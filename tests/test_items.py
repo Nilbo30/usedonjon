@@ -63,6 +63,27 @@ class TestNourritureAuSol(unittest.TestCase):
                        if objet.category == items.FOOD) / len(tires)
             self.assertGreater(part, items.PART_NOURRITURE - 0.08, unlocks)
 
+    def test_le_plancher_tient_quel_que_soit_le_catalogue(self):
+        """La question qui compte : et si le jeu grossit de dix ans ?
+
+        La part n'est pas un poids réglé à la main mais une proportion
+        recalculée sur le tirage du moment : cinquante familles de plus ne la
+        font pas bouger d'un pouce.
+        """
+        vivres = [(type_objet, type_objet.weight)
+                  for type_objet in items.ITEM_TYPES.values()
+                  if type_objet.category == items.FOOD]
+        for familles in (1, 5, 50, 200):
+            faux = [(items.ItemType(f"x{i}", "x", "x", f"categorie_{i // 4}",
+                                    weight=12), 12)
+                    for i in range(familles * 4)]
+            table = items._part_reservee(vivres + faux)
+            total = sum(poids for _, poids in table)
+            part = sum(poids for type_objet, poids in table
+                       if type_objet.category == items.FOOD) / total
+            self.assertAlmostEqual(part, items.PART_NOURRITURE, places=6,
+                                   msg=f"{familles} familles")
+
     def test_un_etage_peut_rester_avare(self):
         """La part est statistique, pas un vivre posé d'office : ça se sentirait."""
         from donjon.game import Game

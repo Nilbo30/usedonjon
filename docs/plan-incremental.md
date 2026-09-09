@@ -423,6 +423,15 @@ Résultat une fois tout ouvert : 0,81 vivre par étage en moyenne, et **39 % des
 | + armurerie | 20,6 ± 1,0 | 27,2 ± 1,4 |
 | + abondance | — | 28,4 ± 1,4 |
 
+La règle passe l'épreuve du temps long : la part n'est pas un poids réglé à la
+main mais une proportion recalculée sur le tirage du moment, donc elle tient à
+1, 5, 50 ou 200 familles d'objets ajoutées (test à l'appui). Deux limites à
+garder en tête : elle ne protège **que** la nourriture — si un autre objet
+devenait vital, il lui faudrait son propre plancher, et la forme générale serait
+une table `{catégorie: part minimale}` — et elle suppose que les vivres à venir
+portent bien la catégorie `FOOD`, faute de quoi ils compteraient comme de la
+dilution.
+
 Un détour instructif au passage : une part *fixe* de 30 % faisait chuter l'état
 « + projectiles » de 27,5 à 21,9, parce qu'à deux objets débloqués la part
 naturelle des vivres (54 %) est bien supérieure au seuil. Une règle qui protège
