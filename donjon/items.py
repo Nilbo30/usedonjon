@@ -2,6 +2,10 @@
 
 Ajouter un objet = ajouter une entrée dans ITEM_TYPES et, si besoin, une
 fonction décorée par @effect. Aucun autre fichier à toucher.
+
+Chaque objet porte une `skill` : la compétence que son usage entraîne (voir
+skills.py). Elle est déduite de la catégorie par défaut, et ne se déclare que
+pour distinguer des familles d'armes (épée, hache, arc...).
 """
 
 from .geom import add
@@ -12,6 +16,16 @@ HERB = "herbe"
 SCROLL = "parchemin"
 FOOD = "nourriture"
 AMMO = "projectile"
+
+#: Compétence entraînée par défaut, selon la catégorie de l'objet.
+SKILL_PAR_CATEGORIE = {
+    WEAPON: "epee",
+    SHIELD: "bouclier",
+    HERB: "herboristerie",
+    SCROLL: "parchemins",
+    FOOD: "nourriture",
+    AMMO: "jet",
+}
 
 EFFECTS = {}
 
@@ -25,11 +39,12 @@ def effect(name):
 
 class ItemType:
     def __init__(self, key, name, glyph, category, power=0, weight=10,
-                 on_use=None, on_hit=None, note=""):
+                 on_use=None, on_hit=None, note="", skill=None):
         self.key = key
         self.name = name
         self.glyph = glyph
         self.category = category
+        self.skill = skill or SKILL_PAR_CATEGORIE.get(category)
         self.power = power          # dégâts d'arme, défense, soin, etc.
         self.weight = weight        # poids de tirage à la génération
         self.on_use = on_use        # effet quand on consomme/lit l'objet
@@ -86,7 +101,7 @@ class Item:
 
 @effect("soigner")
 def _soigner(game, user, item):
-    healed = user.heal(item.power)
+    healed = user.heal(item.power + user.bonus("soin"))
     if healed:
         game.say(game.act(user, "récupères", "récupère") + f" {healed} PV.")
     else:
@@ -96,7 +111,7 @@ def _soigner(game, user, item):
 
 @effect("herbe_de_vie")
 def _herbe_de_vie(game, user, item):
-    user.max_hp += item.power
+    user.base_max_hp += item.power
     user.heal(item.power)
     game.say(game.act(user, "gagnes", "gagne") + f" {item.power} PV max !")
     return True
@@ -107,7 +122,8 @@ def _manger(game, user, item):
     if not user.is_player:
         return False
     before = user.fullness
-    user.fullness = min(user.max_fullness, user.fullness + item.power)
+    gagne = item.power + user.bonus("satiete")
+    user.fullness = min(user.max_fullness, user.fullness + gagne)
     game.say(f"Tu manges {item.name}. Ventre : {before} -> {user.fullness}.")
     return True
 
@@ -136,10 +152,11 @@ def _lire_lumiere(game, user, item):
 @effect("lire_panique")
 def _lire_panique(game, user, item):
     room = game.level.room_at(user.pos)
+    duree = 10 + user.bonus("duree_effet")
     touched = 0
     for monster in game.monsters():
         if room and room.contains(monster.pos):
-            monster.add_status("confus", 10)
+            monster.add_status("confus", duree)
             touched += 1
     game.say(f"Un cri strident ! {touched} monstre(s) paniquent." if touched
              else "Un cri strident... personne alentour.")
@@ -159,7 +176,7 @@ def _lire_teleport(game, user, item):
 
 @effect("jet_degats")
 def _jet_degats(game, thrower, target, item):
-    dmg = max(1, int(game.rng.variance(item.power)))
+    dmg = max(1, int(game.rng.variance(item.power + thrower.bonus("degats_jet"))))
     target.take_damage(dmg)
     game.say(f"{item.name} touche {target.name} ({dmg} dégâts).")
     game.check_death(target, killer=thrower)

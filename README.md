@@ -35,6 +35,10 @@ Tout se joue au clic, sans rien connaître du clavier :
 
 ![Le sac à la souris](docs/sac.png)
 
+Les compétences se consultent d'un clic ou avec `c` :
+
+![Les compétences](docs/competences.png)
+
 ### Au clavier
 
 Les **flèches** (ou `hjkl` + `yubn`, ou le pavé numérique) pour se déplacer et
@@ -81,7 +85,8 @@ manquent, donc la suite reste verte sur un serveur sans affichage.
 |---|---|
 | Étages générés (salles + couloirs), escalier | ✅ |
 | Visibilité « salle entière », mémoire de la carte | ✅ |
-| Combat au tour par tour, XP et niveaux | ✅ |
+| Combat au tour par tour | ✅ |
+| Compétences : on progresse dans ce qu'on pratique | ✅ |
 | Faim (ventre), régénération, mort de faim | ✅ |
 | Objets : herbes, parchemins, nourriture, armes, boucliers, flèches | ✅ |
 | Jet d'objets sur les monstres | ✅ |
@@ -110,6 +115,7 @@ de `monsters.py` et les réglages en tête de `game.py`.
 donjon/
   config.py     RunConfig : réglages d'une partie (canal vers le futur méta)
   events.py     évènements d'action (socle de l'XP par compétence)
+  skills.py     catalogue des compétences, règles de gain, bonus
   rng.py        hasard centralisé et graine → parties reproductibles
   geom.py       positions et 8 directions
   tiles.py      types de cases (table de propriétés)
@@ -162,6 +168,18 @@ def _jet_gel(game, thrower, target, item):
 ItemType("baguette_gel", "baguette de gel", "/", SCROLL, weight=6, on_hit="jet_gel")
 ```
 
+**Une compétence** — une entrée dans `donjon/skills.py`, plus une règle disant
+quel évènement la nourrit :
+
+```python
+Skill("hache", "Hache", base=5, scope=EQUIPEMENT, effects={"attaque": 2})
+```
+
+Une arme de cette famille se déclare avec `skill="hache"` dans `items.py` : la
+règle `"@arme"` fait le reste, le moteur n'est pas touché. Un objet d'une
+catégorie déjà connue (herbe, parchemin…) hérite automatiquement de sa
+compétence.
+
 **Un comportement d'IA** — une fonction décorée dans `donjon/ai.py` :
 
 ```python
@@ -174,9 +192,9 @@ def _voleur(game, monster):
 
 ## Où va le projet
 
-Le jeu évolue vers un hybride roguelike / incrémental : XP séparée par
-compétence (marcher, épée, pyromancie…) plutôt qu'un niveau global, puis
-prestige — à la mort les compétences sont perdues, un niveau global permanent
+Le jeu évolue vers un hybride roguelike / incrémental. Les compétences sont en
+place — on progresse dans ce qu'on pratique, marcher entraîne la marche et
+frapper entraîne l'arme en main — et la suite est le prestige — à la mort les compétences sont perdues, un niveau global permanent
 monte et débloque des mécaniques. Le plan détaillé, la frontière entre état de
 run et état permanent, et les décisions déjà prises sont dans
 [`docs/plan-incremental.md`](docs/plan-incremental.md).

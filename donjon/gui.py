@@ -82,10 +82,15 @@ AIDE = [
     "  Clic droit : annuler le déplacement ou fermer un panneau.",
     "  Les boutons en bas et le sac sont cliquables.",
     "",
+    "PROGRESSION",
+    "  On progresse dans ce qu'on pratique : marcher entraîne la marche,",
+    "  frapper entraîne l'arme en main. Tout est perdu à la mort.",
+    "",
     "CLAVIER",
     "  Flèches, pavé numérique ou hjkl / yubn : se déplacer et attaquer.",
     "  « , » ramasser    « > » descendre    « . » attendre    « i » sac",
-    "  « ? » cette aide    « q » quitter    « R » rejouer après la partie",
+    "  « c » compétences    « ? » cette aide    « q » quitter",
+    "  « R » rejouer après la partie",
     "",
     "  Dans le sac : la lettre de l'objet, puis u utiliser, e équiper,",
     "  t lancer (puis une direction), d poser.",
@@ -111,7 +116,8 @@ class Fenetre:
         self.max_depth = max_depth
         self.tile = tile
         self.game = Game(seed=seed, max_depth=max_depth)
-        self.mode = "jeu"          # jeu | sac | action | direction | aide
+        # jeu | sac | action | direction | aide | competences
+        self.mode = "jeu"
         self.slot = None
         self.note = None
 
@@ -172,7 +178,7 @@ class Fenetre:
             self._fin_de_partie(char, touche)
             return
 
-        if self.mode == "aide":
+        if self.mode in ("aide", "competences"):
             self.mode = "jeu"
         elif self.mode == "jeu":
             self._touche_jeu(touche, char)
@@ -205,6 +211,8 @@ class Fenetre:
             self.game.cmd_descend()
         elif char == "i":
             self.mode = "sac"
+        elif char == "c":
+            self.mode = "competences"
         elif char == "?":
             self.mode = "aide"
         elif char == "q" or touche == "Escape":
@@ -253,7 +261,8 @@ class Fenetre:
                 if not self.ferme:
                     self.dessiner()
                 return
-        if self.game.state != PLAYING or self.mode in ("sac", "action", "aide"):
+        if self.game.state != PLAYING or self.mode in ("sac", "action", "aide",
+                                                       "competences"):
             return
         case = self.case_sous(event.x, event.y)
         if case is None:
@@ -423,6 +432,8 @@ class Fenetre:
             self._dessiner_sac()
         elif self.mode == "aide":
             self._panneau("Aide", AIDE, bouton_fermer=True)
+        elif self.mode == "competences":
+            self._dessiner_competences()
         if self.game.state != PLAYING:
             self._dessiner_fin()
         if self.case_survolee:
@@ -623,7 +634,7 @@ class Fenetre:
         self.canvas.create_rectangle(0, 0, self.largeur, HUD_HEIGHT,
                                      fill="#16141d", outline="")
         self._texte(10, 8, f"Étage {self.game.depth}", gras=True)
-        self._texte(10, 26, f"Niveau {joueur.level}", pale=True)
+        self._texte(10, 26, f"Comp. {joueur.skills.total_levels()}", pale=True)
 
         self._barre(95, 10, 110, joueur.hp, joueur.max_hp,
                     BARRE_PV if joueur.hp > joueur.max_hp * 0.3 else BARRE_PV_BAS,
@@ -675,11 +686,14 @@ class Fenetre:
             ("Descendre", self.game.cmd_descend, joueur.pos == level.stairs),
             ("Attendre", self.game.cmd_wait, True),
             ("Sac", lambda: setattr(self, "mode", "sac"), True),
+            ("Compétences", lambda: setattr(self, "mode", "competences"), True),
             ("Aide", lambda: setattr(self, "mode", "aide"), True),
         ]
-        largeur = 88
-        x = self.largeur - 10 - len(boutons) * (largeur + 6)
-        for texte, action, actif in boutons:
+        # Chaque bouton est dimensionné par son texte : ajouter une commande
+        # plus tard ne fera pas déborder la barre.
+        tailles = [max(78, len(texte) * 7 + 18) for texte, _, _ in boutons]
+        x = self.largeur - 10 - sum(tailles) - 6 * (len(boutons) - 1)
+        for (texte, action, actif), largeur in zip(boutons, tailles):
             self._bouton(x, y, largeur, 26, texte, action, actif)
             x += largeur + 6
 
@@ -776,6 +790,31 @@ class Fenetre:
             self._bouton(gauche + largeur - 92, haut + hauteur - 34, 80, 26,
                          "Fermer", lambda: setattr(self, "mode", "jeu"))
 
+    def _dessiner_competences(self):
+        """Panneau des compétences : niveau et progression vers le suivant."""
+        lignes = self.game.skill_lines()
+        if not lignes:
+            self._panneau("Compétences",
+                          ["Tu n'as encore rien pratiqué.",
+                           "Marche, frappe, mange : tout s'apprend à l'usage."],
+                          bouton_fermer=True)
+            return
+        largeur, hauteur = 430, 78 + len(lignes) * 26
+        gauche = (self.largeur - largeur) / 2
+        haut = (HUD_HEIGHT + self.game.level.height * self.tile - hauteur) / 2
+        self.canvas.create_rectangle(gauche, haut, gauche + largeur,
+                                     haut + hauteur, fill=PANNEAU,
+                                     outline=BORDURE, width=2)
+        self._texte(gauche + 16, haut + 14, "Compétences de ce run", gras=True)
+        for index, (nom, niveau, acquis, requis) in enumerate(lignes):
+            y = haut + 44 + index * 26
+            self._texte(gauche + 16, y, f"{nom}")
+            self._texte(gauche + 190, y, f"niv. {niveau}", gras=True)
+            self._barre(gauche + 250, y + 2, 90, acquis, requis,
+                        BARRE_PV, f"{acquis}/{requis}")
+        self._bouton(gauche + largeur - 92, haut + hauteur - 36, 80, 26,
+                     "Fermer", lambda: setattr(self, "mode", "jeu"))
+
     def _dessiner_fin(self):
         self.canvas.create_rectangle(0, 0, self.largeur, self.hauteur,
                                      fill="#000000", stipple="gray75", outline="")
@@ -787,8 +826,9 @@ class Fenetre:
                                      fill=PANNEAU, outline=couleur, width=2)
         self.canvas.create_text(cx, cy - 40, text=titre, fill=couleur,
                                 font=("TkDefaultFont", 28, "bold"))
-        detail = (f"Étage {self.game.depth} · niveau {self.game.player.level} · "
-                  f"{self.game.turn} tours")
+        detail = (f"Étage {self.game.depth} · "
+                  f"{self.game.player.skills.total_levels()} niveaux de "
+                  f"compétences · {self.game.turn} tours")
         self.canvas.create_text(cx, cy - 2, text=detail, fill=TEXTE,
                                 font=("TkDefaultFont", 12))
         self._bouton(cx - 150, cy + 26, 140, 30, "Rejouer (R)", self.rejouer)

@@ -88,10 +88,18 @@ class TestCombat(BaseEvents):
         self.assertIs(mise_a_mort["monstre"], cible)
         self.assertEqual(mise_a_mort["distance"], 1)
 
-    def test_les_coups_des_monstres_ne_sont_pas_annonces(self):
-        """Seules les actions du héros donnent de l'XP : rien d'autre n'émet."""
+    def test_encaisser_un_coup_annonce_le_bouclier_porte(self):
+        """Le seul évènement que le héros ne déclenche pas : on pare en encaissant."""
         monstre = place_monster(self.game, self.voisine(), attack=1)
         self.game.attack(monstre, self.game.player)
+        (recu,) = self.journal.of(events.COUP_RECU)
+        self.assertIs(recu["source"], monstre)
+        self.assertIs(recu["bouclier"], self.game.player.shield)
+
+    def test_un_coup_de_monstre_sur_un_monstre_n_annonce_rien(self):
+        a = place_monster(self.game, self.voisine())
+        b = place_monster(self.game, self.voisine((0, 1)))
+        self.game.attack(a, b)
         self.assertEqual(len(self.journal), 0)
 
 
@@ -169,9 +177,14 @@ class TestBus(unittest.TestCase):
         game.cmd_wait()
         self.assertEqual(recus, [(game, events.ATTENTE)])
 
-    def test_sans_auditeur_le_jeu_tourne_normalement(self):
+    def test_le_formateur_de_competences_est_branche_par_defaut(self):
+        from donjon.skills import Trainer
         game = sandbox(seed=5)
-        self.assertEqual(game.listeners, [])
+        self.assertTrue(any(isinstance(l, Trainer) for l in game.listeners))
+
+    def test_sans_aucun_auditeur_le_jeu_tourne_normalement(self):
+        game = sandbox(seed=5)
+        game.listeners.clear()
         game.cmd_wait()
         self.assertGreater(game.turn, 0)
 

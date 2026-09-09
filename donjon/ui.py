@@ -14,7 +14,8 @@ LOG_LINES = 5
 HELP = [
     "hjkl / yubn / flèches : se déplacer et attaquer",
     ",  ramasser      >  descendre l'escalier      .  attendre",
-    "i  inventaire     ?  aide                     q  quitter",
+    "i  inventaire     c  compétences             q  quitter",
+    "?  aide",
     "",
     "Dans l'inventaire : lettre de l'objet puis",
     "  u utiliser   e équiper   t lancer   d poser   échap annuler",
@@ -60,6 +61,9 @@ def _main(stdscr, seed, max_depth):
         if char == "i":
             message = _inventory_flow(stdscr, game)
             continue
+        if char == "c":
+            _overlay(stdscr, "Compétences de ce run", _skill_lines(game))
+            continue
         if key in ARROWS:
             game.cmd_move(ARROWS[key])
             continue
@@ -71,6 +75,12 @@ def _main(stdscr, seed, max_depth):
             game.cmd_pickup()
         elif char == ">":
             game.cmd_descend()
+
+
+def _skill_lines(game):
+    lignes = [f"{nom:<16} niv. {niveau:<3} {acquis}/{requis}"
+              for nom, niveau, acquis, requis in game.skill_lines()]
+    return lignes or ["Tu n'as encore rien pratiqué."]
 
 
 def _init_colors():
@@ -115,7 +125,7 @@ def _draw(stdscr, game, message=None):
         _addstr(stdscr, log_top + offset, 0, line[: width - 1])
 
     footer = message or {
-        PLAYING: "? aide   i inventaire   q quitter",
+        PLAYING: "? aide   i inventaire   c compétences   q quitter",
         DEAD: "Tu es mort. Une touche pour quitter.",
         WON: "Victoire ! Une touche pour quitter.",
     }[game.state]

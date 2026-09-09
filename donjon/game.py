@@ -11,9 +11,9 @@ Deux idées portent l'extensibilité :
    appellent exactement les mêmes fonctions.
 """
 
-from . import ai, dungeon, events, items, monsters, tiles, traps
+from . import ai, dungeon, events, items, monsters, skills, tiles, traps
 from .config import RunConfig
-from .entities import ACTION_COST, Monster, Player, exp_threshold
+from .entities import ACTION_COST, Monster, Player
 from .events import Event
 from .geom import ALL_DIRS, add, chebyshev, is_diagonal
 from .log import MessageLog
@@ -44,9 +44,12 @@ class Game:
         self.player = Player(player_name, self.config)
         self.actors = [self.player]
         self.level = None
-        self.listeners = []        # auditeurs d'évènements (voir events.py)
+        # Auditeurs d'évènements. Le formateur de compétences en est un comme
+        # un autre : le moteur ne sait pas ce qu'il fait de ce qu'on lui dit.
+        self.listeners = [skills.Trainer()]
         self._spawn_countdown = self.config.spawn_interval
         self._regen_countdown = self.config.regen_interval
+        self._hunger_acc = 0.0
         self._starting_kit()
         self.next_floor(first=True)
 
@@ -185,7 +188,12 @@ class Game:
         if not player.alive:
             return
         if player.fullness > 0:
-            player.fullness -= 1
+            # « Marche » réduit le coût d'un tour ; on accumule la fraction
+            # restante pour que le rythme reste régulier.
+            self._hunger_acc += max(0.25, 1.0 - player.bonus("endurance"))
+            while self._hunger_acc >= 1.0 and player.fullness > 0:
+                self._hunger_acc -= 1.0
+                player.fullness -= 1
             if player.fullness == 20:
                 self.say("Ton ventre gargouille. Tu as faim.")
             if player.fullness == 0:
@@ -289,6 +297,9 @@ class Game:
                         touche=True, degats=dmg)
         else:
             self.say(f"{attacker.name} te frappe ({dmg} dégâts).")
+            if defender.is_player:
+                self.notify(events.COUP_RECU, bouclier=defender.shield,
+                            source=attacker, degats=dmg)
         self.check_death(defender, killer=attacker)
 
     def check_death(self, actor, killer=None):
@@ -303,19 +314,7 @@ class Game:
             self.notify(events.MONSTRE_VAINCU, monstre=actor,
                         arme=self.player.weapon,
                         distance=chebyshev(self.player.pos, actor.pos))
-            self.grant_exp(actor.exp)
         return True
-
-    def grant_exp(self, amount):
-        player = self.player
-        player.exp += amount
-        while player.exp >= exp_threshold(player.level + 1):
-            player.level += 1
-            player.max_hp += 5
-            player.base_attack += 2
-            player.base_defense += 1
-            player.heal(5)
-            self.say(f"Niveau {player.level} ! Tu te sens plus fort.")
 
     def is_visible(self, pos):
         return pos in self.visible_cells()
@@ -447,7 +446,8 @@ class Game:
             if target:
                 self.say(f"Tu lances {item.name} sur {target.name}.")
                 if not item.hit(self, self.player, target):
-                    dmg = max(1, int(self.rng.variance(max(1, item.power or 2))))
+                    puissance = max(1, item.power or 2) + self.player.bonus("degats_jet")
+                    dmg = max(1, int(self.rng.variance(puissance)))
                     target.take_damage(dmg)
                     self.say(f"{item.name} inflige {dmg} dégâts.")
                     self.check_death(target, killer=self.player)
@@ -468,9 +468,20 @@ class Game:
         p = self.player
         weapon = p.weapon.name if p.weapon else "mains nues"
         shield = p.shield.name if p.shield else "aucun"
-        return (f"Ét.{self.depth}  Niv.{p.level}  PV {p.hp}/{p.max_hp}  "
+        return (f"Ét.{self.depth}  Comp.{p.skills.total_levels()}  "
+                f"PV {p.hp}/{p.max_hp}  "
                 f"Ventre {p.fullness}  Atq {p.attack}  Déf {p.defense}  "
                 f"[{weapon} / {shield}]  T{self.turn}")
+
+    def skill_lines(self):
+        """Compétences pratiquées, prêtes à afficher (nom, niveau, progression)."""
+        lignes = []
+        for cle in self.player.skills.known():
+            competence = skills.CATALOGUE[cle]
+            acquis, requis = self.player.skills.progress(cle)
+            lignes.append((competence.name, self.player.skills.level(cle),
+                           acquis, requis))
+        return lignes
 
     def render(self, reveal=False):
         """Rend l'étage en lignes de texte (mémoire + champ de vision)."""

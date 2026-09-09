@@ -1,6 +1,5 @@
 import unittest
 
-from donjon.entities import exp_threshold
 from tests.helpers import place_monster, sandbox
 
 
@@ -30,13 +29,18 @@ class TestCombat(unittest.TestCase):
         self.assertEqual(game.player.pos, start)
         self.assertLess(target.hp, 100)
 
-    def test_mort_donne_de_l_experience_et_des_niveaux(self):
+    def test_vaincre_un_monstre_entraine_le_combat(self):
+        """Plus de niveau global : une mise à mort nourrit une compétence."""
         game = sandbox()
         target = place_monster(game, (game.player.pos[0] + 1, game.player.pos[1]),
-                               hp=1, exp=exp_threshold(3))
-        game.attack(game.player, target)
+                               hp=1)
+        avant = game.player.skills.progress("combat")[0]
+        for _ in range(20):
+            if not target.alive:
+                break
+            game.attack(game.player, target)
         self.assertFalse(target.alive)
-        self.assertGreaterEqual(game.player.level, 3)
+        self.assertGreater(game.player.skills.progress("combat")[0], avant)
 
     def test_mort_du_joueur_termine_la_partie(self):
         game = sandbox()

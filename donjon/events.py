@@ -16,6 +16,7 @@ Contrat des évènements — les clés listées sont toujours présentes :
 | `pas`            | `depart`, `arrivee`, `diagonale`                            |
 | `attente`        | —                                                           |
 | `coup`           | `arme` (Item ou None), `cible` (Actor), `touche`, `degats`  |
+| `coup_recu`      | `bouclier` (Item ou None), `source` (Actor), `degats`        |
 | `monstre_vaincu` | `monstre` (Actor), `arme` (Item ou None), `distance`        |
 | `ramassage`      | `objet`                                                     |
 | `pose`           | `objet`                                                     |
@@ -25,12 +26,17 @@ Contrat des évènements — les clés listées sont toujours présentes :
 | `descente`       | `etage` (le nouvel étage)                                   |
 
 `arme` vaut None à mains nues : c'est volontaire, une compétence « pugilat »
-pourra s'y accrocher sans rien changer ici.
+s'y accroche sans rien changer ici. Même logique pour `bouclier`.
+
+`coup_recu` est le seul évènement que le héros ne déclenche pas lui-même : on
+apprend à parer en encaissant. Les coups portés *par* les monstres sur d'autres
+monstres, eux, n'émettent rien.
 """
 
 PAS = "pas"
 ATTENTE = "attente"
 COUP = "coup"
+COUP_RECU = "coup_recu"
 MONSTRE_VAINCU = "monstre_vaincu"
 RAMASSAGE = "ramassage"
 POSE = "pose"
@@ -40,8 +46,8 @@ JET = "jet"
 DESCENTE = "descente"
 
 #: Tous les évènements que le moteur sait émettre, pour vérifier les tables.
-NOMS = (PAS, ATTENTE, COUP, MONSTRE_VAINCU, RAMASSAGE, POSE, USAGE_OBJET,
-        EQUIPEMENT, JET, DESCENTE)
+NOMS = (PAS, ATTENTE, COUP, COUP_RECU, MONSTRE_VAINCU, RAMASSAGE, POSE,
+        USAGE_OBJET, EQUIPEMENT, JET, DESCENTE)
 
 
 class Event:

@@ -6,6 +6,7 @@ dans monsters.py, pas une sous-classe.
 """
 
 from .config import RunConfig
+from .skills import SkillSet
 
 ACTION_COST = 100
 
@@ -17,7 +18,7 @@ class Actor:
     def __init__(self, name, glyph, hp, attack, defense, speed=100):
         self.name = name
         self.glyph = glyph
-        self.max_hp = hp
+        self.base_max_hp = hp
         self.hp = hp
         self.base_attack = attack
         self.base_defense = defense
@@ -28,7 +29,7 @@ class Actor:
         self.statuses = {}       # nom -> tours restants
         self.is_player = False
 
-    # --- statistiques (surchargées par le joueur pour l'équipement) ------
+    # --- statistiques (surchargées par le joueur : équipement + compétences)
     @property
     def attack(self):
         return self.base_attack
@@ -36,6 +37,14 @@ class Actor:
     @property
     def defense(self):
         return self.base_defense
+
+    @property
+    def max_hp(self):
+        return self.base_max_hp + self.bonus("pv_max")
+
+    def bonus(self, effet):
+        """Bonus de compétence. Nul pour tout le monde sauf le héros."""
+        return 0
 
     # --- statuts ---------------------------------------------------------
     def add_status(self, name, turns):
@@ -84,19 +93,24 @@ class Monster(Actor):
             species["attack"], species["defense"], species.get("speed", 100),
         )
         self.species = species
-        self.exp = species.get("exp", 1)
         self.behaviour = species.get("behaviour", "chasseur")
         self.target_pos = None   # dernière position connue du héros
 
 
 class Player(Actor):
+    """Le héros. Sa progression est entièrement dans `skills` (voir skills.py).
+
+    Toutes ses statistiques passent par un même empilement : valeur de base
+    (RunConfig) + équipement + compétences. Une nouvelle source de bonus
+    s'ajoutera ici, à un seul endroit.
+    """
+
     def __init__(self, name="Shiren", config=None):
         config = config or RunConfig()
         super().__init__(name, "@", hp=config.start_hp,
                          attack=config.start_attack, defense=config.start_defense)
         self.is_player = True
-        self.level = 1
-        self.exp = 0
+        self.skills = SkillSet()
         self.max_fullness = config.max_fullness
         self.fullness = self.max_fullness
         self.inventory = []
@@ -105,18 +119,29 @@ class Player(Actor):
         self.max_items = config.inventory_size
 
     @property
+    def weapon_skill(self):
+        """Famille de l'arme portée — « pugilat » à mains nues."""
+        return self.weapon.type.skill if self.weapon else "pugilat"
+
+    def families(self):
+        """Familles d'équipement actives, pour les bonus de compétence."""
+        familles = [self.weapon_skill]
+        if self.shield and self.shield.type.skill:
+            familles.append(self.shield.type.skill)
+        return familles
+
+    def bonus(self, effet):
+        return self.skills.bonus(effet, self.families())
+
+    @property
     def attack(self):
-        bonus = self.weapon.power if self.weapon else 0
-        return self.base_attack + bonus
+        equipement = self.weapon.power if self.weapon else 0
+        return int(self.base_attack + equipement + self.bonus("attaque"))
 
     @property
     def defense(self):
-        bonus = self.shield.power if self.shield else 0
-        return self.base_defense + bonus
-
-    @property
-    def exp_to_next(self):
-        return exp_threshold(self.level + 1) - self.exp
+        equipement = self.shield.power if self.shield else 0
+        return int(self.base_defense + equipement + self.bonus("defense"))
 
     def add_item(self, item):
         if len(self.inventory) >= self.max_items:
@@ -134,10 +159,3 @@ class Player(Actor):
 
     def slot_of(self, item):
         return self.inventory.index(item)
-
-
-def exp_threshold(level):
-    """XP cumulée nécessaire pour atteindre `level`."""
-    if level <= 1:
-        return 0
-    return int(8 * (level - 1) ** 2 + 4 * (level - 1))

@@ -69,15 +69,47 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 |---|---|---|
 | 0 | `RunConfig` : les réglages deviennent des données injectées | ✅ fait |
 | 1 | Bus d'évènements d'action (`events.py`) | ✅ fait |
-| 2 | Table des compétences + XP (`skills.py`) | à faire |
-| 3 | Pipeline de stats ; suppression du niveau global de run | à faire |
+| 2 | Table des compétences + XP (`skills.py`) | ✅ fait |
+| 3 | Pipeline de stats ; suppression du niveau global de run | ✅ fait |
 | 4 | Fin de run + `RunSummary` | à faire |
 | 5 | `Meta` + sauvegarde JSON ; la boucle est bouclée | à faire |
 | 6 | Déblocages en table | à faire |
 
 Chaque étape laisse le jeu lançable et jouable.
 
-### Étape 2 — ce qui reste à décider en l'écrivant
+### Étapes 2 et 3 — livrées ensemble
+
+Des compétences sans effet ne se testent pas, et « bonus de stats continus »
+n'a de sens qu'avec le pipeline. Les compétences remplacent donc le niveau
+global dans le même mouvement : c'était le plus petit incrément cohérent.
+
+Ce qui a disparu : `player.level`, `player.exp`, `exp_threshold`, `grant_exp`
+et le champ `exp` du bestiaire. On ne progresse plus en tuant.
+
+**Comment ajouter du contenu, désormais :**
+
+| Ajout | Ce qu'il faut écrire |
+|---|---|
+| Une famille d'arme (hache) | une entrée dans `CATALOGUE` + `skill="hache"` sur les objets |
+| Une compétence sur du contenu existant | une entrée dans `CATALOGUE` + une `Regle` |
+| Un objet d'une catégorie connue | rien : la compétence est déduite de la catégorie |
+| Un **nouveau type de bonus** | une entrée dans `EFFETS` **et** un point de lecture dans le moteur |
+
+Seule la dernière ligne coûte du code — c'est la frontière assumée du système,
+et les effets sont volontairement peu nombreux (8).
+
+**Équilibrage après la bascule**, bot à profondeur 5, 120 graines : 77 % de
+victoires contre 83 % avant. Les compétences remplacent donc à peu près les
+bonus de l'ancien niveau global, en un peu plus dur. Niveaux gagnés par run
+(médiane 7) : marche 2,5 · combat 2,2 · épée 1,3 · bouclier 0,7 · le reste
+proche de zéro.
+
+Les compétences rares (cuisine, herboristerie, parchemins, jet) ne montent
+quasiment pas parce que le bot n'utilise presque pas d'objets. À revoir quand
+un humain aura joué : c'est peut-être le bot qui joue mal, pas la courbe qui
+est fausse.
+
+### Mesures de référence (avant l'étape 2)
 
 Mesuré sur 40 parties complètes, une partie émet en moyenne :
 
@@ -90,10 +122,18 @@ Mesuré sur 40 parties complètes, une partie émet en moyenne :
 | `usage_objet` | 1,9 |
 | `ramassage` | 0,7 |
 
-Avec une XP fixe par action, « marcher » monterait donc environ **neuf fois
-plus vite** qu'« épée ». Les courbes de seuils devront être très différentes
-d'une compétence à l'autre — c'est de la donnée, pas du moteur, mais il faut
-le savoir avant d'écrire la table.
+Avec une XP fixe par action, « marcher » monte environ **neuf fois plus vite**
+qu'« épée ». C'est ce qui a dicté les courbes : `marche` coûte 25 XP le premier
+niveau, `epee` seulement 5.
+
+## Dette assumée
+
+- `bouclier` s'entraîne en encaissant : c'est le seul évènement (`coup_recu`)
+  que le héros ne déclenche pas lui-même. Assumé — on apprend à parer en se
+  faisant frapper.
+- Aucune compétence de magie n'existe encore : le jeu n'a ni bâton ni sort.
+  Pyromancie et cryomancie viendront avec le contenu correspondant, chacune
+  en une entrée de table.
 
 ## Question encore ouverte
 
