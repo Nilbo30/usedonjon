@@ -92,6 +92,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
 
     def test_les_reglages_remplacent(self):
         meta = Meta(xp=1000)
+        meta.acheter("creatures")
         meta.acheter("barda")
         self.assertEqual(meta.run_config().starting_kit,
                          tree.ARBRE["barda"].reglages["starting_kit"])
@@ -107,6 +108,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
         session = Session(sauvegarde=False)
         session.meta = Meta(xp=1000)
         session.meta.acheter("estomac")
+        session.meta.acheter("creatures")
         session.meta.acheter("barda")
         game = session.descendre()
         self.assertGreater(game.player.max_fullness, RunConfig().max_fullness)

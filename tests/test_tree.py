@@ -118,7 +118,13 @@ class TestRythme(unittest.TestCase):
         self.assertGreaterEqual(reussites, 10, f"gains : {gains}")
 
     def test_le_jeu_s_ouvre_dans_l_ordre_attendu(self):
-        """Équipement avant créatures : on ne lâche pas le héros nu devant eux."""
+        """Le danger d'abord, sa réponse ensuite.
+
+        Débloquer une épée avant d'avoir quoi que ce soit à frapper laisse le
+        joueur perplexe ; affronter les créatures à mains nues pose un problème
+        auquel « Barda » répond. Les deux vies à poings nus entraînent le
+        pugilat, qui n'est donc pas du temps perdu.
+        """
         session = Session(sauvegarde=False, seed=3)
         ordre = []
         for _ in range(12):
@@ -133,7 +139,7 @@ class TestRythme(unittest.TestCase):
                     min(candidats, key=lambda n: n.cost).key).key)
         self.assertIn("barda", ordre)
         self.assertIn("creatures", ordre)
-        self.assertLess(ordre.index("barda"), ordre.index("creatures"))
+        self.assertLess(ordre.index("creatures"), ordre.index("barda"))
 
 
 if __name__ == "__main__":

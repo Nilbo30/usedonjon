@@ -69,20 +69,21 @@ _enregistrer(
     Noeud("second_souffle", "Second souffle", 220, "+20 points de vie.",
           branche="Survie", parents=("endurci",), effets={"start_hp": 20}),
 
-    # --- Équipement : de quoi ne pas descendre les mains nues -------------
+    # --- Équipement : la réponse au problème posé par les créatures -------
     Noeud("barda", "Barda", 12,
           "Tu pars avec une épée, un bouclier et un onigiri.",
-          branche="Équipement",
+          branche="Équipement", parents=("creatures",),
           reglages={"starting_kit": ("epee_bois", "bouclier_bois", "onigiri")}),
     Noeud("affutage", "Affûtage", 35, "+1 en attaque.",
           branche="Équipement", parents=("barda",), effets={"start_attack": 1}),
     Noeud("cuirasse", "Cuirasse", 35, "+1 en défense.",
           branche="Équipement", parents=("barda",), effets={"start_defense": 1}),
 
-    # --- Monde vivant : le donjon s'anime ---------------------------------
+    # --- Monde vivant : d'abord le danger, l'équipement viendra après -----
     Noeud("creatures", "Créatures", 12,
-          "Le donjon se peuple : monstres et pièges apparaissent.",
-          branche="Monde vivant", parents=("barda",),
+          "Le donjon se peuple : monstres et pièges. Tu n'as que tes poings — "
+          "cogner entraîne le pugilat.",
+          branche="Monde vivant",
           reglages={"monsters_per_floor": (3, 6), "traps_per_floor": (1, 3),
                     "spawn_interval": 30}),
     Noeud("butin", "Butin", 35,

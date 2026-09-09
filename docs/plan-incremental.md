@@ -265,16 +265,21 @@ Deux choses que la mesure a dictées :
 - une vie vide dure 124 tours, soit **~40 secondes** en clic-déplacement — le
   prologue est une vignette, pas une corvée. Le déplacement automatique à la
   souris, fait bien avant, sauve cette idée sans qu'on l'ait cherché ;
-- **débloquer les monstres avant les armes rend le jeu pire** (6 XP contre 4,5,
-  et on meurt à l'étage 3 au lieu de 6, à mains nues). D'où le prérequis :
-  « Créatures » exige « Barda ».
+- **les créatures viennent avant l'équipement**, et non l'inverse. J'avais
+  d'abord conclu le contraire en lisant mal ma propre mesure : les monstres sans
+  arme rapportent 6 XP contre 4,5 à vide, c'est-à-dire *plus*, et j'avais retenu
+  « on meurt à l'étage 3 » pour en déduire « c'est pire ». Une campagne complète
+  a tranché : l'ouverture va aussi vite dans les deux sens (Fouille à la vie 9),
+  mais l'ordre inverse est absurde à jouer — on obtient une épée sans rien à
+  frapper. Le danger d'abord, sa réponse ensuite ; les deux vies à mains nues
+  entraînent le pugilat, qui existe depuis l'étape 2.
 
 **Échelle des prix** : 3 · 12 · 35 · 90 · 220, calée sur les 4,2 XP de la
 première mort — le premier talent tombe dès la première vie. Un test le
 verrouille, sinon le jeu s'ouvrirait sur deux vies vides avant le moindre choix.
 
 **Rythme observé** : Estomac (vie 1) · Constitution (2) · Besace (4) ·
-**Barda** (6) · **Créatures** (8) · **Fouille** (9), puis accélération.
+**Créatures** (6) · **Barda** (8) · **Fouille** (9), puis accélération.
 
 **Comment on ajoute du contenu**, désormais : un nœud dans `tree.py`, et un
 `unlock="..."` sur les objets concernés. Les baguettes seront deux lignes de

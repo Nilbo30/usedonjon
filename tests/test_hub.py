@@ -17,7 +17,7 @@ class TestRefuge(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
         self.session.meta.xp = 1000
-        for cle in ("fouille", "coffre", "barda"):
+        for cle in ("fouille", "coffre", "creatures", "barda"):
             self.session.meta.acheter(cle)
         self.game = self.session.demarrer()
 
@@ -114,7 +114,7 @@ class TestCoffre(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
         self.session.meta.xp = 1000
-        for cle in ("fouille", "coffre", "barda"):
+        for cle in ("fouille", "coffre", "creatures", "barda"):
             self.session.meta.acheter(cle)
         self.game = self.session.demarrer()
         self.heros = self.game.player
@@ -167,7 +167,7 @@ class TestPersistanceDuCoffre(unittest.TestCase):
         chemin = os.path.join(tempfile.mkdtemp(), "meta.json")
         session = Session(chemin=chemin)
         session.meta.xp = 1000
-        for cle in ("fouille", "coffre", "barda"):
+        for cle in ("fouille", "coffre", "creatures", "barda"):
             session.meta.acheter(cle)
         session.demarrer()
         session.deposer(session.player.inventory[0])
