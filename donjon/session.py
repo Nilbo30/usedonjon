@@ -19,6 +19,7 @@ Trois façons de terminer une partie, trois suites différentes :
 """
 
 from . import hub
+from . import tree
 from . import items as items_mod
 from . import meta as meta_mod
 from .entities import Player, equiper_kit
@@ -36,7 +37,7 @@ class Session:
         self.rng = Rng(seed)
         self.player = None
         self.game = None
-        self.dernier_gain = None      # (xp gagnée, niveaux franchis)
+        self.dernier_gain = None      # XP rapportée par la dernière descente
         self.dernier_bilan = None     # bilan de la dernière descente
 
     # ------------------------------------------------------------------ #
@@ -135,8 +136,11 @@ class Session:
         return [items_mod.make(ligne["cle"], ligne.get("plus", 0), registre)
                 for ligne in self.meta.entrepot]
 
+    def capacite_entrepot(self):
+        return self.meta.capacite_entrepot()
+
     def entrepot_plein(self):
-        return len(self.meta.entrepot) >= self.meta.CAPACITE_ENTREPOT
+        return len(self.meta.entrepot) >= self.capacite_entrepot()
 
     def deposer(self, item):
         """Range un objet du sac dans le coffre. Il survivra à la mort."""
@@ -160,6 +164,16 @@ class Session:
         self._sauver()
         return True
 
+    # ------------------------------------------------------------------ #
+    # L'arbre des talents
+    # ------------------------------------------------------------------ #
+    def acheter(self, cle):
+        """Achète un talent au refuge. Renvoie le nœud acquis, ou None."""
+        noeud = self.meta.acheter(cle)
+        if noeud is not None:
+            self._sauver()
+        return noeud
+
     def _sauver(self):
         if self.sauvegarde:
             meta_mod.save(self.meta, self.chemin)
@@ -171,11 +185,13 @@ class Session:
         """Ce qu'a rapporté la dernière descente, prêt à afficher."""
         if not self.dernier_gain:
             return []
-        gagnee, franchis = self.dernier_gain
-        lignes = [f"+{gagnee:.0f} XP de progression permanente"]
-        if franchis:
-            lignes.append("Niveau global " + " puis ".join(map(str, franchis))
-                          + " !")
+        lignes = [f"+{self.dernier_gain:.0f} XP  "
+                  f"(tu en as {self.meta.xp:.0f} à dépenser)"]
+        abordables = [noeud for noeud in tree.disponibles(self.meta.noeuds)
+                      if noeud.cost <= self.meta.xp]
+        if abordables:
+            lignes.append(f"{len(abordables)} talent(s) à ta portée — "
+                          f"touche « t » au refuge.")
         return lignes
 
     def lignes_d_accueil(self):

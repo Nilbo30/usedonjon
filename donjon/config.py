@@ -12,6 +12,11 @@ modification du moteur.
 """
 
 
+#: Une config construite à la main (tests, bot, CLI) a tout le contenu.
+TOUT_DEBLOQUE = frozenset({"butin", "herbes", "grimoires", "intuition",
+                           "armurerie", "coffre", "orbe"})
+
+
 class RunConfig:
     """Paramètres immuables d'une partie. `replace()` en produit une variante.
 
@@ -40,6 +45,7 @@ class RunConfig:
         starting_kit=("epee_bois", "bouclier_bois", "onigiri", "herbe_soin"),
         hunger_enabled=True,
         is_hub=False,
+        unlocks=(),
     ):
         self.max_depth = max_depth
         self.spawn_interval = spawn_interval
@@ -64,6 +70,9 @@ class RunConfig:
         # et sans étages : c'est la config qui le dit, pas un cas particulier.
         self.hunger_enabled = hunger_enabled
         self.is_hub = is_hub
+        # Drapeaux de contenu débloqué (voir tree.py). Une RunConfig nue les a
+        # tous : c'est la progression qui restreint, pas le moteur.
+        self.unlocks = frozenset(unlocks) if unlocks else TOUT_DEBLOQUE
 
     def replace(self, **changements):
         """Copie modifiée : `config.replace(max_depth=10)`."""

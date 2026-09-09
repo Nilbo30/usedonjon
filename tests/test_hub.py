@@ -16,6 +16,9 @@ from donjon.session import Session
 class TestRefuge(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
+        self.session.meta.xp = 1000
+        for cle in ("fouille", "coffre", "barda"):
+            self.session.meta.acheter(cle)
         self.game = self.session.demarrer()
 
     def test_on_commence_au_refuge(self):
@@ -34,6 +37,11 @@ class TestRefuge(unittest.TestCase):
         self.assertIsNotNone(self.game.level.stairs)
         self.assertNotEqual(self.game.level.chest, self.game.level.stairs)
 
+    def test_sans_le_talent_il_n_y_a_pas_de_coffre(self):
+        """Le coffre lui-même se gagne : la première vie n'en a pas."""
+        nue = Session(sauvegarde=False, seed=7)
+        self.assertIsNone(nue.demarrer().level.chest)
+
     def test_l_escalier_mene_au_donjon(self):
         heros = self.game.player
         self.game.player.pos = self.game.level.stairs
@@ -50,6 +58,9 @@ class TestOrbe(unittest.TestCase):
 
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
+        self.session.meta.xp = 1000
+        for cle in ("fouille", "grimoires", "coffre", "voie_du_retour"):
+            self.session.meta.acheter(cle)
         self.session.demarrer()
         self.game = self.session.descendre()
         self.heros = self.game.player
@@ -96,12 +107,15 @@ class TestOrbe(unittest.TestCase):
         suivant = self.session.avancer()
         self.assertIsNot(suivant.player, self.heros)
         self.assertEqual(suivant.player.skills.total_levels(), 0)
-        self.assertGreater(self.session.meta.xp + self.session.meta.level, 0)
+        self.assertGreater(self.session.meta.xp, 0)
 
 
 class TestCoffre(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
+        self.session.meta.xp = 1000
+        for cle in ("fouille", "coffre", "barda"):
+            self.session.meta.acheter(cle)
         self.game = self.session.demarrer()
         self.heros = self.game.player
 
@@ -129,12 +143,12 @@ class TestCoffre(unittest.TestCase):
         self.assertEqual(len(self.session.entrepot()), 1)
 
     def test_le_coffre_a_une_capacite(self):
-        for _ in range(self.session.meta.CAPACITE_ENTREPOT + 3):
+        for _ in range(self.session.capacite_entrepot() + 3):
             objet = items.make("fleche")
             self.heros.add_item(objet)
             self.session.deposer(objet)
         self.assertEqual(len(self.session.meta.entrepot),
-                         self.session.meta.CAPACITE_ENTREPOT)
+                         self.session.capacite_entrepot())
         self.assertTrue(self.session.entrepot_plein())
 
     def test_on_ne_depose_pas_ce_qu_on_n_a_pas(self):
@@ -152,6 +166,9 @@ class TestPersistanceDuCoffre(unittest.TestCase):
     def test_le_coffre_est_sauvegarde(self):
         chemin = os.path.join(tempfile.mkdtemp(), "meta.json")
         session = Session(chemin=chemin)
+        session.meta.xp = 1000
+        for cle in ("fouille", "coffre", "barda"):
+            session.meta.acheter(cle)
         session.demarrer()
         session.deposer(session.player.inventory[0])
         relue = Session(chemin=chemin)

@@ -5,15 +5,15 @@ lit qu'un `RunSummary` et ne produit qu'une `RunConfig`.
 
     Meta ──(run_config)──> RunConfig ──> Game ──(RunSummary)──> Meta.absorb
 
-Deux tables de données, et rien d'autre à toucher pour équilibrer :
-
-* `BONUS` — ce que chaque niveau global ajoute à la config des runs suivants.
-* la conversion d'un bilan en XP méta, ci-dessous.
+L'XP gagnée en mourant est une monnaie : on l'échange contre des nœuds de
+l'arbre (voir tree.py), qui déverrouillent le jeu morceau par morceau. Rien
+n'est linéaire — chaque vie pose une question, pas un palier.
 """
 
 import json
 import os
 
+from . import tree
 from .config import RunConfig
 
 #: Emplacement de la sauvegarde. Modifiable pour les tests.
@@ -24,29 +24,8 @@ CHEMIN_DEFAUT = os.path.join(os.path.expanduser("~"), ".usedonjon", "meta.json")
 #: zéro, ce qui fait de son usage un pari et non un gain gratuit.
 FACTEUR_PROFONDEUR = 0.1
 
-#: Coût du premier niveau global, puis multiplié à chaque palier.
-COUT_BASE = 20
-CROISSANCE = 1.4
-
-#: Ce que chaque niveau global ajoute, cumulativement, aux runs suivants.
-#: Une ligne de plus = un palier de plus. Les clés sont des champs de RunConfig.
-BONUS = {
-    1: {"max_fullness": 20},
-    2: {"start_hp": 5},
-    3: {"max_fullness": 20},
-    4: {"inventory_size": 2},
-    5: {"start_hp": 5},
-    6: {"max_fullness": 30},
-    7: {"start_attack": 1, "start_defense": 1},
-    8: {"start_hp": 10},
-    9: {"max_fullness": 30},
-    10: {"start_attack": 2, "start_defense": 2},
-}
-
-
-def cout_du_niveau(niveau):
-    """XP nécessaire pour passer de `niveau` à `niveau + 1`."""
-    return max(1, round(COUT_BASE * CROISSANCE ** niveau))
+#: Places dans le coffre avant tout agrandissement.
+CAPACITE_ENTREPOT_BASE = 4
 
 
 def valeur_du_run(summary):
@@ -58,94 +37,108 @@ def valeur_du_run(summary):
 class Meta:
     """L'état permanent d'un joueur. Sérialisable tel quel."""
 
-    #: Places dans l'entrepôt du refuge.
-    CAPACITE_ENTREPOT = 8
-
-    def __init__(self, level=0, xp=0.0, runs=0, best_depth=0, best_levels=0,
-                 entrepot=None):
-        self.level = level
-        self.xp = xp                 # XP accumulée dans le niveau courant
+    def __init__(self, xp=0.0, xp_totale=0.0, runs=0, best_depth=0,
+                 best_levels=0, entrepot=None, noeuds=None):
+        self.xp = xp                 # solde dépensable
+        self.xp_totale = xp_totale   # tout ce qui a été gagné, pour la mémoire
         self.runs = runs
         self.best_depth = best_depth
         self.best_levels = best_levels
         # Les objets déposés au refuge : la seule matière qui traverse la mort.
         self.entrepot = list(entrepot or [])
+        # Les talents acquis. Définitifs : on ne réattribue pas.
+        self.noeuds = list(noeuds or [])
 
     # --- progression -----------------------------------------------------
     def absorb(self, summary):
-        """Encaisse un run terminé. Renvoie (xp gagnée, niveaux franchis)."""
+        """Encaisse une descente terminée. Renvoie l'XP gagnée."""
         gagnee = valeur_du_run(summary)
         self.runs += 1
         self.best_depth = max(self.best_depth, summary.deepest)
         self.best_levels = max(self.best_levels, summary.total_levels)
         self.xp += gagnee
-        franchis = []
-        while self.xp >= cout_du_niveau(self.level):
-            self.xp -= cout_du_niveau(self.level)
-            self.level += 1
-            franchis.append(self.level)
-        return gagnee, franchis
+        self.xp_totale += gagnee
+        return gagnee
 
-    def progress(self):
-        """(xp dans le niveau, xp nécessaire) pour une barre de progression."""
-        return (self.xp, cout_du_niveau(self.level))
+    # --- l'arbre ---------------------------------------------------------
+    def acquis(self, cle):
+        return cle in self.noeuds
+
+    def achetable(self, cle):
+        """Le nœud existe, n'est pas acquis, ses parents le sont, et on peut payer."""
+        noeud = tree.ARBRE.get(cle)
+        return bool(noeud and cle not in self.noeuds
+                    and noeud.accessible(self.noeuds) and self.xp >= noeud.cost)
+
+    def acheter(self, cle):
+        """Achète un talent. Renvoie le nœud, ou None si ce n'est pas possible."""
+        if not self.achetable(cle):
+            return None
+        noeud = tree.ARBRE[cle]
+        self.xp -= noeud.cost
+        self.noeuds.append(cle)
+        return noeud
+
+    def _cumul(self):
+        """Somme des effets, valeurs de réglage et drapeaux des talents acquis."""
+        effets, reglages, unlocks = {}, {}, set()
+        for cle in self.noeuds:
+            noeud = tree.ARBRE.get(cle)
+            if noeud is None:
+                continue                      # talent d'une version antérieure
+            for champ, valeur in noeud.effets.items():
+                effets[champ] = effets.get(champ, 0) + valeur
+            reglages.update(noeud.reglages)
+            unlocks.update(noeud.unlocks)
+        return effets, reglages, unlocks
+
+    def capacite_entrepot(self):
+        effets, _, _ = self._cumul()
+        return CAPACITE_ENTREPOT_BASE + effets.get("coffre_places", 0)
 
     # --- influence sur les runs ------------------------------------------
-    def bonuses(self):
-        """Somme des bonus acquis, par champ de RunConfig."""
-        acquis = {}
-        for niveau, apports in BONUS.items():
-            if niveau <= self.level:
-                for champ, valeur in apports.items():
-                    acquis[champ] = acquis.get(champ, 0) + valeur
-        return acquis
-
     def run_config(self, base=None):
-        """La config du prochain run : la base, plus tout ce qui a été gagné."""
-        base = base or RunConfig()
-        acquis = self.bonuses()
-        if not acquis:
-            return base
-        return base.replace(**{champ: getattr(base, champ) + valeur
-                               for champ, valeur in acquis.items()})
+        """La config de la prochaine vie : un donjon nu, plus les talents acquis.
 
-    def prochain_avantage(self):
-        """Ce que le prochain niveau global débloquera, en clair."""
-        apports = BONUS.get(self.level + 1)
-        if not apports:
-            return None
-        libelles = {"max_fullness": "de ventre", "start_hp": "PV de départ",
-                    "start_attack": "d'attaque", "start_defense": "de défense",
-                    "inventory_size": "places dans le sac"}
-        return " · ".join(f"+{valeur} {libelles.get(champ, champ)}"
-                          for champ, valeur in sorted(apports.items()))
+        Une `RunConfig` construite à la main garde tout son contenu ; c'est ce
+        chemin-ci, et lui seul, qui verrouille ce qui n'a pas été gagné.
+        """
+        base = base or RunConfig()
+        effets, reglages, unlocks = self._cumul()
+        valeurs = dict(tree.BASE_VERROUILLEE)
+        valeurs.update(reglages)
+        for champ, valeur in effets.items():
+            if champ in tree.EFFETS_META:
+                continue
+            valeurs[champ] = getattr(base, champ) + valeur
+        valeurs["unlocks"] = frozenset(unlocks) or frozenset({"__rien__"})
+        return base.replace(**valeurs)
 
     def lines(self):
         """Résumé affichable de la progression permanente."""
-        xp, requis = self.progress()
-        lignes = [f"Niveau global {self.level}  ({xp:.0f}/{requis} vers le suivant)",
-                  f"Runs joués : {self.runs}"]
+        lignes = [f"{self.xp:.0f} XP à dépenser  ·  {len(self.noeuds)} talents",
+                  f"Vies jouées : {self.runs}"]
         if self.best_depth:
             lignes.append(f"Record : étage {self.best_depth} · "
                           f"{self.best_levels} niveaux de compétences")
-        prochain = self.prochain_avantage()
-        if prochain:
-            lignes.append(f"Niveau {self.level + 1} débloquera : {prochain}")
-        acquis = self.bonuses()
-        if acquis:
-            lignes.append("Acquis : " + " · ".join(
-                f"{champ} +{valeur}" for champ, valeur in sorted(acquis.items())))
+        abordables = [n for n in tree.disponibles(self.noeuds)
+                      if n.cost <= self.xp]
+        if abordables:
+            lignes.append("À portée : " + " · ".join(
+                f"{n.name} ({n.cost})" for n in sorted(abordables,
+                                                       key=lambda n: n.cost)[:3]))
         return lignes
 
     # --- persistance -----------------------------------------------------
     def to_dict(self):
-        return {"level": self.level, "xp": self.xp, "runs": self.runs,
+        return {"xp": self.xp, "xp_totale": self.xp_totale, "runs": self.runs,
                 "best_depth": self.best_depth, "best_levels": self.best_levels,
-                "entrepot": self.entrepot}
+                "entrepot": self.entrepot, "noeuds": self.noeuds}
 
     @classmethod
     def from_dict(cls, donnees):
-        connus = {"level", "xp", "runs", "best_depth", "best_levels", "entrepot"}
+        connus = {"xp", "xp_totale", "runs", "best_depth", "best_levels",
+                  "entrepot", "noeuds"}
         return cls(**{k: v for k, v in donnees.items() if k in connus})
 
 

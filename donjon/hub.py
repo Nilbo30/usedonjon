@@ -21,16 +21,18 @@ def config(base=None):
                         traps_per_floor=(0, 0), spawn_interval=10 ** 9)
 
 
-def generer():
-    """Une salle unique : un coffre à gauche, l'escalier du donjon à droite."""
+def generer(avec_coffre=True):
+    """Une salle unique : l'escalier du donjon, et le coffre s'il est acquis."""
     level = Level(LARGEUR, HAUTEUR)
     salle = Room(2, 2, LARGEUR - 4, HAUTEUR - 4)
     level.rooms.append(salle)
     for pos in salle.cells():
         level.set_tile(pos, tiles.FLOOR)
 
-    level.chest = (salle.x + 2, salle.y + salle.h // 2)
-    level.set_tile(level.chest, tiles.CHEST)
+    level.chest = None
+    if avec_coffre:
+        level.chest = (salle.x + 2, salle.y + salle.h // 2)
+        level.set_tile(level.chest, tiles.CHEST)
 
     level.stairs = (salle.x + salle.w - 3, salle.y + salle.h // 2)
     level.set_tile(level.stairs, tiles.STAIRS)

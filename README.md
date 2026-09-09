@@ -102,7 +102,7 @@ manquent, donc la suite reste verte sur un serveur sans affichage.
 | 30 étages générés (salles + couloirs), escalier | ✅ |
 | XP et monstres qui montent avec la profondeur | ✅ |
 | Bilan de fin de run (étage record, tours, compétences, cause) | ✅ |
-| Progression permanente : mourir fait monter un niveau global | ✅ |
+| Progression permanente : un arbre de talents qui déverrouille le jeu | ✅ |
 | Un refuge où l'on marche, avec un coffre qui traverse la mort | ✅ |
 | L'orbe de retour : remonter avec ses acquis, sans gagner de méta | ✅ |
 | Visibilité « salle entière », mémoire de la carte | ✅ |
@@ -142,6 +142,7 @@ donjon/
   events.py     évènements d'action (socle de l'XP par compétence)
   skills.py     catalogue des compétences, règles de gain, bonus
   run.py        RunSummary : le bilan d'un run terminé
+  tree.py       l'arbre des talents : tout le contenu déverrouillable
   meta.py       progression permanente et sa sauvegarde JSON
   session.py    le lien entre les runs (le seul endroit méta + partie)
   rng.py        hasard centralisé et graine → parties reproductibles
@@ -232,12 +233,22 @@ Deux boucles s'y imbriquent :
   **aucune** progression permanente et la profondeur repart de zéro. On est plus
   fort pour descendre plus bas, à condition d'y arriver vraiment.
 
-## Progression permanente
+## L'arbre des talents
 
-Chaque mort fait monter un **niveau global**, calculé à partir des niveaux de
-compétences du run multipliés par la profondeur atteinte. Ces niveaux rendent
-les runs suivants plus généreux — ventre plus grand, plus de PV, sac plus
-grand — selon une table dans `meta.py`. La sauvegarde vit dans
+Le jeu **se déverrouille**. La première vie se joue dans un couloir vide où
+l'on meurt de faim : pas d'arme, pas de monstre, rien au sol. Mourir rapporte
+de l'XP permanente — les niveaux de compétences du run multipliés par la
+profondeur atteinte — et cette XP s'échange contre des talents, au refuge.
+
+L'équipement, les créatures, les objets, les herbes, les parchemins, le coffre,
+l'orbe : chacun est un nœud à acheter, avec ses prérequis. Les choix sont
+définitifs. Chaque déblocage augmente ce qu'une vie rapporte, donc accélère le
+suivant.
+
+![L'arbre des talents](docs/talents.png)
+
+Ajouter du contenu, c'est un nœud dans `tree.py` et un `unlock="..."` sur les
+objets concernés — le moteur ne bouge pas. La sauvegarde vit dans
 `~/.usedonjon/meta.json`.
 
 ## Où va le projet

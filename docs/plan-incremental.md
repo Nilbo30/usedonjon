@@ -46,8 +46,8 @@ finira par lire le méta au milieu d'un combat et la frontière sera perdue.
 | Gain d'XP | **Fixe par action**, sans rendement décroissant ni garde-fou anti-farm |
 | Effet d'un niveau | **Bonus de stats continus** (épée +N dégâts, marche → faim ralentie…) |
 | Fin de run | **Mort seule** — pas d'extraction volontaire ; le fond du donjon (étage 30) reste une victoire, hors de portée sans progression |
-| Source du niveau global | **Les niveaux de compétences** accumulés dans le run |
-| Effet du niveau global | **Une table fixe de bonus** — même progression pour tous |
+| Source de l'XP permanente | **Les niveaux de compétences** accumulés dans le run |
+| Emploi de l'XP | **Un arbre de talents** : on choisit, les choix sont définitifs |
 | Objets qui survivent | **Un entrepôt**, dans un hub accessible après la mort |
 
 ### Pourquoi pas de garde-fou anti-farm
@@ -86,7 +86,8 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 6 | `Meta` + sauvegarde JSON ; la boucle est bouclée | ✅ fait |
 | 7 | Le refuge : un lieu où l'on marche, avec son coffre | ✅ fait |
 | 8 | L'orbe : remonter au refuge avec ses acquis | ✅ fait |
-| 9 | Déblocages en table | à faire |
+| 9 | L'arbre des talents : le jeu entier se déverrouille | ✅ fait |
+| 10 | Le butin des créatures | à faire |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -238,6 +239,52 @@ survivent à la mort avec leur bonus. C'est la seule matière qui traverse.
 
 Détail savoureux : l'orbe étant un parchemin, il arrive **non identifié**.
 Le reconnaître est en soi une étape.
+
+### Étape 9 — l'arbre déverrouille le jeu
+
+La progression linéaire a été remplacée par un **arbre de talents** (tree.py),
+et l'idée est allée plus loin que des bonus chiffrés : **le jeu entier se
+déverrouille**. La première vie se joue dans un couloir vide où l'on meurt de
+faim ; l'équipement, les créatures, les objets au sol, le coffre du refuge,
+l'orbe — tout se gagne un nœud à la fois.
+
+Ce qui rend la chose viable, mesuré :
+
+| État du jeu | XP par vie |
+|---|---|
+| Donjon vide | 4,5 |
+| + monstres | 6,0 |
+| + kit de départ | 14,0 |
+| + objets au sol | 15,9 |
+
+**Chaque déblocage augmente le débit**, donc accélère le suivant : c'est le
+moteur d'un incrémental, et il sort des données plutôt que d'une règle.
+
+Deux choses que la mesure a dictées :
+
+- une vie vide dure 124 tours, soit **~40 secondes** en clic-déplacement — le
+  prologue est une vignette, pas une corvée. Le déplacement automatique à la
+  souris, fait bien avant, sauve cette idée sans qu'on l'ait cherché ;
+- **débloquer les monstres avant les armes rend le jeu pire** (6 XP contre 4,5,
+  et on meurt à l'étage 3 au lieu de 6, à mains nues). D'où le prérequis :
+  « Créatures » exige « Barda ».
+
+**Échelle des prix** : 3 · 12 · 35 · 90 · 220, calée sur les 4,2 XP de la
+première mort — le premier talent tombe dès la première vie. Un test le
+verrouille, sinon le jeu s'ouvrirait sur deux vies vides avant le moindre choix.
+
+**Rythme observé** : Estomac (vie 1) · Constitution (2) · Besace (4) ·
+**Barda** (6) · **Créatures** (8) · **Fouille** (9), puis accélération.
+
+**Comment on ajoute du contenu**, désormais : un nœud dans `tree.py`, et un
+`unlock="..."` sur les objets concernés. Les baguettes seront deux lignes de
+données. `RunConfig()` construite à la main garde tout — c'est le chemin du
+méta, et lui seul, qui verrouille.
+
+**Rupture de sauvegarde assumée** : `Meta.level` et `BONUS` ont disparu au
+profit de `xp` / `xp_totale` / `noeuds`. Les anciennes sauvegardes repartent de
+zéro. Un talent inconnu dans un fichier (version antérieure ou future) est
+ignoré plutôt que fatal.
 
 ## Règles fixées en cours de route
 

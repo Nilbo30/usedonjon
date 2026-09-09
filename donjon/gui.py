@@ -21,6 +21,7 @@ import tkinter.font as tkfont
 from . import items as items_mod
 from . import path
 from . import skills as skills_mod
+from . import tree as tree_mod
 from .config import RunConfig
 from .game import PLAYING, RETOUR, VERS_DONJON, WON
 from .geom import DIRECTIONS, chebyshev, step_toward
@@ -100,6 +101,7 @@ AIDE = [
     "  Flèches, pavé numérique ou hjkl / yubn : se déplacer et attaquer.",
     "  « , » ramasser    « > » descendre    « . » attendre    « i » sac",
     "  « s » se reposer jusqu'à guérison (interrompu si un monstre paraît)",
+    "  « t » l'arbre des talents (au refuge)",
     "  « c » compétences    « ? » cette aide    « q » quitter",
     "  « R » rejouer après la partie",
     "",
@@ -142,7 +144,8 @@ class Fenetre:
         self.session = session or Session(sauvegarde=sauvegarde, seed=seed,
                                           config=base)
         self.game = self.session.demarrer()
-        # jeu | sac | action | direction | aide | competences | accueil | coffre
+        # jeu | sac | action | direction | aide | competences | accueil |
+        # coffre | talents
         self.mode = "accueil"
         self.slot = None
         self.note = None
@@ -220,6 +223,9 @@ class Fenetre:
 
         if self.mode in ("aide", "competences", "accueil"):
             self.mode = "jeu"
+        elif self.mode == "talents":
+            if touche == "Escape" or char in ("t", "i", "c"):
+                self.mode = "jeu"
         elif self.mode == "coffre":
             if touche == "Escape" or char in ("i", "c"):
                 self.mode = "jeu"
@@ -279,6 +285,8 @@ class Fenetre:
             self.mode = "sac"
         elif char == "c":
             self.mode = "competences"
+        elif char == "t" and self.session.au_refuge:
+            self.mode = "talents"
         elif char == "?":
             self.mode = "aide"
         elif char == "q" or touche == "Escape":
@@ -330,7 +338,7 @@ class Fenetre:
                 return
         if self.game.state != PLAYING or self.mode in ("sac", "action", "aide",
                                                        "competences", "accueil",
-                                                       "coffre"):
+                                                       "coffre", "talents"):
             return
         case = self.case_sous(event.x, event.y)
         if case is None:
@@ -513,6 +521,8 @@ class Fenetre:
                           bouton_fermer=True)
         elif self.mode == "coffre":
             self._dessiner_coffre()
+        elif self.mode == "talents":
+            self._dessiner_talents()
         if self.game.state != PLAYING:
             self._dessiner_fin()
         if self.case_survolee:
@@ -795,6 +805,7 @@ class Fenetre:
              and not au_refuge),
             ("Coffre", lambda: setattr(self, "mode", "coffre"),
              au_refuge and joueur.pos == getattr(level, "chest", None)),
+            ("Talents", lambda: setattr(self, "mode", "talents"), au_refuge),
             ("Sac", lambda: setattr(self, "mode", "sac"), True),
             ("Compétences", lambda: setattr(self, "mode", "competences"), True),
             ("Aide", lambda: setattr(self, "mode", "aide"), True),
@@ -985,6 +996,93 @@ class Fenetre:
         self._bouton(gauche + largeur - 92, haut + hauteur - 36, 80, 26,
                      "Fermer", lambda: setattr(self, "mode", "jeu"))
 
+    def _dessiner_talents(self):
+        """L'arbre : ce qui est acquis, ce qu'on peut prendre, ce qui attend."""
+        meta = self.session.meta
+        largeur = min(self.largeur - 40, 940)
+        gauche = (self.largeur - largeur) / 2
+        colonnes = self._colonnes_de_talents()
+        hauteur = 96 + max(len(c) for c in colonnes) * 20
+        haut = (HUD_HEIGHT + self.hauteur_carte - hauteur) / 2
+        self.canvas.create_rectangle(gauche, haut, gauche + largeur,
+                                     haut + hauteur, fill=PANNEAU,
+                                     outline=BORDURE, width=2)
+        self._texte(gauche + 16, haut + 14,
+                    f"Talents — {meta.xp:.0f} XP à dépenser", gras=True)
+        self._texte(gauche + largeur - 16, haut + 14,
+                    "Les choix sont définitifs.", ancre="ne", pale=True)
+
+        largeur_colonne = (largeur - 48) / 2
+        for index, colonne in enumerate(colonnes):
+            x = gauche + 16 + index * (largeur_colonne + 16)
+            for rang, entree in enumerate(colonne):
+                self._ligne_talent(x, haut + 44 + rang * 20, largeur_colonne,
+                                   entree)
+        survole = self._talent_survole()
+        if survole:
+            self._texte(gauche + 16, haut + hauteur - 38, survole.description,
+                        pale=True)
+        self._bouton(gauche + largeur - 92, haut + hauteur - 40, 80, 26,
+                     "Fermer", lambda: setattr(self, "mode", "jeu"))
+
+    def _colonnes_de_talents(self):
+        """Les branches réparties en deux colonnes, titres compris."""
+        branches = tree_mod.par_branche()
+        milieu = (len(branches) + 1) // 2
+        colonnes = []
+        for moitie in (branches[:milieu], branches[milieu:]):
+            entrees = []
+            for nom, noeuds in moitie:
+                entrees.append(("titre", nom))
+                entrees += [("noeud", noeud) for noeud in noeuds]
+            colonnes.append(entrees)
+        return colonnes
+
+    def _ligne_talent(self, x, y, largeur, entree):
+        genre, valeur = entree
+        if genre == "titre":
+            self._texte(x, y, valeur.upper(), gras=True, couleur=TEXTE_PALE)
+            return
+        noeud = valeur
+        meta = self.session.meta
+        acquis = meta.acquis(noeud.key)
+        accessible = noeud.accessible(meta.noeuds)
+        achetable = meta.achetable(noeud.key)
+        zone = (x + 8, y, x + largeur, y + 19)
+        if achetable and self.zone_survolee == zone:
+            self.canvas.create_rectangle(*zone, fill=BOUTON_SURVOL, outline="")
+        if acquis:
+            marque, couleur = "✔", ESCALIER
+        elif achetable:
+            marque, couleur = "•", TEXTE
+        elif accessible:
+            marque, couleur = "•", TEXTE_PALE
+        else:
+            marque, couleur = "·", "#5a5470"
+        self._texte(x + 12, y + 2, marque, couleur=couleur)
+        self._texte(x + 30, y + 2, noeud.name, couleur=couleur,
+                    gras=achetable)
+        if not acquis:
+            self._texte(x + largeur - 10, y + 2, f"{noeud.cost} XP", ancre="ne",
+                        couleur=couleur)
+        if achetable:
+            self.zones.append((*zone, lambda c=noeud.key: self._acheter(c),
+                               f"talent {noeud.key}"))
+        elif accessible or acquis:
+            self.zones.append((*zone, lambda: None, f"talent {noeud.key}"))
+
+    def _talent_survole(self):
+        etiquette = self.etiquette_survolee or ""
+        if etiquette.startswith("talent "):
+            return tree_mod.ARBRE.get(etiquette.split(" ", 1)[1])
+        return None
+
+    def _acheter(self, cle):
+        noeud = self.session.acheter(cle)
+        if noeud:
+            self.game.say(f"Talent acquis : {noeud.name}.")
+            self.note = f"{noeud.name} — {noeud.description}"
+
     def _dessiner_coffre(self):
         """Le coffre du refuge : à gauche le sac, à droite ce qui survivra."""
         session = self.session
@@ -1001,7 +1099,7 @@ class Fenetre:
         self._texte(gauche + 16, haut + 14, "Ton sac — clique pour déposer",
                     gras=True)
         self._texte(gauche + 32 + colonne, haut + 14,
-                    f"Le coffre ({len(garde)}/{session.meta.CAPACITE_ENTREPOT})"
+                    f"Le coffre ({len(garde)}/{session.capacite_entrepot()})"
                     " — clique pour reprendre", gras=True)
         self.canvas.create_line(gauche + colonne + 24, haut + 36,
                                 gauche + colonne + 24, haut + hauteur - 44,

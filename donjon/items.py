@@ -38,6 +38,7 @@ class Registre:
     def __init__(self, rng=None):
         self.connus = set()
         self.apparences = {}
+        self.intuition_disponible = True   # « Intuition » : une fois par vie
         if rng is not None:
             self.melanger(rng)
 
@@ -88,7 +89,8 @@ def effect(name):
 
 class ItemType:
     def __init__(self, key, name, glyph, category, power=0, weight=10,
-                 on_use=None, on_hit=None, note="", skill=None, depth_min=1):
+                 on_use=None, on_hit=None, note="", skill=None, depth_min=1,
+                 unlock=None):
         self.key = key
         self.name = name
         self.glyph = glyph
@@ -100,6 +102,7 @@ class ItemType:
         self.on_hit = on_hit        # effet quand l'objet est lancé sur une cible
         self.note = note
         self.depth_min = depth_min  # étage à partir duquel l'objet apparaît
+        self.unlock = unlock        # talent requis pour qu'il apparaisse
 
     @property
     def equippable(self):
@@ -308,38 +311,38 @@ def _register(*types):
 _register(
     ItemType("herbe_soin", "herbe de soin", "*", HERB, power=15, weight=20,
              on_use="soigner", on_hit="jet_soin",
-             note="Rend 15 PV. Lancée, elle soigne la cible."),
+             note="Rend 15 PV. Lancée, elle soigne la cible.", unlock="herbes"),
     ItemType("herbe_vie", "herbe de vie", "*", HERB, power=4, weight=4,
              on_use="herbe_de_vie", on_hit="jet_soin",
-             note="Augmente définitivement les PV maximum de 4."),
+             note="Augmente définitivement les PV maximum de 4.", unlock="herbes"),
     ItemType("herbe_confusion", "herbe de confusion", "*", HERB, weight=8,
              on_use="confusion_soi", on_hit="jet_confusion",
              note="À lancer : désoriente la cible 12 tours. Mangée, "
-                  "elle te désoriente toi."),
+                  "elle te désoriente toi.", unlock="herbes"),
     ItemType("graine_sommeil", "graine de sommeil", "*", HERB, weight=8,
              on_use="sommeil_soi", on_hit="jet_sommeil",
              note="À lancer : endort la cible 10 tours, sans défense. "
-                  "Mangée, elle t'endort 8 tours."),
+                  "Mangée, elle t'endort 8 tours.", unlock="herbes"),
     ItemType("onigiri", "un onigiri", "%", FOOD, power=50, weight=14,
              on_use="manger", note="Rend 50 points de ventre."),
     ItemType("parchemin_lumiere", "parchemin de lumière", "?", SCROLL, weight=8,
-             on_use="lire_lumiere", note="Révèle tout l'étage, escalier compris."),
+             on_use="lire_lumiere", note="Révèle tout l'étage, escalier compris.", unlock="grimoires"),
     ItemType("parchemin_panique", "parchemin de panique", "?", SCROLL, weight=7,
              on_use="lire_panique",
-             note="Désoriente 10 tours tous les monstres de la salle."),
+             note="Désoriente 10 tours tous les monstres de la salle.", unlock="grimoires"),
     ItemType("parchemin_teleport", "parchemin de téléportation", "?", SCROLL,
              weight=7, on_use="lire_teleport",
-             note="Te téléporte au hasard sur l'étage. Utile pour fuir."),
+             note="Te téléporte au hasard sur l'étage. Utile pour fuir.", unlock="grimoires"),
     ItemType("orbe_retour", "orbe de retour", "o", SCROLL, weight=6, depth_min=4,
              on_use="orbe_retour", skill="parchemins",
              note="Te ramène au refuge avec tes objets et tes compétences. "
-                  "En échange, la profondeur atteinte est remise à zéro."),
+                  "En échange, la profondeur atteinte est remise à zéro.", unlock="orbe"),
     ItemType("fleche", "une flèche", "(", AMMO, power=7, weight=12,
              on_hit="jet_degats", note="À lancer : 7 dégâts à distance."),
-    ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8),
-    ItemType("epee_fer", "épée en fer", ")", WEAPON, power=6, weight=5),
-    ItemType("bouclier_bois", "bouclier en bois", "[", SHIELD, power=3, weight=8),
-    ItemType("bouclier_fer", "bouclier en fer", "[", SHIELD, power=6, weight=5),
+    ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8, unlock="armurerie"),
+    ItemType("epee_fer", "épée en fer", ")", WEAPON, power=6, weight=5, unlock="armurerie"),
+    ItemType("bouclier_bois", "bouclier en bois", "[", SHIELD, power=3, weight=8, unlock="armurerie"),
+    ItemType("bouclier_fer", "bouclier en fer", "[", SHIELD, power=6, weight=5, unlock="armurerie"),
 )
 
 
@@ -347,10 +350,14 @@ def make(key, plus=0, registre=None):
     return Item(ITEM_TYPES[key], plus, registre)
 
 
-def random_item(rng, depth=1, registre=None):
+def random_item(rng, depth=1, registre=None, unlocks=None):
     """Tire un objet au hasard; les objets s'améliorent avec la profondeur."""
-    item_type = rng.weighted([(t, t.weight) for t in ITEM_TYPES.values()
-                              if depth >= t.depth_min])
+    candidats = [(t, t.weight) for t in ITEM_TYPES.values()
+                 if depth >= t.depth_min
+                 and (t.unlock is None or unlocks is None or t.unlock in unlocks)]
+    if not candidats:
+        return None
+    item_type = rng.weighted(candidats)
     plus = 0
     if item_type.equippable:
         plus = max(0, rng.randint(-1, 1 + depth // 3))

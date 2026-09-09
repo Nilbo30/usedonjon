@@ -84,7 +84,7 @@ class Game:
 
     def next_floor(self, first=False):
         if self.config.is_hub:
-            self.level = hub.generer()
+            self.level = hub.generer("coffre" in self.config.unlocks)
             self.actors = [self.player]
             self.player.pos = hub.depart(self.level)
             self.player.energy = ACTION_COST
@@ -110,8 +110,10 @@ class Game:
         for _ in range(self.rng.randint(*self.config.items_per_floor)):
             pos = dungeon.random_floor(self.level, self.rng, exclude=occupied)
             occupied.add(pos)
-            self.level.items[pos] = items.random_item(self.rng, self.depth,
-                                                      self.identification)
+            objet = items.random_item(self.rng, self.depth,
+                                      self.identification, self.config.unlocks)
+            if objet is not None:
+                self.level.items[pos] = objet
         for _ in range(self.rng.randint(*self.config.traps_per_floor)):
             pos = dungeon.random_floor(self.level, self.rng, exclude=occupied)
             occupied.add(pos)
@@ -371,8 +373,19 @@ class Game:
             return True
         del self.level.items[self.player.pos]
         self.say(f"Tu ramasses {item.name}.")
+        self._intuition(item)
         self.notify(events.RAMASSAGE, objet=item)
         return True
+
+    def _intuition(self, item):
+        """Talent « Intuition » : le premier objet mystérieux de la vie se révèle."""
+        registre = self.identification
+        if ("intuition" not in self.config.unlocks
+                or not registre.intuition_disponible or item.identifie):
+            return
+        registre.intuition_disponible = False
+        registre.identifier(item.type.key)
+        self.say(f"Tu reconnais {item.type.name} au premier coup d'œil.")
 
     def attack(self, attacker, defender):
         self.spend(attacker)
@@ -506,6 +519,7 @@ class Game:
             return False
         del self.level.items[self.player.pos]
         self.say(f"Tu ramasses {item.name}.")
+        self._intuition(item)
         self.pass_turn(self.player)
         self.notify(events.RAMASSAGE, objet=item)
         return self._finish(True)

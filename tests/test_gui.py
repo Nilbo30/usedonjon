@@ -39,8 +39,21 @@ class Clic:
         self.y = y
 
 
+TALENTS_DE_TEST = ("estomac", "barda", "creatures", "fouille", "herbes",
+                   "grimoires", "coffre")
+
+
+def _debloquer(fenetre, *cles):
+    """Offre des talents et refait le héros : le jeu s'ouvre verrouillé."""
+    fenetre.session.meta.xp = 10 ** 4
+    for cle in (cles or TALENTS_DE_TEST):
+        fenetre.session.meta.acheter(cle)
+    fenetre.session.player = None
+
+
 def _entrer_dans_le_donjon(fenetre):
     """La fenêtre s'ouvre au refuge ; ces tests portent sur le donjon."""
+    _debloquer(fenetre)
     fenetre.game = fenetre.session.descendre()
     fenetre.mode = "jeu"
     fenetre.dessiner()
@@ -98,13 +111,19 @@ class TestRefuge(unittest.TestCase):
     def setUp(self):
         from donjon.gui import Fenetre
         self.fenetre = Fenetre(seed=7, sauvegarde=False)
+        _debloquer(self.fenetre)
+        self.fenetre.game = self.fenetre.session.demarrer()
+        self.fenetre.dessiner()
 
     def tearDown(self):
         self.fenetre.root.destroy()
 
     def test_on_ouvre_au_refuge_avec_le_mot_d_accueil(self):
-        self.assertTrue(self.fenetre.session.au_refuge)
-        self.assertEqual(self.fenetre.mode, "accueil")
+        from donjon.gui import Fenetre
+        neuve = Fenetre(seed=7, sauvegarde=False)
+        self.assertTrue(neuve.session.au_refuge)
+        self.assertEqual(neuve.mode, "accueil")
+        neuve.root.destroy()
 
     def test_marcher_sur_le_coffre_l_ouvre(self):
         fenetre = self.fenetre
@@ -137,6 +156,46 @@ class TestRefuge(unittest.TestCase):
         self.assertFalse(fenetre.session.au_refuge)
         self.assertIs(fenetre.game.player, heros)
         self.assertEqual(fenetre.mode, "jeu")
+
+    def test_l_arbre_des_talents_s_ouvre_au_refuge(self):
+        fenetre = self.fenetre
+        fenetre.mode = "jeu"
+        fenetre.on_key(Evenement(char="t"))
+        self.assertEqual(fenetre.mode, "talents")
+
+    def test_acheter_un_talent_d_un_clic(self):
+        from donjon.gui import Fenetre
+        fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(fenetre.root.destroy)
+        fenetre.session.meta.xp = 50
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        zone = next(z for z in fenetre.zones if z[5] == "talent estomac")
+        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
+        self.assertIn("estomac", fenetre.session.meta.noeuds)
+        self.assertAlmostEqual(fenetre.session.meta.xp, 47)
+
+    def test_un_talent_trop_cher_ne_s_achete_pas(self):
+        from donjon.gui import Fenetre
+        fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(fenetre.root.destroy)
+        fenetre.session.meta.xp = 0
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        zone = next(z for z in fenetre.zones if z[5] == "talent estomac")
+        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
+        self.assertEqual(fenetre.session.meta.noeuds, [])
+
+    def test_un_talent_verrouille_n_est_pas_cliquable(self):
+        from donjon.gui import Fenetre
+        fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(fenetre.root.destroy)
+        fenetre.session.meta.xp = 10000
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        etiquettes = [z[5] for z in fenetre.zones]
+        self.assertIn("talent estomac", etiquettes)
+        self.assertNotIn("talent second_souffle", etiquettes)
 
     def test_la_carte_du_refuge_est_centree(self):
         fenetre = self.fenetre
@@ -188,9 +247,10 @@ class TestSouris(unittest.TestCase):
     def test_clic_sur_le_heros_ramasse_l_objet_au_sol(self):
         from donjon import items
         game = self.fenetre.game
+        avant = len(game.player.inventory)
         game.level.items[game.player.pos] = items.make("fleche")
         self._clic_case(game.player.pos)
-        self.assertEqual(len(game.player.inventory), 5)
+        self.assertEqual(len(game.player.inventory), avant + 1)
 
     def test_clic_lointain_declenche_un_trajet(self):
         fenetre = self.fenetre
@@ -222,10 +282,11 @@ class TestSouris(unittest.TestCase):
         game = self.fenetre.game
         etiquettes = [z[5] for z in self.fenetre.zones]
         self.assertNotIn("Ramasser", etiquettes)
+        avant = len(game.player.inventory)
         game.level.items[game.player.pos] = items.make("fleche")
         self.fenetre.dessiner()
         self._cliquer_zone("Ramasser")
-        self.assertEqual(len(game.player.inventory), 5)
+        self.assertEqual(len(game.player.inventory), avant + 1)
 
     def test_le_sac_se_pilote_a_la_souris(self):
         fenetre = self.fenetre

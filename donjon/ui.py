@@ -103,7 +103,7 @@ def _coffre(stdscr, session, game):
     lignes += [f"  {chr(ord('a') + i)}) {o.name}"
                for i, o in enumerate(game.player.inventory)]
     lignes += ["", f"LE COFFRE (chiffre pour reprendre) "
-                   f"{len(garde)}/{session.meta.CAPACITE_ENTREPOT}"]
+                   f"{len(garde)}/{session.capacite_entrepot()}"]
     lignes += [f"  {i + 1}) {o.name}" for i, o in enumerate(garde)] or ["  (vide)"]
     _overlay(stdscr, "Coffre du refuge", lignes, wait=False)
     touche = stdscr.getch()
