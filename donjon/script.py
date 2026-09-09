@@ -1,0 +1,158 @@
+"""Mode sans interface : jouer une partie depuis une chaîne de commandes.
+
+Sert à tester vite et de façon déterministe (mêmes appels que l'UI) :
+
+    python -m donjon --seed 42 --script "lllj,>"
+
+Langage de commandes :
+    h j k l y u b n   déplacement (gauche/bas/haut/droite + diagonales)
+    .                 attendre
+    ,                 ramasser
+    >                 descendre l'escalier
+    U<slot>           utiliser / lire / manger l'objet
+    E<slot>           équiper ou déséquiper
+    D<slot>           poser
+    T<slot><dir>      lancer l'objet dans une direction
+    #                 le reste de la ligne est un commentaire
+
+Les commandes d'objet sont en MAJUSCULES pour ne pas entrer en conflit avec les
+déplacements en diagonale (« u » = haut-droite, « U » = utiliser).
+
+Les emplacements (<slot>) vont de « a » à « l » comme dans l'inventaire.
+"""
+
+from .geom import DIRECTIONS
+
+MOVE_KEYS = {
+    "h": DIRECTIONS["w"], "l": DIRECTIONS["e"],
+    "j": DIRECTIONS["s"], "k": DIRECTIONS["n"],
+    "y": DIRECTIONS["nw"], "u": DIRECTIONS["ne"],
+    "b": DIRECTIONS["sw"], "n": DIRECTIONS["se"],
+}
+
+
+class ScriptError(ValueError):
+    pass
+
+
+def slot_index(char):
+    index = ord(char.lower()) - ord("a")
+    if index < 0:
+        raise ScriptError(f"emplacement invalide : {char!r}")
+    return index
+
+
+def tokenize(source):
+    """Découpe la source en commandes (chaque commande = 1 à 3 caractères)."""
+    text = "".join(line.split("#")[0] for line in source.splitlines())
+    text = "".join(text.split())          # les espaces ne sont que du confort
+    tokens = []
+    i = 0
+    while i < len(text):
+        char = text[i]
+        if char in MOVE_KEYS or char in ".,>":
+            tokens.append((char,))
+            i += 1
+        elif char in "UED":
+            if i + 1 >= len(text):
+                raise ScriptError(f"« {char} » attend un emplacement")
+            tokens.append((char, text[i + 1]))
+            i += 2
+        elif char == "T":
+            if i + 2 >= len(text):
+                raise ScriptError("« T » attend un emplacement puis une direction")
+            tokens.append((char, text[i + 1], text[i + 2]))
+            i += 3
+        else:
+            raise ScriptError(f"commande inconnue : {char!r}")
+    return tokens
+
+
+def run_command(game, token):
+    """Exécute une commande déjà découpée. Renvoie True si un tour est passé."""
+    char = token[0]
+    if char in MOVE_KEYS:
+        return game.cmd_move(MOVE_KEYS[char])
+    if char == ".":
+        return game.cmd_wait()
+    if char == ",":
+        return game.cmd_pickup()
+    if char == ">":
+        return game.cmd_descend()
+    if char == "U":
+        return game.cmd_use(slot_index(token[1]))
+    if char == "E":
+        return game.cmd_equip(slot_index(token[1]))
+    if char == "D":
+        return game.cmd_drop(slot_index(token[1]))
+    if char == "T":
+        direction = MOVE_KEYS.get(token[2])
+        if direction is None:
+            raise ScriptError(f"direction de jet invalide : {token[2]!r}")
+        return game.cmd_throw(slot_index(token[1]), direction)
+    raise ScriptError(f"commande non gérée : {token!r}")
+
+
+def run_script(game, source, on_step=None):
+    """Joue toute la partition. `on_step(game, token, acted)` après chaque commande."""
+    from .game import PLAYING
+    for token in tokenize(source):
+        if game.state != PLAYING:
+            break
+        acted = run_command(game, token)
+        if on_step:
+            on_step(game, token, acted)
+    return game
+
+
+def autoplay(game, steps=200, on_step=None):
+    """Bot bête mais fonctionnel : mange, se soigne, tape, et fonce à l'escalier.
+
+    Sert de test de robustesse rapide : des centaines de tours joués sans
+    exception, avec une graine fixe donc reproductibles.
+    """
+    from . import path
+    from .game import PLAYING
+    from .geom import chebyshev, step_toward
+
+    for _ in range(steps):
+        if game.state != PLAYING:
+            break
+        player = game.player
+        adjacent = [m for m in game.monsters() if chebyshev(m.pos, player.pos) == 1]
+        if adjacent:
+            acted = game.cmd_move(step_toward(player.pos, adjacent[0].pos))
+        elif player.hp <= player.max_hp // 3 and _find(game, "herbe_soin") is not None:
+            acted = game.cmd_use(_find(game, "herbe_soin"))
+        elif player.fullness <= 25 and _find(game, "onigiri") is not None:
+            acted = game.cmd_use(_find(game, "onigiri"))
+        elif game.level.items.get(player.pos) is not None:
+            acted = game.cmd_pickup()
+        elif player.pos == game.level.stairs:
+            acted = game.cmd_descend()
+        else:
+            acted = _seek(game, path, game.level.stairs)
+        if on_step:
+            on_step(game, ("auto",), acted)
+    return game
+
+
+def _find(game, key):
+    for index, item in enumerate(game.player.inventory):
+        if item.type.key == key:
+            return index
+    return None
+
+
+def _seek(game, path, goal):
+    """Un pas vers `goal` via le BFS, sinon un pas au hasard (anti-blocage)."""
+    from .geom import ALL_DIRS
+
+    blocked = {a.pos for a in game.actors if a.alive and a is not game.player}
+    direction = path.step_along(game.level, game.player.pos, goal, blocked)
+    if direction and game.cmd_move(direction):
+        return True
+    for direction in game.rng.shuffle(list(ALL_DIRS)):
+        if game.can_step(game.player, direction):
+            return game.cmd_move(direction)
+    return game.cmd_wait()
