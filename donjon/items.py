@@ -350,19 +350,39 @@ def make(key, plus=0, registre=None):
     return Item(ITEM_TYPES[key], plus, registre)
 
 
-def random_item(rng, depth=1, registre=None, unlocks=None, categorie=None):
-    """Tire un objet au hasard; les objets s'améliorent avec la profondeur.
+#: Part minimale du tirage revenant à la nourriture, quel que soit le nombre de
+#: familles d'objets débloquées par ailleurs. C'est un plancher : quand peu de
+#: choses sont ouvertes, les vivres gardent la part plus large qui leur revient.
+PART_NOURRITURE = 0.30
 
-    `categorie` restreint le tirage à une famille d'usage (nourriture, arme...)
-    et renvoie `None` si rien ne correspond : au générateur d'étage de décider
-    quoi faire de ce refus.
+
+def _part_reservee(candidats):
+    """Rend à la nourriture sa part du tirage, sans rien garantir par étage.
+
+    Sans ce rééquilibrage, chaque famille débloquée noie les vivres : leur part
+    tombe de 100 % à 11,7 % une fois tout ouvert, et acheter du contenu revient
+    à s'affamer. Le corriger en posant un vivre d'office à chaque étage serait
+    plus simple, mais on le sentirait — un étage doit pouvoir être avare.
     """
+    vivres = [(t, w) for t, w in candidats if t.category == FOOD]
+    autres = [(t, w) for t, w in candidats if t.category != FOOD]
+    if not vivres or not autres:
+        return candidats
+    facteur = (PART_NOURRITURE / (1 - PART_NOURRITURE)
+               * sum(w for _, w in autres) / sum(w for _, w in vivres))
+    if facteur <= 1:
+        return candidats                  # les vivres sont déjà bien servis
+    return [(t, w * facteur) for t, w in vivres] + autres
+
+
+def random_item(rng, depth=1, registre=None, unlocks=None):
+    """Tire un objet au hasard; les objets s'améliorent avec la profondeur."""
     candidats = [(t, t.weight) for t in ITEM_TYPES.values()
                  if depth >= t.depth_min
-                 and (categorie is None or t.category == categorie)
                  and (t.unlock is None or unlocks is None or t.unlock in unlocks)]
     if not candidats:
         return None
+    candidats = _part_reservee(candidats)
     item_type = rng.weighted(candidats)
     plus = 0
     if item_type.equippable:

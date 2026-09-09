@@ -401,20 +401,32 @@ tant que la nourriture n'était pas verrouillée : **la part de nourriture dans
 le tirage s'effondre à mesure qu'on débloque des familles** — 100 %, puis 26 %
 avec les herbes, puis 11,7 % une fois tout ouvert. Trois vivres par étage
 devenaient moins d'un. Le +1 trouvaille par famille ne compensait rien du tout ;
-acheter du contenu affamait. Correction structurelle plutôt que d'ajustement de
-poids : **le premier objet de chaque étage est un vivre**. Un onigiri rend 50 de
-ventre et un étage en coûte à peu près autant — la tension reste, la faillite
-disparaît.
+acheter du contenu affamait. Corrigé d'abord par une garantie : un vivre posé d'office à chaque étage. Ça
+marchait, et c'était **trop mécanique** — « il y a toujours un onigiri quelque
+part » se sent en jouant, et un étage doit pouvoir être avare. La garantie est
+donc statistique et non plus par étage : **la nourriture ne descend jamais sous
+30 % du tirage**, quel que soit le nombre de familles ouvertes. C'est un
+plancher, pas une part fixe — quand peu de choses sont débloquées, les vivres
+gardent la part plus large qui leur revient naturellement (100 % au début, 54 %
+avec les projectiles).
 
-| État | avant la garantie | après |
+Résultat une fois tout ouvert : 0,81 vivre par étage en moyenne, et **39 % des
+étages n'en portent aucun**. La faillite disparaît, la peur reste.
+
+| État | avant | après le plancher |
 |---|---|---|
 | épée + bouclier | 11,9 ± 0,4 | 11,9 ± 0,4 |
 | + nourriture | 24,0 ± 1,3 | 24,0 ± 1,3 |
-| + projectiles | 27,5 ± 1,4 | 28,1 ± 1,3 |
-| + herbes | 23,3 ± 1,4 | 26,0 ± 1,5 |
-| + grimoires | 20,9 ± 1,1 | 25,4 ± 1,3 |
-| + armurerie | 20,6 ± 1,0 | 27,1 ± 1,3 |
-| + abondance | — | 26,5 ± 1,0 |
+| + projectiles | 27,5 ± 1,4 | 27,5 ± 1,4 |
+| + herbes | 23,3 ± 1,4 | 24,8 ± 1,3 |
+| + grimoires | 20,9 ± 1,1 | 24,5 ± 1,2 |
+| + armurerie | 20,6 ± 1,0 | 27,2 ± 1,4 |
+| + abondance | — | 28,4 ± 1,4 |
+
+Un détour instructif au passage : une part *fixe* de 30 % faisait chuter l'état
+« + projectiles » de 27,5 à 21,9, parce qu'à deux objets débloqués la part
+naturelle des vivres (54 %) est bien supérieure au seuil. Une règle qui protège
+doit être un plancher, jamais un plafond déguisé.
 
 Plus aucun recul ne survit à la marge d'erreur, « Abondance » compris : la
 question laissée ouverte plus haut se referme, et sa cause était la même.

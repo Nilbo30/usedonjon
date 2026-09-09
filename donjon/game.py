@@ -107,23 +107,11 @@ class Game:
         occupied = {self.player.pos, self.level.stairs}
         for _ in range(self.rng.randint(*self.config.monsters_per_floor)):
             self.spawn_monster(occupied)
-        for index in range(self.rng.randint(*self.config.items_per_floor)):
+        for _ in range(self.rng.randint(*self.config.items_per_floor)):
             pos = dungeon.random_floor(self.level, self.rng, exclude=occupied)
             occupied.add(pos)
-            # Le premier objet de l'étage est un vivre. Sans cette garantie,
-            # chaque famille débloquée ferait chuter la part de nourriture dans
-            # le tirage — de 100 % à 12 % une fois tout ouvert : acheter du
-            # contenu ferait mourir de faim.
-            objet = None
-            if index == 0:
-                objet = items.random_item(self.rng, self.depth,
-                                          self.identification,
-                                          self.config.unlocks,
-                                          categorie=items.FOOD)
-            if objet is None:
-                objet = items.random_item(self.rng, self.depth,
-                                          self.identification,
-                                          self.config.unlocks)
+            objet = items.random_item(self.rng, self.depth,
+                                      self.identification, self.config.unlocks)
             if objet is not None:
                 self.level.items[pos] = objet
         for _ in range(self.rng.randint(*self.config.traps_per_floor)):

@@ -46,34 +46,34 @@ class TestApparitionParProfondeur(unittest.TestCase):
 class TestNourritureAuSol(unittest.TestCase):
     """La faim est le premier tueur : elle ne doit pas dépendre du tirage."""
 
-    def test_chaque_etage_porte_de_quoi_manger(self):
-        """Sinon débloquer une famille d'objets revient à s'affamer.
+    def test_la_nourriture_garde_sa_part_quoi_qu_on_debloque(self):
+        """Sinon chaque famille débloquée noie les vivres.
 
-        La part de nourriture dans le tirage tombe de 100 % à 12 % quand tout
-        est ouvert : sans garantie, acheter du contenu réduirait les vivres au
-        sol d'un facteur trois.
+        La part de nourriture tombait de 100 % à 11,7 % une fois tout ouvert :
+        acheter du contenu réduisait les vivres au sol d'un facteur trois.
         """
+        from donjon.config import TOUT_DEBLOQUE
+        from donjon.rng import Rng
+
+        for unlocks in ({"vivres"}, {"vivres", "herbes"}, TOUT_DEBLOQUE):
+            rng = Rng(5)
+            tires = [items.random_item(rng, 5, unlocks=unlocks)
+                     for _ in range(600)]
+            part = sum(1 for objet in tires
+                       if objet.category == items.FOOD) / len(tires)
+            self.assertGreater(part, items.PART_NOURRITURE - 0.08, unlocks)
+
+    def test_un_etage_peut_rester_avare(self):
+        """La part est statistique, pas un vivre posé d'office : ça se sentirait."""
         from donjon.game import Game
 
-        for graine in range(12):
+        sans_vivre = 0
+        for graine in range(20):
             game = Game(seed=graine)
-            au_sol = [objet.category for objet in game.level.items.values()]
-            self.assertIn(items.FOOD, au_sol, f"graine {graine}")
-
-    def test_le_tirage_sait_se_limiter_a_une_categorie(self):
-        from donjon.rng import Rng
-
-        rng = Rng(3)
-        for _ in range(50):
-            objet = items.random_item(rng, 8, categorie=items.FOOD)
-            self.assertEqual(objet.category, items.FOOD)
-
-    def test_une_categorie_absente_ne_tire_rien(self):
-        """Au générateur d'étage de décider quoi faire du refus."""
-        from donjon.rng import Rng
-
-        self.assertIsNone(items.random_item(Rng(3), 8, unlocks={"herbes"},
-                                            categorie=items.FOOD))
+            if not any(objet.category == items.FOOD
+                       for objet in game.level.items.values()):
+                sans_vivre += 1
+        self.assertGreater(sans_vivre, 0)
 
 
 class TestIdentification(unittest.TestCase):

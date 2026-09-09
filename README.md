@@ -249,9 +249,10 @@ l'orbe : chacun est un nœud à acheter, avec ses prérequis. Les choix sont
 définitifs. Chaque déblocage augmente ce qu'une vie rapporte, donc accélère le
 suivant.
 
-Un étage porte toujours au moins un vivre : sans cette garantie, chaque famille
-d'objets débloquée ferait chuter la part de nourriture dans le tirage, et
-acheter du contenu ferait mourir de faim.
+La nourriture ne descend jamais sous 30 % des trouvailles, quel que soit le
+nombre de familles d'objets débloquées — sans ce plancher, acheter du contenu
+noierait les vivres et ferait mourir de faim. C'est un plancher statistique, pas
+un vivre posé d'office : quatre étages sur dix n'en portent aucun.
 
 **On n'achète jamais des monstres.** Un nœud donne un outil, et le donjon
 apprend le même geste : l'épée fait venir ce qui se bat au contact, le bouclier
