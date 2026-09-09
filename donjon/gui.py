@@ -14,10 +14,12 @@ s'interrompt dès qu'un monstre apparaît. Les boutons du bas et le sac sont
 entièrement cliquables ; le survol décrit ce qu'il y a sous le curseur.
 """
 
+import textwrap
 import tkinter as tk
 
 from . import items as items_mod
 from . import path
+from . import skills as skills_mod
 from .game import PLAYING, WON, Game
 from .geom import DIRECTIONS, chebyshev, step_toward
 
@@ -110,6 +112,17 @@ def sombre(couleur, facteur=0.62):
     return melange(couleur, FOND, facteur)
 
 
+def fiche_objet(objet):
+    """Effet de l'objet et compétence qu'il entraîne, en une ou deux lignes."""
+    lignes = []
+    if objet.description:
+        lignes.append(objet.description)
+    competence = skills_mod.CATALOGUE.get(objet.type.skill)
+    if competence:
+        lignes.append(f"S'en servir entraîne : {competence.name}")
+    return lignes
+
+
 class Fenetre:
     def __init__(self, seed=None, max_depth=5, tile=TILE):
         self.seed = seed
@@ -124,6 +137,7 @@ class Fenetre:
         # zones cliquables : (x1, y1, x2, y2, action, étiquette)
         self.zones = []
         self.zone_survolee = None  # géométrie (x1, y1, x2, y2) de la zone survolée
+        self.etiquette_survolee = None
         self.ferme = False
         self.case_survolee = None
         self.destination = None    # cible du déplacement automatique
@@ -291,6 +305,7 @@ class Fenetre:
         case = None if zone else self.case_sous(event.x, event.y)
         if geometrie != self.zone_survolee:
             self.zone_survolee = geometrie
+            self.etiquette_survolee = zone[5] if zone else None
             self.case_survolee = case
             self.dessiner()
         elif case != self.case_survolee:
@@ -300,6 +315,7 @@ class Fenetre:
     def on_leave(self, _event):
         self.case_survolee = None
         self.zone_survolee = None
+        self.etiquette_survolee = None
         self.dessiner()
 
     def _zone_sous(self, px, py):
@@ -588,45 +604,53 @@ class Fenetre:
         cx, cy = self._cellule(*case)
         self.canvas.create_rectangle(cx, cy, cx + self.tile, cy + self.tile,
                                      outline=SURVOL, tags="survol")
-        texte = self.description(case)
-        if not texte:
+        lignes = self.description(case)
+        if not lignes:
             return
-        largeur = len(texte) * 6.6 + 14
-        gauche = min(px + 14, self.largeur - largeur - 4)
-        haut = min(py + 14, self.hauteur - 30)
-        self.canvas.create_rectangle(gauche, haut, gauche + largeur, haut + 22,
-                                     fill=PANNEAU, outline=BORDURE, tags="survol")
-        self.canvas.create_text(gauche + 7, haut + 11, text=texte, anchor="w",
-                                fill=TEXTE, font=("TkDefaultFont", 9),
-                                tags="survol")
+        largeur = min(self.largeur - 12,
+                      max(len(ligne) for ligne in lignes) * 6.4 + 16)
+        hauteur = 8 + len(lignes) * 15
+        gauche = max(4, min(px + 14, self.largeur - largeur - 4))
+        haut = max(4, min(py + 14, self.hauteur - hauteur - 4))
+        self.canvas.create_rectangle(gauche, haut, gauche + largeur,
+                                     haut + hauteur, fill=PANNEAU,
+                                     outline=BORDURE, tags="survol")
+        for index, ligne in enumerate(lignes):
+            self.canvas.create_text(gauche + 8, haut + 12 + index * 15, text=ligne,
+                                    anchor="w", tags="survol",
+                                    fill=TEXTE if index == 0 else TEXTE_PALE,
+                                    font=("TkDefaultFont", 9,
+                                          "bold" if index == 0 else "normal"))
 
     def description(self, case):
-        """Ce qu'il y a sur une case, en une ligne (étiquette de survol)."""
+        """Ce qu'il y a sur une case, en une à trois lignes (étiquette de survol)."""
         game, level = self.game, self.game.level
-        visible = case in game.visible_cells()
+        objet = level.items.get(case)
         if case == game.player.pos:
-            if case in level.items:
-                return f"Toi — clic pour ramasser {level.items[case].name}"
+            if objet:
+                return [f"Toi — clic pour ramasser {objet.name}"] + fiche_objet(objet)
             if case == level.stairs:
-                return "Toi — clic pour descendre l'escalier"
-            return "Toi — clic pour attendre un tour"
-        if visible:
+                return ["Toi — clic pour descendre l'escalier"]
+            return ["Toi — clic pour attendre un tour"]
+        if case in game.visible_cells():
             monstre = game.actor_at(case)
             if monstre:
                 statuts = monstre.status_line()
-                detail = f" · {statuts}" if statuts else ""
-                return (f"{monstre.name} — PV {monstre.hp}/{monstre.max_hp}"
-                        f" · atq {monstre.attack}{detail}")
-        if case in level.items:
-            return level.items[case].name
+                lignes = [f"{monstre.name} — PV {monstre.hp}/{monstre.max_hp}"
+                          f" · atq {monstre.attack} · déf {monstre.defense}"]
+                if statuts:
+                    lignes.append(statuts)
+                return lignes
+        if objet:
+            return [objet.name] + fiche_objet(objet)
         piege = level.traps.get(case)
         if piege and piege.revealed:
-            return piege.name
+            return [piege.name, "Marcher dessus le déclenche."]
         if case == level.stairs:
-            return "Escalier vers l'étage suivant"
+            return ["Escalier vers l'étage suivant"]
         if not level.walkable(case):
-            return "Mur"
-        return None
+            return ["Mur"]
+        return []
 
     # --- HUD, journal, boutons -------------------------------------------
     def _dessiner_hud(self):
@@ -717,18 +741,40 @@ class Fenetre:
             font=("TkDefaultFont", 10, "bold" if gras else "normal"))
 
     # --- panneaux --------------------------------------------------------
+    def _objet_decrit(self):
+        """L'objet dont on montre la fiche : le survolé, sinon le sélectionné."""
+        inventaire = self.game.player.inventory
+        index = None
+        if self.mode == "sac":
+            etiquette = self.etiquette_survolee or ""
+            if etiquette.startswith("objet "):
+                index = int(etiquette.split()[1])
+        else:
+            index = self.slot
+        if index is not None and 0 <= index < len(inventaire):
+            return inventaire[index]
+        return None
+
     def _dessiner_sac(self):
         joueur = self.game.player
         if not joueur.inventory:
             self._panneau("Sac", ["Ton sac est vide."], bouton_fermer=True)
             return
         titres = {
-            "sac": "Sac — clique un objet (ou tape sa lettre)",
+            "sac": "Sac — clique ou survole un objet (ou tape sa lettre)",
             "action": "Que faire de cet objet ?",
             "direction": "Clique la cible du jet (ou une direction au clavier)",
         }
+        objet_decrit = self._objet_decrit()
+        fiche = []
+        for ligne in fiche_objet(objet_decrit) if objet_decrit else []:
+            fiche += textwrap.wrap(ligne, 64) or [""]
+        if not fiche:
+            fiche = ["Survole un objet pour savoir ce qu'il fait."]
+
         lignes = len(joueur.inventory)
-        largeur, hauteur = 430, 74 + lignes * 24 + 44
+        largeur = 520
+        hauteur = 74 + lignes * 24 + 14 + len(fiche) * 16 + 44
         gauche = (self.largeur - largeur) / 2
         haut = (HUD_HEIGHT + self.game.level.height * self.tile - hauteur) / 2
         self.canvas.create_rectangle(gauche, haut, gauche + largeur, haut + hauteur,
@@ -740,7 +786,15 @@ class Fenetre:
             choisi = index == self.slot and self.mode != "sac"
             self._ligne_objet(gauche + 12, y, largeur - 24, index, objet, choisi)
 
-        y_actions = haut + 48 + lignes * 24
+        # Fiche de l'objet : à quoi il sert, et ce que son usage entraîne.
+        y_fiche = haut + 50 + lignes * 24
+        self.canvas.create_line(gauche + 12, y_fiche, gauche + largeur - 12, y_fiche,
+                                fill=BORDURE)
+        for index, ligne in enumerate(fiche):
+            self._texte(gauche + 16, y_fiche + 8 + index * 16, ligne,
+                        pale=objet_decrit is None or index > 0)
+
+        y_actions = y_fiche + 14 + len(fiche) * 16
         if self.mode == "action":
             actions = [("Utiliser", lambda: self.utiliser(self.game.cmd_use)),
                        ("Équiper", lambda: self.utiliser(self.game.cmd_equip)),

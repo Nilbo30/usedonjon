@@ -155,9 +155,11 @@ def _inventory_flow(stdscr, game):
     if not 0 <= slot < len(player.inventory):
         return "Pas d'objet à cette lettre."
     item = player.inventory[slot]
+    fiche = [item.description] if item.description else []
     _overlay(stdscr, item.name,
-             ["u) utiliser / lire / manger", "e) équiper ou ranger",
-              "t) lancer (puis une direction)", "d) poser", "échap) annuler"],
+             fiche + ["", "u) utiliser / lire / manger", "e) équiper ou ranger",
+                      "t) lancer (puis une direction)", "d) poser",
+                      "échap) annuler"],
              wait=False)
     action = stdscr.getch()
     action_char = chr(action) if 0 <= action < 256 else ""

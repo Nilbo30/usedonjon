@@ -47,7 +47,7 @@ def _approach(game, monster, target_pos):
 @behaviour("chasseur")
 def _chasseur(game, monster):
     player = game.player
-    if chebyshev(monster.pos, player.pos) == 1:
+    if game.can_attack(monster, player):
         game.attack(monster, player)
         return
     if _sees_player(game, monster):
@@ -65,7 +65,7 @@ def _chasseur(game, monster):
 def _erratique(game, monster):
     """Vole n'importe comment : une fois sur deux, direction aléatoire."""
     player = game.player
-    if chebyshev(monster.pos, player.pos) == 1 and game.rng.chance(0.7):
+    if game.can_attack(monster, player) and game.rng.chance(0.7):
         game.attack(monster, player)
         return
     if game.rng.chance(0.5):
@@ -83,7 +83,7 @@ def _peureux(game, monster):
         away = step_toward(player.pos, monster.pos)
         if game.try_move(monster, away):
             return
-    if dist == 1:
+    if game.can_attack(monster, player):
         game.attack(monster, player)
         return
     _chasseur(game, monster)

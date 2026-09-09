@@ -119,9 +119,17 @@ def autoplay(game, steps=200, on_step=None):
         if game.state != PLAYING:
             break
         player = game.player
-        adjacent = [m for m in game.monsters() if chebyshev(m.pos, player.pos) == 1]
+        # `can_attack` et non la simple adjacence : une cible en diagonale
+        # derrière un coin de mur est hors d'atteinte, et s'acharner dessus
+        # ferait tourner le bot dans le vide sans consommer de tour.
+        adjacent = [m for m in game.monsters() if game.can_attack(player, m)]
+        bloques = [m for m in game.monsters()
+                   if chebyshev(m.pos, player.pos) == 1
+                   and not game.can_attack(player, m)]
         if adjacent:
             acted = game.cmd_move(step_toward(player.pos, adjacent[0].pos))
+        elif bloques:
+            acted = _se_replacer(game, bloques[0])
         elif player.hp <= player.max_hp // 3 and _find(game, "herbe_soin") is not None:
             acted = game.cmd_use(_find(game, "herbe_soin"))
         elif player.fullness <= 25 and _find(game, "onigiri") is not None:
@@ -132,6 +140,8 @@ def autoplay(game, steps=200, on_step=None):
             acted = game.cmd_descend()
         else:
             acted = _seek(game, path, game.level.stairs)
+        if not acted:
+            acted = game.cmd_wait()      # jamais de tour perdu : pas de blocage
         if on_step:
             on_step(game, ("auto",), acted)
     return game
@@ -142,6 +152,21 @@ def _find(game, key):
         if item.type.key == key:
             return index
     return None
+
+
+def _se_replacer(game, cible):
+    """Contourner un coin de mur pour pouvoir frapper la cible au tour suivant."""
+    from .geom import ALL_DIRS, add, chebyshev
+
+    for direction in ALL_DIRS:
+        if not game.can_step(game.player, direction):
+            continue
+        depuis = add(game.player.pos, direction)
+        vers_cible = (cible.pos[0] - depuis[0], cible.pos[1] - depuis[1])
+        if (chebyshev(depuis, cible.pos) == 1
+                and not game.corner_blocked(depuis, vers_cible)):
+            return game.cmd_move(direction)
+    return False
 
 
 def _seek(game, path, goal):

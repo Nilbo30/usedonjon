@@ -52,6 +52,24 @@ class TestRobustesse(unittest.TestCase):
                 finished += 1
         self.assertGreater(finished, 20, "le bot devrait conclure la plupart des parties")
 
+    def test_le_bot_ne_tourne_jamais_a_vide(self):
+        """Régression : une cible inatteignable en diagonale bloquait le bot.
+
+        Chaque décision doit consommer un tour, sinon la partie n'avance plus.
+        """
+        from tests.helpers import place_monster, sandbox
+
+        game = sandbox(seed=5)
+        game.player.base_max_hp = 9999       # on mesure les tours, pas la survie
+        game.player.hp = 9999
+        pos = game.player.pos
+        game.level.set_tile((pos[0] + 1, pos[1]), "wall")
+        game.level.set_tile((pos[0], pos[1] + 1), "wall")
+        place_monster(game, (pos[0] + 1, pos[1] + 1), hp=9999)
+        avant = game.turn
+        autoplay(game, 50)
+        self.assertGreaterEqual(game.turn - avant, 50)
+
     def test_les_monstres_restent_sur_des_cases_valides(self):
         game = Game(seed=5)
         autoplay(game, 300)

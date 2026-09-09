@@ -126,6 +126,16 @@ Avec une XP fixe par action, « marcher » monte environ **neuf fois plus vite**
 qu'« épée ». C'est ce qui a dicté les courbes : `marche` coûte 25 XP le premier
 niveau, `epee` seulement 5.
 
+## Règles fixées en cours de route
+
+**Diagonales et angles de murs.** Une diagonale n'est franchissable — ni en
+déplacement, ni en coup — que si les deux cases orthogonales sont libres. La
+règle vaut pour le héros comme pour les monstres. Coût mesuré au bot :
+83 victoires sur 120 contre 92 sans la règle, à graines identiques. Le bot y
+perd parce qu'il ignore une cible qu'il ne peut pas frapper et continue sa
+route en encaissant ; un joueur humain, lui, y gagne un outil défensif (rompre
+le contact en passant un coin) que le bot n'exploite pas.
+
 ## Dette assumée
 
 - `bouclier` s'entraîne en encaissant : c'est le seul évènement (`coup_recu`)

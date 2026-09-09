@@ -15,7 +15,7 @@ from . import ai, dungeon, events, items, monsters, skills, tiles, traps
 from .config import RunConfig
 from .entities import ACTION_COST, Monster, Player
 from .events import Event
-from .geom import ALL_DIRS, add, chebyshev, is_diagonal
+from .geom import ALL_DIRS, add, chebyshev, is_diagonal, sub
 from .log import MessageLog
 from .rng import Rng
 
@@ -247,19 +247,29 @@ class Game:
     # ------------------------------------------------------------------ #
     # Mouvements et combat (utilisés par le joueur ET les monstres)
     # ------------------------------------------------------------------ #
+    def corner_blocked(self, pos, delta):
+        """Angle coupé : une diagonale dont les deux cases orthogonales sont murées.
+
+        La règle vaut pour les déplacements ET pour les coups : personne ne
+        frappe à travers le coin d'un mur, ni le héros ni les monstres.
+        """
+        if not is_diagonal(delta):
+            return False
+        cote_a = add(pos, (delta[0], 0))
+        cote_b = add(pos, (0, delta[1]))
+        return not (self.level.walkable(cote_a) and self.level.walkable(cote_b))
+
     def can_step(self, actor, delta):
         dest = add(actor.pos, delta)
-        if not self.level.walkable(dest):
+        if not self.level.walkable(dest) or self.actor_at(dest):
             return False
-        if self.actor_at(dest):
+        return not self.corner_blocked(actor.pos, delta)
+
+    def can_attack(self, attacker, target):
+        """Cible à portée de corps à corps, angles de murs respectés."""
+        if chebyshev(attacker.pos, target.pos) != 1:
             return False
-        if is_diagonal(delta):
-            # Pas de coupe d'angle : les deux cases orthogonales doivent être libres.
-            side_a = add(actor.pos, (delta[0], 0))
-            side_b = add(actor.pos, (0, delta[1]))
-            if not (self.level.walkable(side_a) and self.level.walkable(side_b)):
-                return False
-        return True
+        return not self.corner_blocked(attacker.pos, sub(target.pos, attacker.pos))
 
     def try_move(self, actor, delta):
         if not self.can_step(actor, delta):
@@ -334,6 +344,9 @@ class Game:
         dest = add(player.pos, delta)
         target = self.actor_at(dest)
         if target and target is not player:
+            if not self.can_attack(player, target):
+                self.say("Le coin du mur t'empêche de frapper là.")
+                return False
             self.attack(player, target)
             return self._finish(True)
         depart = player.pos

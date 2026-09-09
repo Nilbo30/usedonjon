@@ -4,6 +4,29 @@ from donjon import items
 from tests.helpers import place_monster, sandbox
 
 
+class TestFiches(unittest.TestCase):
+    """Chaque objet doit pouvoir expliquer ce qu'il fait."""
+
+    def test_tous_les_objets_ont_une_fiche(self):
+        for cle in items.ITEM_TYPES:
+            self.assertTrue(items.make(cle).description, cle)
+
+    def test_l_equipement_annonce_son_bonus_reel(self):
+        self.assertIn("+8", items.make("epee_fer", plus=2).description)
+        self.assertIn("+1", items.make("bouclier_bois", plus=-2).description)
+
+    def test_les_chiffres_des_fiches_suivent_les_donnees(self):
+        """Garde-fou : une fiche qui ment après un changement de puissance."""
+        for cle in ("herbe_soin", "herbe_vie", "onigiri", "fleche"):
+            objet = items.make(cle)
+            self.assertIn(str(objet.power), objet.description, cle)
+
+    def test_chaque_objet_entraine_une_competence_connue(self):
+        from donjon import skills
+        for cle, type_objet in items.ITEM_TYPES.items():
+            self.assertIn(type_objet.skill, skills.CATALOGUE, cle)
+
+
 class TestObjets(unittest.TestCase):
     def test_herbe_de_soin(self):
         game = sandbox()

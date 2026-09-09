@@ -96,13 +96,14 @@ manquent, donc la suite reste verte sur un serveur sans affichage.
 |---|---|
 | Étages générés (salles + couloirs), escalier | ✅ |
 | Visibilité « salle entière », mémoire de la carte | ✅ |
-| Combat au tour par tour | ✅ |
+| Combat au tour par tour, diagonales bloquées par les angles de murs | ✅ |
 | Compétences : on progresse dans ce qu'on pratique | ✅ |
 | Faim (ventre), régénération, mort de faim | ✅ |
 | Objets : herbes, parchemins, nourriture, armes, boucliers, flèches | ✅ |
 | Jet d'objets sur les monstres | ✅ |
 | Statuts (endormi, confus, paralysé) avec durée | ✅ |
 | Pièges cachés | ✅ |
+| Fiches d'objets au survol (effet, compétence entraînée) | ✅ |
 | Vitesses différentes (rapide / lent) | ✅ |
 | Trois IA (chasseur, erratique, peureux) + pathfinding | ✅ |
 | Jeu complet à la souris (clic, déplacement auto, survol, boutons) | ✅ |

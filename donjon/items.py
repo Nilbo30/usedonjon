@@ -86,6 +86,16 @@ class Item:
     def power(self):
         return self.type.power + self.plus
 
+    @property
+    def description(self):
+        """Une ligne expliquant l'effet. Les chiffres d'équipement sont calculés
+        pour tenir compte du bonus (+1, +2...) de l'exemplaire."""
+        if self.category == WEAPON:
+            return f"Arme : +{self.power} en attaque."
+        if self.category == SHIELD:
+            return f"Bouclier : +{self.power} en défense."
+        return self.type.note
+
     def use(self, game, user):
         fn = EFFECTS.get(self.type.on_use)
         return fn(game, user, self) if fn else False
@@ -218,23 +228,31 @@ def _register(*types):
 
 _register(
     ItemType("herbe_soin", "herbe de soin", "*", HERB, power=15, weight=20,
-             on_use="soigner", on_hit="jet_soin"),
+             on_use="soigner", on_hit="jet_soin",
+             note="Rend 15 PV. Lancée, elle soigne la cible."),
     ItemType("herbe_vie", "herbe de vie", "*", HERB, power=4, weight=4,
-             on_use="herbe_de_vie", on_hit="jet_soin"),
+             on_use="herbe_de_vie", on_hit="jet_soin",
+             note="Augmente définitivement les PV maximum de 4."),
     ItemType("herbe_confusion", "herbe de confusion", "*", HERB, weight=8,
-             on_use="confusion_soi", on_hit="jet_confusion"),
+             on_use="confusion_soi", on_hit="jet_confusion",
+             note="À lancer : désoriente la cible 12 tours. Mangée, "
+                  "elle te désoriente toi."),
     ItemType("graine_sommeil", "graine de sommeil", "*", HERB, weight=8,
-             on_use="sommeil_soi", on_hit="jet_sommeil"),
+             on_use="sommeil_soi", on_hit="jet_sommeil",
+             note="À lancer : endort la cible 10 tours, sans défense. "
+                  "Mangée, elle t'endort 8 tours."),
     ItemType("onigiri", "un onigiri", "%", FOOD, power=50, weight=14,
-             on_use="manger"),
+             on_use="manger", note="Rend 50 points de ventre."),
     ItemType("parchemin_lumiere", "parchemin de lumière", "?", SCROLL, weight=8,
-             on_use="lire_lumiere"),
+             on_use="lire_lumiere", note="Révèle tout l'étage, escalier compris."),
     ItemType("parchemin_panique", "parchemin de panique", "?", SCROLL, weight=7,
-             on_use="lire_panique"),
-    ItemType("parchemin_teleport", "parchemin de téléportation", "?", SCROLL, weight=7,
-             on_use="lire_teleport"),
+             on_use="lire_panique",
+             note="Désoriente 10 tours tous les monstres de la salle."),
+    ItemType("parchemin_teleport", "parchemin de téléportation", "?", SCROLL,
+             weight=7, on_use="lire_teleport",
+             note="Te téléporte au hasard sur l'étage. Utile pour fuir."),
     ItemType("fleche", "une flèche", "(", AMMO, power=7, weight=12,
-             on_hit="jet_degats"),
+             on_hit="jet_degats", note="À lancer : 7 dégâts à distance."),
     ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8),
     ItemType("epee_fer", "épée en fer", ")", WEAPON, power=6, weight=5),
     ItemType("bouclier_bois", "bouclier en bois", "[", SHIELD, power=3, weight=8),

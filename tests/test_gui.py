@@ -192,12 +192,31 @@ class TestSouris(unittest.TestCase):
         px, py = fenetre._cellule(*case)
         fenetre.on_motion(Clic(px + 5, py + 5))
         self.assertEqual(fenetre.case_survolee, case)
-        self.assertIn(monstre.name, fenetre.description(case))
+        self.assertIn(monstre.name, fenetre.description(case)[0])
 
     def test_survol_du_heros_annonce_l_action_du_clic(self):
         fenetre = self.fenetre
-        texte = fenetre.description(fenetre.game.player.pos)
-        self.assertIn("clic", texte.lower())
+        (ligne,) = fenetre.description(fenetre.game.player.pos)
+        self.assertIn("clic", ligne.lower())
+
+    def test_survol_d_un_objet_au_sol_explique_son_effet(self):
+        from donjon import items
+        fenetre = self.fenetre
+        case = (fenetre.game.player.pos[0] + 1, fenetre.game.player.pos[1])
+        fenetre.game.level.items[case] = items.make("graine_sommeil")
+        lignes = fenetre.description(case)
+        self.assertEqual(lignes[0], "graine de sommeil")
+        self.assertIn("endort", lignes[1])
+        self.assertIn("Herboristerie", lignes[2])
+
+    def test_le_sac_affiche_la_fiche_de_l_objet_choisi(self):
+        from donjon import items
+        fenetre = self.fenetre
+        fenetre.game.player.inventory = [items.make("parchemin_lumiere")]
+        fenetre.mode = "action"
+        fenetre.slot = 0
+        fenetre.dessiner()
+        self.assertIs(fenetre._objet_decrit(), fenetre.game.player.inventory[0])
 
 
 if __name__ == "__main__":
