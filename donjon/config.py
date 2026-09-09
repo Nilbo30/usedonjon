@@ -12,9 +12,14 @@ modification du moteur.
 """
 
 
+from . import monsters
+
 #: Une config construite à la main (tests, bot, CLI) a tout le contenu.
-TOUT_DEBLOQUE = frozenset({"butin", "herbes", "grimoires", "intuition",
+TOUT_DEBLOQUE = frozenset({"herbes", "grimoires", "intuition",
                            "armurerie", "coffre", "orbe"})
+
+#: De même pour le bestiaire : toutes les classes de créatures.
+TOUTES_CLASSES = frozenset(monsters.CLASSES)
 
 
 class RunConfig:
@@ -46,6 +51,7 @@ class RunConfig:
         hunger_enabled=True,
         is_hub=False,
         unlocks=(),
+        classes=(),
     ):
         self.max_depth = max_depth
         self.spawn_interval = spawn_interval
@@ -73,6 +79,9 @@ class RunConfig:
         # Drapeaux de contenu débloqué (voir tree.py). Une RunConfig nue les a
         # tous : c'est la progression qui restreint, pas le moteur.
         self.unlocks = frozenset(unlocks) if unlocks else TOUT_DEBLOQUE
+        # Classes de créatures réveillées. Le héros et le donjon apprennent les
+        # mêmes choses : c'est un talent qui ouvre chacune (voir tree.py).
+        self.classes = frozenset(classes) if classes else TOUTES_CLASSES
 
     def replace(self, **changements):
         """Copie modifiée : `config.replace(max_depth=10)`."""

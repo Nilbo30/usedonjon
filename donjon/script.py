@@ -130,6 +130,8 @@ def autoplay(game, steps=200, on_step=None):
             acted = game.cmd_move(step_toward(player.pos, adjacent[0].pos))
         elif bloques:
             acted = _se_replacer(game, bloques[0])
+        elif _a_mieux_en_main(game) is not None:
+            acted = game.cmd_equip(_a_mieux_en_main(game))
         elif player.hp <= player.max_hp // 3 and _find(game, "herbe_soin") is not None:
             acted = game.cmd_use(_find(game, "herbe_soin"))
         elif player.fullness <= 25 and _find(game, "onigiri") is not None:
@@ -150,6 +152,25 @@ def autoplay(game, steps=200, on_step=None):
         if on_step:
             on_step(game, ("auto",), acted)
     return game
+
+
+def _a_mieux_en_main(game):
+    """Le slot d'un équipement meilleur que celui porté, sinon None.
+
+    Sans ça le bot ramasse l'épée en fer et continue à cogner avec celle en
+    bois : toute mesure sur l'armement mesurerait sa cécité, pas le jeu.
+    """
+    from . import items as items_mod
+
+    player = game.player
+    porte = {items_mod.WEAPON: player.weapon, items_mod.SHIELD: player.shield}
+    for index, objet in enumerate(player.inventory):
+        if objet.category not in porte:
+            continue
+        actuel = porte[objet.category]
+        if objet is not actuel and objet.power > (actuel.power if actuel else 0):
+            return index
+    return None
 
 
 def _find(game, key):

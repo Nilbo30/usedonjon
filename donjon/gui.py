@@ -60,10 +60,12 @@ BARRE_VENTRE = "#e0a54f"
 SURVOL = "#f0e9a8"
 
 # --- l'arbre des talents, dessiné en éventail -------------------------------
-#: Un rayon par rang ; au-delà, les rangs s'ajoutent d'eux-mêmes.
-TALENT_RAYONS = (172, 250, 325)
+#: Le premier et le dernier anneau ; les rangs intermédiaires se répartissent
+#: entre les deux. Un rang de plus resserre l'éventail au lieu de le faire
+#: déborder — c'est arrivé, le jour où « Cuirasse » est passée au rang 3.
+TALENT_RAYON_PREMIER, TALENT_RAYON_DERNIER = 145, 325
 #: La fenêtre est large et basse : on étire l'éventail en ellipse.
-TALENT_ETIREMENT = 1.42
+TALENT_ETIREMENT = 1.75
 #: Ouverture de l'éventail, en degrés, de la droite vers la gauche.
 TALENT_OUVERTURE = (10, 170)
 #: Écart visé entre deux nœuds d'un même rang : il décide de la largeur
@@ -146,11 +148,16 @@ def sombre(couleur, facteur=0.62):
     return melange(couleur, FOND, facteur)
 
 
-def rayon_de_rang(rang):
-    """À quelle distance du centre se place un nœud de ce rang."""
-    if rang < len(TALENT_RAYONS):
-        return TALENT_RAYONS[rang]
-    return TALENT_RAYONS[-1] + (rang - len(TALENT_RAYONS) + 1) * 68
+def rayon_de_rang(rang, dernier_rang):
+    """À quelle distance du centre se place un nœud de ce rang.
+
+    Les anneaux se partagent la place disponible : l'arbre peut s'approfondir
+    sans jamais sortir du cadre.
+    """
+    if dernier_rang <= 0:
+        return TALENT_RAYON_PREMIER
+    ecart = (TALENT_RAYON_DERNIER - TALENT_RAYON_PREMIER) / dernier_rang
+    return TALENT_RAYON_PREMIER + rang * ecart
 
 
 def foret_de_branche(noeuds):
@@ -1118,6 +1125,7 @@ class Fenetre:
           voisinage.
         """
         rangs = tree_mod.profondeurs()
+        dernier = max(rangs.values(), default=0)
         debut, fin = (math.radians(angle) for angle in TALENT_OUVERTURE)
         branches = []
         for _nom, noeuds in tree_mod.par_branche():
@@ -1125,7 +1133,7 @@ class Fenetre:
             compte = {}
             for noeud in noeuds:
                 compte[rangs[noeud.key]] = compte.get(rangs[noeud.key], 0) + 1
-            besoin = max(nombre * TALENT_ESPACEMENT / rayon_de_rang(rang)
+            besoin = max(nombre * TALENT_ESPACEMENT / rayon_de_rang(rang, dernier)
                          for rang, nombre in compte.items())
             branches.append((racines, enfants, poids_des_feuilles(enfants),
                              besoin))
@@ -1133,24 +1141,26 @@ class Fenetre:
         ouverture, angle, places = fin - debut, fin, {}
         for racines, enfants, poids, besoin in branches:
             part = ouverture * besoin / total
-            self._partager(racines, enfants, poids, rangs, angle, part, places)
+            self._partager(racines, enfants, poids, rangs, angle, part, places,
+                           dernier)
             angle -= part
         return places
 
-    def _partager(self, noeuds, enfants, poids, rangs, haut, part, places):
+    def _partager(self, noeuds, enfants, poids, rangs, haut, part, places,
+                  dernier):
         """Découpe `part` entre ces nœuds, chacun au prorata de ses feuilles."""
         total = sum(poids[noeud.key] for noeud in noeuds) or 1
         for noeud in noeuds:
             sienne = part * poids[noeud.key] / total
             self._poser_talent(noeud, rangs[noeud.key], haut - sienne / 2,
-                               sienne, places)
+                               sienne, places, dernier)
             self._partager(enfants[noeud.key], enfants, poids, rangs, haut,
-                           sienne, places)
+                           sienne, places, dernier)
             haut -= sienne
 
-    def _poser_talent(self, noeud, rang, theta, part, places):
+    def _poser_talent(self, noeud, rang, theta, part, places, dernier):
         cx, cy = self._centre_de_l_eventail()
-        rayon = rayon_de_rang(rang)
+        rayon = rayon_de_rang(rang, dernier)
         places[noeud.key] = (
             cx + TALENT_ETIREMENT * rayon * math.cos(theta),
             cy - rayon * math.sin(theta),

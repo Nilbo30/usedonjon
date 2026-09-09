@@ -6,7 +6,7 @@ Le test le plus utile est le dernier : il vérifie qu'une première mort suffit
 
 import unittest
 
-from donjon import items, tree
+from donjon import items, monsters, tree
 from donjon.config import RunConfig
 from donjon.meta import Meta
 from donjon.script import autoplay
@@ -37,6 +37,33 @@ class TestCoherence(unittest.TestCase):
                                 f"{noeud.key}: {champ}")
             for champ in noeud.reglages:
                 self.assertTrue(hasattr(base, champ), f"{noeud.key}: {champ}")
+
+    def test_les_objets_de_depart_existent(self):
+        for noeud in tree.ARBRE.values():
+            for cle in noeud.objets:
+                self.assertIn(cle, items.ITEM_TYPES, noeud.key)
+
+    def test_les_classes_reveillees_existent(self):
+        for noeud in tree.ARBRE.values():
+            for cle in noeud.classes:
+                self.assertIn(cle, monsters.CLASSES, noeud.key)
+
+    def test_chaque_classe_est_reveillee_par_un_noeud(self):
+        """Une classe que rien n'ouvre ne se croiserait jamais en jeu."""
+        reveillees = {cle for noeud in tree.ARBRE.values()
+                      for cle in noeud.classes}
+        self.assertEqual(reveillees, set(monsters.CLASSES))
+
+    def test_un_noeud_qui_reveille_une_classe_tient_sa_promesse(self):
+        """La leçon du nœud « Butin » : pas de talent qui ne fasse rien.
+
+        Réveiller une classe dont aucune créature ne porte le nom, c'est vendre
+        un danger qui n'existe pas.
+        """
+        peuplees = {espece["classe"] for espece in monsters.SPECIES}
+        for noeud in tree.ARBRE.values():
+            for cle in noeud.classes:
+                self.assertIn(cle, peuplees, f"{noeud.key} → {cle}")
 
     def test_la_base_verrouillee_vise_des_champs_reels(self):
         base = RunConfig()
@@ -163,9 +190,9 @@ class TestRythme(unittest.TestCase):
                     break
                 ordre.append(session.acheter(
                     min(candidats, key=lambda n: n.cost).key).key)
-        self.assertIn("barda", ordre)
+        self.assertIn("epee", ordre)
         self.assertIn("creatures", ordre)
-        self.assertLess(ordre.index("creatures"), ordre.index("barda"))
+        self.assertLess(ordre.index("creatures"), ordre.index("epee"))
 
 
 if __name__ == "__main__":

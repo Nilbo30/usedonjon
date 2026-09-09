@@ -174,14 +174,18 @@ Deux choix structurent la suite :
 
 ## Ajouter du contenu
 
-**Un monstre** — une entrée dans `donjon/monsters.py` :
+**Un monstre** — une entrée dans `donjon/monsters.py`, à l'intersection d'une
+**famille** (ce qu'elle est) et d'une **classe** (ce qu'elle fait) :
 
 ```python
-{"key": "ninja", "name": "Ninja", "glyph": "n", "hp": 18, "attack": 10,
- "defense": 4, "exp": 14, "depth": (4, 99), "weight": 10, "behaviour": "peureux",
- "color": "#d0c05b", "shape": "pointu"}
+{"key": "ninja", "name": "Ninja", "glyph": "n",
+ "famille": "humanoide", "classe": "embusque",
+ "hp": 18, "attack": 10, "defense": 4,
+ "depth": (4, 99), "weight": 10, "color": "#d0c05b", "shape": "pointu"}
 ```
 
+La famille donne l'allure par défaut et, bientôt, les forces et faiblesses ; la
+classe donne le comportement (voir `ai.py`) et le talent qui la réveille.
 `glyph` sert au terminal, `color` et `shape` (`rond`, `carre`, `pointu`) à la
 fenêtre graphique — les deux derniers sont facultatifs.
 
@@ -244,6 +248,12 @@ L'équipement, les créatures, les objets, les herbes, les parchemins, le coffre
 l'orbe : chacun est un nœud à acheter, avec ses prérequis. Les choix sont
 définitifs. Chaque déblocage augmente ce qu'une vie rapporte, donc accélère le
 suivant.
+
+**On n'achète jamais des monstres.** Un nœud donne un outil, et le donjon
+apprend le même geste : l'épée fait venir ce qui se bat au contact, le bouclier
+ce qui encaisse, les herbes ce qui frappe puis se retire. La menace qu'un achat
+réveille est ce qui rend le suivant désirable — et le critère est mesuré : après
+chaque nœud, l'XP par vie doit monter.
 
 L'arbre s'affiche en éventail : au centre l'XP qu'il reste à dépenser, autour
 les branches qui s'ouvrent en rayons, un cran plus loin du centre par prérequis.

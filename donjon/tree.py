@@ -10,7 +10,15 @@ contenu :
 
 * `effets` — des nombres qui s'ajoutent à la `RunConfig` (+25 de ventre) ;
 * `reglages` — des valeurs qui la remplacent (le kit de départ, les cadences) ;
-* `unlocks` — des drapeaux que la génération consulte (« grimoires »).
+* `unlocks` — des drapeaux que la génération consulte (« grimoires ») ;
+* `objets` — ce qui s'ajoute au sac de départ ;
+* `classes` — les classes de créatures que le nœud réveille (voir monsters.py).
+
+Ce dernier point est une règle du jeu, pas un détail : **ce que le héros
+apprend, le donjon l'apprend aussi**. Le nœud qui te donne une épée fait venir
+les créatures qui se battent au contact, celui qui te donne un bouclier fait
+apparaître ce qui encaisse. On n'achète donc jamais des monstres — on achète un
+outil, et la menace qu'il éveille est ce qui rendra le suivant désirable.
 
 Ajouter les baguettes, plus tard, sera : un nœud ici, un `unlock="baguettes"`
 sur les objets concernés. Le moteur ne bouge pas.
@@ -28,7 +36,7 @@ BASE_VERROUILLEE = {
 
 class Noeud:
     def __init__(self, key, name, cost, description, branche="", parents=(),
-                 effets=None, reglages=None, unlocks=()):
+                 effets=None, reglages=None, unlocks=(), objets=(), classes=()):
         self.key = key
         self.name = name
         self.cost = cost
@@ -38,6 +46,8 @@ class Noeud:
         self.effets = dict(effets or {})       # additifs
         self.reglages = dict(reglages or {})   # absolus
         self.unlocks = tuple(unlocks)
+        self.objets = tuple(objets)            # s'ajoutent au sac de départ
+        self.classes = tuple(classes)          # créatures réveillées
 
     def accessible(self, acquis):
         return all(parent in acquis for parent in self.parents)
@@ -70,49 +80,52 @@ _enregistrer(
           branche="Survie", parents=("endurci",), effets={"start_hp": 20}),
 
     # --- Équipement : la réponse au problème posé par les créatures -------
-    Noeud("barda", "Barda", 12,
-          "Tu pars avec une épée, un bouclier et un onigiri.",
+    Noeud("epee", "L'épée", 12,
+          "Tu pars avec une épée et un onigiri. Le donjon s'arme aussi : des "
+          "créatures viennent au contact, plus dures que les bêtes.",
           branche="Équipement", parents=("creatures",),
-          reglages={"starting_kit": ("epee_bois", "bouclier_bois", "onigiri")}),
+          objets=("epee_bois", "onigiri"), classes=("guerrier",)),
+    Noeud("bouclier", "Le bouclier", 12,
+          "Tu pars avec un bouclier. Le donjon se protège aussi : des "
+          "créatures blindées apparaissent, difficiles à entamer.",
+          branche="Équipement", parents=("epee",),
+          objets=("bouclier_bois",), classes=("blinde",)),
     Noeud("affutage", "Affûtage", 35, "+1 en attaque.",
-          branche="Équipement", parents=("barda",), effets={"start_attack": 1}),
+          branche="Équipement", parents=("epee",), effets={"start_attack": 1}),
     Noeud("cuirasse", "Cuirasse", 35, "+1 en défense.",
-          branche="Équipement", parents=("barda",), effets={"start_defense": 1}),
+          branche="Équipement", parents=("bouclier",), effets={"start_defense": 1}),
 
     # --- Monde vivant : d'abord le danger, l'équipement viendra après -----
     Noeud("creatures", "Créatures", 12,
-          "Le donjon se peuple : monstres et pièges. Tu n'as que tes poings — "
-          "cogner entraîne le pugilat.",
-          branche="Monde vivant",
+          "Le donjon se peuple : des bêtes rôdent, et des pièges. Tu n'as que "
+          "tes poings — cogner entraîne le pugilat.",
+          branche="Monde vivant", classes=("rodeur", "erratique"),
           reglages={"monsters_per_floor": (3, 6), "traps_per_floor": (1, 3),
                     "spawn_interval": 30}),
-    Noeud("butin", "Butin", 35,
-          "Les créatures vaincues laissent parfois quelque chose.",
-          branche="Monde vivant", parents=("creatures",), unlocks=("butin",)),
-    Noeud("faune", "Faune variée", 90,
-          "Des espèces plus nombreuses, et un donjon plus habité.",
-          branche="Monde vivant", parents=("creatures",),
-          reglages={"monsters_per_floor": (4, 8), "spawn_interval": 22}),
 
     # --- Trouvailles : ce qui traîne par terre ----------------------------
     Noeud("fouille", "Fouille", 12,
           "Des objets apparaissent au sol : vivres et projectiles.",
           branche="Trouvailles", reglages={"items_per_floor": (2, 4)}),
     Noeud("herbes", "Herbes", 35,
-          "Herbes et graines rejoignent les trouvailles.",
-          branche="Trouvailles", parents=("fouille",), unlocks=("herbes",)),
+          "Herbes et graines rejoignent les trouvailles. Le donjon apprend "
+          "aussi à souffler : des créatures frappent puis se retirent.",
+          branche="Trouvailles", parents=("fouille",), unlocks=("herbes",),
+          classes=("embusque",), effets={"items_per_floor": (1, 1)}),
     Noeud("grimoires", "Grimoires", 35,
           "Les parchemins rejoignent les trouvailles — non identifiés.",
-          branche="Trouvailles", parents=("fouille",), unlocks=("grimoires",)),
+          branche="Trouvailles", parents=("fouille",), unlocks=("grimoires",),
+          effets={"items_per_floor": (1, 1)}),
     Noeud("intuition", "Intuition", 90,
           "Le premier parchemin ramassé de chaque vie est reconnu d'emblée.",
           branche="Trouvailles", parents=("grimoires",), unlocks=("intuition",)),
     Noeud("armurerie", "Armurerie", 90,
           "Armes et boucliers se trouvent aussi dans le donjon.",
-          branche="Trouvailles", parents=("fouille",), unlocks=("armurerie",)),
+          branche="Trouvailles", parents=("fouille",), unlocks=("armurerie",),
+          effets={"items_per_floor": (1, 1)}),
     Noeud("abondance", "Abondance", 220, "Deux trouvailles de plus par étage.",
           branche="Trouvailles", parents=("herbes",),
-          reglages={"items_per_floor": (4, 6)}),
+          effets={"items_per_floor": (2, 2)}),
 
     # --- Le refuge --------------------------------------------------------
     Noeud("coffre", "Le coffre", 35,

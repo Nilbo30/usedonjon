@@ -39,7 +39,7 @@ class Clic:
         self.y = y
 
 
-TALENTS_DE_TEST = ("estomac", "creatures", "barda", "fouille", "herbes",
+TALENTS_DE_TEST = ("estomac", "creatures", "epee", "fouille", "herbes",
                    "grimoires", "coffre")
 
 
@@ -198,6 +198,42 @@ class TestRefuge(unittest.TestCase):
         fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
         self.assertNotIn("second_souffle", fenetre.session.meta.noeuds)
         self.assertEqual(fenetre.session.meta.xp, 10000)
+
+    def test_l_eventail_place_tous_les_noeuds_dans_le_cadre(self):
+        """Un nœud d'une branche oubliée dans `BRANCHES` disparaîtrait sans bruit.
+
+        La marge laisse la place au nom, posé à côté du rond : c'est elle qui a
+        manqué le jour où l'arbre a gagné un rang de profondeur.
+        """
+        from donjon import tree
+        from donjon.gui import HUD_HEIGHT
+
+        fenetre = self.fenetre
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        places = fenetre._disposition_talents()
+        self.assertEqual(len(places), len(tree.ARBRE))
+        bas = HUD_HEIGHT + fenetre.hauteur_carte
+        for cle, (x, y, _angle, _place) in places.items():
+            self.assertTrue(40 <= x <= fenetre.largeur - 40, f"{cle} en x={x}")
+            self.assertTrue(HUD_HEIGHT + 60 <= y <= bas - 40, f"{cle} en y={y}")
+
+    def test_les_ronds_de_l_eventail_ne_se_touchent_pas(self):
+        """Deux talents collés seraient impossibles à distinguer et à cliquer."""
+        import math
+
+        from donjon.gui import RAYON_TALENT
+
+        fenetre = self.fenetre
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        places = fenetre._disposition_talents()
+        for premier, un in places.items():
+            for second, autre in places.items():
+                if premier < second:
+                    self.assertGreater(math.dist(un[:2], autre[:2]),
+                                       2 * RAYON_TALENT + 6,
+                                       f"{premier} / {second}")
 
     def test_aucun_trait_ne_se_croise(self):
         """Deux traits qui se croisent donnent un prérequis faux à l'œil.

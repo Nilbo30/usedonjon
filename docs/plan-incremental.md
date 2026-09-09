@@ -87,7 +87,8 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 7 | Le refuge : un lieu où l'on marche, avec son coffre | ✅ fait |
 | 8 | L'orbe : remonter au refuge avec ses acquis | ✅ fait |
 | 9 | L'arbre des talents : le jeu entier se déverrouille | ✅ fait |
-| 10 | Le butin des créatures | à faire |
+| 10 | Familles et classes de créatures ; ce qu'on apprend, le donjon l'apprend | ✅ fait |
+| 11 | Le butin des créatures | à faire |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -313,6 +314,90 @@ de `BRANCHES` disparaîtrait sans bruit.
 profit de `xp` / `xp_totale` / `noeuds`. Les anciennes sauvegardes repartent de
 zéro. Un talent inconnu dans un fichier (version antérieure ou future) est
 ignoré plutôt que fatal.
+
+### Étape 10 — familles, classes, et le couplage qui les paie
+
+Le bestiaire était une liste de six blocs figés où le « Sorcier bleu » portait
+à la fois son espèce, ses chiffres, son comportement et son nom. Il devient un
+croisement à deux axes :
+
+* la **famille** — animal, humanoïde, homoncule — dit ce qu'est la créature :
+  son allure, les étages où on la croise, et bientôt ses forces et faiblesses ;
+* la **classe** — rôdeur, erratique, embusqué, guerrier, blindé — dit ce qu'elle
+  fait : son comportement (`ai.py`) et le talent qui la réveille.
+
+Les chiffres restent écrits à la main, créature par créature : un bestiaire se
+règle à l'oreille, pas au produit de deux multiplicateurs. Les axes portent le
+sens, pas l'arithmétique. La bascule a été vérifiée à l'empreinte : md5
+identique sur huit parties scriptées, `4fde85d8bf3105dd3f0e5c8d648f2f5f`.
+
+**La règle du couplage**, et c'est elle qui vaut l'étape : *ce que le héros
+apprend, le donjon l'apprend aussi*. Un nœud ne vend jamais des monstres — il
+vend un outil, et la classe qu'il réveille vient avec.
+
+| Le nœud donne | Le donjon apprend |
+|---|---|
+| l'épée | le **guerrier** — frappe fort, on choisit ses combats |
+| le bouclier | le **blindé** — encaisse, il faut frapper plus fort ou fuir |
+| les herbes | l'**embusqué** — frappe puis se retire pour souffler |
+
+Cela répond à une question posée pendant la conception : *si le rat est
+l'ennemi le plus facile, qu'est-ce qui empêche de ne jamais acheter le reste ?*
+Trois réponses, dans l'ordre de force :
+
+1. **On n'achète pas les monstres**, donc on ne peut pas les refuser sans
+   refuser sa propre puissance.
+2. **Le donjon ne s'adoucit pas** : quand aucune créature réveillée n'habite un
+   étage, `table_for_depth` rappelle les plus proches au lieu de vider l'étage,
+   et `_scale_to_depth` les met à niveau. Sans ce repli, ne rien débloquer
+   serait la stratégie optimale — un donjon désert où l'on descend encaisser le
+   multiplicateur de profondeur.
+3. **Le revenu plafonne** : la monnaie du méta est la somme des niveaux de
+   compétences, et une classe qu'on n'a jamais réveillée est une compétence
+   qu'on ne pratique pas.
+
+**Le critère d'acceptation** est chiffré : après chaque achat, l'XP par vie doit
+monter. Il a immédiatement condamné deux nœuds.
+
+| État | XP/vie |
+|---|---|
+| donjon vide | 4,5 |
+| + créatures | 5,8 |
+| + l'épée | 8,7 |
+| + le bouclier | 11,6 |
+| + fouille | 23,1 |
+
+« Faune variée » (23,1 → 21,3) ne donnait rien au joueur : rien qu'une densité
+de monstres plus forte. **Supprimé** — sous cette grammaire, aucun nœud n'a le
+droit de n'apporter que du danger. Sa classe d'embusqués est passée aux herbes,
+dont elle est le miroir. « Butin », qui promettait un contenu inexistant, est
+sorti de l'arbre en attendant l'étape 11.
+
+**Deux leçons de méthode**, plus utiles que les chiffres :
+
+*L'instrument avant la conclusion.* Les nœuds d'objets semblaient tous faire
+reculer l'XP. Vérification faite, **le bot ne s'équipait jamais** : il ramassait
+l'épée en fer et continuait à cogner avec celle en bois. Mesurer « Armurerie »
+avec ce bot-là, c'était mesurer sa cécité. Corrigé (`_a_mieux_en_main`).
+
+*Le bruit avant le signal.* Même corrigé, la série semblait reculer trois fois
+de suite. Avec 80 parties et une marge d'erreur, la vérité est plus plate :
+21,0 ± 1,2 → 19,6 ± 0,9 → 18,8 ± 1,0 → 19,9 ± 0,9. **Ces écarts ne sont pas
+significatifs** ; j'avais lu du bruit comme du signal, exactement le travers que
+je m'étais promis d'éviter. Reste un effet réel : chaque famille d'objets
+débloquée diluait la nourriture dans un nombre de trouvailles constant —
+acheter du contenu faisait mourir de faim. Chaque famille ajoute désormais
++1 trouvaille par étage, ce qui a demandé que les effets sachent s'additionner
+terme à terme (`Meta._somme`).
+
+**Rythme observé** après le découpage de « Barda » : Estomac (vie 1) ·
+Constitution (2) · Besace (4,3) · Créatures (6,3) · **L'épée** (8,3) ·
+**Le bouclier** (9,5) · Fouille (10,7). Le nœud supplémentaire coûte moins de
+deux vies.
+
+**Ce qui reste ouvert** : « Abondance » (17,5 ± 0,8 contre 19,9 ± 0,9) est le
+seul recul qui survive à la marge d'erreur. Hypothèse : le bot se détourne pour
+ramasser et y perd plus de ventre qu'il n'y gagne. Non tranché.
 
 ## Règles fixées en cours de route
 

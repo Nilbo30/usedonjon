@@ -79,21 +79,41 @@ class Meta:
         self.noeuds.append(cle)
         return noeud
 
+    @staticmethod
+    def _somme(actuel, valeur):
+        """Additionne deux effets — terme à terme quand ce sont des couples.
+
+        « +1 trouvaille par étage » s'écrit `(1, 1)` : sans ce traitement,
+        Python collerait les tuples bout à bout au lieu de les additionner.
+        """
+        if isinstance(valeur, tuple):
+            return tuple(a + b for a, b in zip(actuel, valeur))
+        return actuel + valeur
+
     def _cumul(self):
-        """Somme des effets, valeurs de réglage et drapeaux des talents acquis."""
+        """Ce que les talents acquis apportent, chaque genre à sa façon.
+
+        Les effets s'additionnent, les réglages remplacent, les drapeaux, les
+        objets de départ et les classes de créatures s'accumulent.
+        """
         effets, reglages, unlocks = {}, {}, set()
+        objets, classes = [], set()
         for cle in self.noeuds:
             noeud = tree.ARBRE.get(cle)
             if noeud is None:
                 continue                      # talent d'une version antérieure
             for champ, valeur in noeud.effets.items():
-                effets[champ] = effets.get(champ, 0) + valeur
+                courant = effets.get(champ)
+                effets[champ] = (valeur if courant is None
+                                 else self._somme(courant, valeur))
             reglages.update(noeud.reglages)
             unlocks.update(noeud.unlocks)
-        return effets, reglages, unlocks
+            objets += list(noeud.objets)
+            classes.update(noeud.classes)
+        return effets, reglages, unlocks, objets, classes
 
     def capacite_entrepot(self):
-        effets, _, _ = self._cumul()
+        effets, *_ = self._cumul()
         return CAPACITE_ENTREPOT_BASE + effets.get("coffre_places", 0)
 
     # --- influence sur les runs ------------------------------------------
@@ -104,14 +124,22 @@ class Meta:
         chemin-ci, et lui seul, qui verrouille ce qui n'a pas été gagné.
         """
         base = base or RunConfig()
-        effets, reglages, unlocks = self._cumul()
+        effets, reglages, unlocks, objets, classes = self._cumul()
         valeurs = dict(tree.BASE_VERROUILLEE)
         valeurs.update(reglages)
+        valeurs["starting_kit"] = tuple(objets)
         for champ, valeur in effets.items():
             if champ in tree.EFFETS_META:
                 continue
-            valeurs[champ] = getattr(base, champ) + valeur
+            # Sur la valeur déjà réglée s'il y en a une : un effet « +1
+            # trouvaille » doit s'ajouter à ce que « Fouille » a posé, pas le
+            # court-circuiter.
+            depart = valeurs.get(champ, getattr(base, champ))
+            valeurs[champ] = self._somme(depart, valeur)
+        # Un ensemble vide veut dire « tout » côté RunConfig : il faut donc un
+        # sentinelle pour dire « rien » sans rouvrir le contenu.
         valeurs["unlocks"] = frozenset(unlocks) or frozenset({"__rien__"})
+        valeurs["classes"] = frozenset(classes) or frozenset({"__aucune__"})
         return base.replace(**valeurs)
 
     def lines(self):

@@ -11,6 +11,7 @@ import tempfile
 import unittest
 
 from donjon import meta as meta_mod
+from donjon import monsters
 from donjon import tree
 from donjon.config import RunConfig
 from donjon.meta import Meta
@@ -90,12 +91,26 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
                    + tree.ARBRE["ventre_ogre"].effets["max_fullness"])
         self.assertEqual(meta.run_config(base).max_fullness, attendu)
 
-    def test_les_reglages_remplacent(self):
+    def test_les_objets_de_depart_s_accumulent(self):
+        """Deux nœuds d'équipement remplissent le même sac, sans s'écraser."""
+        meta = Meta(xp=1000)
+        for cle in ("creatures", "epee", "bouclier"):
+            meta.acheter(cle)
+        self.assertEqual(meta.run_config().starting_kit,
+                         tree.ARBRE["epee"].objets + tree.ARBRE["bouclier"].objets)
+
+    def test_les_classes_reveillees_arrivent_dans_la_config(self):
+        """Ce que le héros apprend, le donjon l'apprend : pas plus, pas moins."""
         meta = Meta(xp=1000)
         meta.acheter("creatures")
-        meta.acheter("barda")
-        self.assertEqual(meta.run_config().starting_kit,
-                         tree.ARBRE["barda"].reglages["starting_kit"])
+        self.assertIn("rodeur", meta.run_config().classes)
+        self.assertNotIn("guerrier", meta.run_config().classes)
+        meta.acheter("epee")
+        self.assertIn("guerrier", meta.run_config().classes)
+
+    def test_sans_talent_aucune_classe_n_est_reveillee(self):
+        self.assertEqual(Meta().run_config().classes & set(monsters.CLASSES),
+                         set())
 
     def test_les_drapeaux_arrivent_dans_la_config(self):
         meta = Meta(xp=1000)
@@ -109,7 +124,8 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
         session.meta = Meta(xp=1000)
         session.meta.acheter("estomac")
         session.meta.acheter("creatures")
-        session.meta.acheter("barda")
+        session.meta.acheter("epee")
+        session.meta.acheter("bouclier")
         game = session.descendre()
         self.assertGreater(game.player.max_fullness, RunConfig().max_fullness)
         self.assertEqual(len(game.player.inventory), 3)
@@ -154,7 +170,7 @@ class TestPersistance(unittest.TestCase):
 
     def test_aller_retour(self):
         meta = Meta(xp=12.5, xp_totale=99, runs=9, best_depth=13,
-                    best_levels=22, noeuds=["estomac", "barda"])
+                    best_levels=22, noeuds=["estomac", "epee"])
         self.assertTrue(meta_mod.save(meta, self.chemin))
         relu = meta_mod.load(self.chemin)
         self.assertEqual(relu.to_dict(), meta.to_dict())

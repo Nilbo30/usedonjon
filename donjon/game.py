@@ -124,7 +124,10 @@ class Game:
                  else f"Tu entres dans le donjon. Étage {self.depth}.")
 
     def spawn_monster(self, occupied=(), away_from_player=False):
-        species = self.rng.weighted(monsters.table_for_depth(self.depth))
+        table = monsters.table_for_depth(self.depth, self.config.classes)
+        if not table:                 # aucune classe réveillée : donjon désert
+            return None
+        species = self.rng.weighted(table)
         exclude = set(occupied) | {a.pos for a in self.actors}
         for _ in range(20):
             pos = dungeon.random_floor(self.level, self.rng, exclude=exclude)
