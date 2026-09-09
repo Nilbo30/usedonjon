@@ -12,7 +12,7 @@ tester une idée en quelques secondes et faire grossir les mécaniques ensuite.
 ```bash
 python3 -m donjon                # fenêtre graphique (tkinter, fourni avec Python)
 python3 -m donjon --seed 42      # partie reproductible
-python3 -m donjon --depth 10     # 10 étages avant la victoire
+python3 -m donjon --depth 10     # raccourcir le donjon (30 étages par défaut)
 python3 -m donjon --tile 26      # cases plus grandes
 python3 -m donjon --tui          # version terminal (ASCII, curses)
 ```
@@ -96,7 +96,9 @@ manquent, donc la suite reste verte sur un serveur sans affichage.
 
 | Mécanique | État |
 |---|---|
-| Étages générés (salles + couloirs), escalier | ✅ |
+| 30 étages générés (salles + couloirs), escalier | ✅ |
+| XP et monstres qui montent avec la profondeur | ✅ |
+| Bilan de fin de run (étage record, tours, compétences, cause) | ✅ |
 | Visibilité « salle entière », mémoire de la carte | ✅ |
 | Combat au tour par tour, diagonales bloquées par les angles de murs | ✅ |
 | Compétences : on progresse dans ce qu'on pratique | ✅ |

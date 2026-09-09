@@ -34,7 +34,7 @@ COLOR_OF_GLYPH = {
 }
 
 
-def run(seed=None, max_depth=5):
+def run(seed=None, max_depth=None):
     curses.wrapper(lambda stdscr: _main(stdscr, seed, max_depth))
 
 

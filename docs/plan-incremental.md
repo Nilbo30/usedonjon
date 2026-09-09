@@ -45,7 +45,10 @@ finira par lire le méta au milieu d'un combat et la frontière sera perdue.
 | Niveau global du personnage | **Il disparaît** — les compétences remplacent toute la progression de run (étape 3) |
 | Gain d'XP | **Fixe par action**, sans rendement décroissant ni garde-fou anti-farm |
 | Effet d'un niveau | **Bonus de stats continus** (épée +N dégâts, marche → faim ralentie…) |
-| Fin de run | **Mort seule** (ou fond du donjon atteint) — pas d'extraction volontaire |
+| Fin de run | **Mort seule** — pas d'extraction volontaire ; le fond du donjon (étage 30) reste une victoire, hors de portée sans progression |
+| Source du niveau global | **Les niveaux de compétences** accumulés dans le run |
+| Effet du niveau global | **Une table fixe de bonus** — même progression pour tous |
+| Objets qui survivent | **Un entrepôt**, dans un hub accessible après la mort |
 
 ### Pourquoi pas de garde-fou anti-farm
 
@@ -78,9 +81,12 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 1 | Bus d'évènements d'action (`events.py`) | ✅ fait |
 | 2 | Table des compétences + XP (`skills.py`) | ✅ fait |
 | 3 | Pipeline de stats ; suppression du niveau global de run | ✅ fait |
-| 4 | Fin de run + `RunSummary` | à faire |
-| 5 | `Meta` + sauvegarde JSON ; la boucle est bouclée | à faire |
-| 6 | Déblocages en table | à faire |
+| 4 | Profondeur récompensée : 30 étages, XP et monstres à l'échelle | ✅ fait |
+| 5 | Fin de run + `RunSummary` | ✅ fait |
+| 6 | `Meta` + sauvegarde JSON ; la boucle est bouclée | à faire |
+| 7 | Le hub après la mort (bilan, méta, « nouveau run ») | à faire |
+| 8 | L'orbe (soft reset) et l'entrepôt | à faire |
+| 9 | Déblocages en table | à faire |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -133,7 +139,51 @@ Avec une XP fixe par action, « marcher » monte environ **neuf fois plus vite**
 qu'« épée ». C'est ce qui a dicté les courbes : `marche` coûte 25 XP le premier
 niveau, `epee` seulement 5.
 
+## Les deux boucles
+
+```
+        ┌──────────── run ────────────┐
+        │  descendre, pratiquer,      │
+        │  monter ses compétences     │
+        └──────┬───────────────┬──────┘
+               │ mort          │ orbe (soft reset)
+               ▼               ▼
+        niveau global      étage 1, on garde
+        + entrepôt         objets ET niveaux
+        (tout est perdu)   (aucun gain de méta)
+```
+
+**L'orbe, façon R Key d'Isaac.** On repart au premier étage en conservant
+objets et niveaux de compétences : les étages du haut deviennent triviaux et on
+descend plus bas qu'au tour précédent. Le prix : **aucune progression du niveau
+global**. C'est un soft reset dans le run, imbriqué dans le hard reset qu'est la
+mort.
+
+Ce choix est architecturalement gratuit : le run ne se termine pas, il
+redémarre. Rien à sérialiser, et `Meta` reste alimenté uniquement par la mort —
+la frontière tient sans effort.
+
+L'orbe est un objet trouvé dans le donjon, rare et plutôt profond, invisible
+tant que le méta ne l'a pas débloqué. Il ne rend ni PV ni satiété : l'utiliser à
+l'agonie reste un pari.
+
+**Conséquence assumée :** le donjon passe à 30 étages. Un donjon qu'on termine
+en un passage ne laisserait nulle part où aller après un usage de l'orbe. Le run
+se juge donc à l'étage le plus profond atteint (`RunSummary.deepest`, suivi
+séparément de `depth` puisque l'orbe fait revenir à 1).
+
 ## Règles fixées en cours de route
+
+**Descendre paie.** L'XP par action est multipliée par
+`1 + 0.15 × (étage − 1)` : à l'étage 11, une même action rapporte 2,5 fois plus.
+Sans ça, le méta venant des niveaux de compétences, la stratégie optimale
+serait de tourner en rond au premier étage jusqu'à épuiser l'estomac, mourir, et
+recommencer — sans aucun risque. Les monstres s'endurcissent en parallèle
+(`monster_scaling`, +6 % par étage), sans quoi le bestiaire, qui s'arrête à
+l'étage 8, laisserait 22 étages sans difficulté.
+
+Mesuré : le bot atteint l'étage 6 en médiane, 8 au mieux, sur 120 graines. Il
+reste donc 22 étages de marge pour ce que la progression permanente ouvrira.
 
 **Le repos.** Deux vitesses de régénération : 1 PV tous les 8 tours en agissant,
 tous les 3 tours à l'arrêt (`RunConfig.regen_interval` et

@@ -10,7 +10,7 @@ class TestRunConfig(unittest.TestCase):
     def test_replace_ne_touche_pas_l_original(self):
         base = RunConfig()
         variante = base.replace(max_depth=12, max_fullness=250)
-        self.assertEqual(base.max_depth, 5)
+        self.assertEqual(base.max_depth, RunConfig().max_depth)
         self.assertEqual(variante.max_depth, 12)
         self.assertEqual(variante.max_fullness, 250)
         self.assertEqual(variante.miss_chance, base.miss_chance)

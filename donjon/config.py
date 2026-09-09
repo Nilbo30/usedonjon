@@ -22,7 +22,7 @@ class RunConfig:
 
     def __init__(
         self,
-        max_depth=5,
+        max_depth=30,
         spawn_interval=30,
         monsters_per_floor=(3, 6),
         items_per_floor=(2, 4),
@@ -30,6 +30,8 @@ class RunConfig:
         regen_interval=8,
         rest_regen_interval=3,
         miss_chance=0.08,
+        xp_depth_bonus=0.15,
+        monster_scaling=0.06,
         max_fullness=100,
         start_hp=20,
         start_attack=6,
@@ -45,6 +47,11 @@ class RunConfig:
         self.regen_interval = regen_interval            # en agissant
         self.rest_regen_interval = rest_regen_interval  # en se reposant
         self.miss_chance = miss_chance
+        # L'XP par action et la vigueur des monstres montent avec l'étage :
+        # c'est ce qui donne une raison de descendre plutôt que de tourner en
+        # rond en sécurité au premier étage.
+        self.xp_depth_bonus = xp_depth_bonus
+        self.monster_scaling = monster_scaling
         self.max_fullness = max_fullness
         self.start_hp = start_hp
         self.start_attack = start_attack

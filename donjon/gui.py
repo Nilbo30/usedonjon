@@ -127,7 +127,7 @@ def fiche_objet(objet):
 
 
 class Fenetre:
-    def __init__(self, seed=None, max_depth=5, tile=TILE):
+    def __init__(self, seed=None, max_depth=None, tile=TILE):
         self.seed = seed
         self.max_depth = max_depth
         self.tile = tile
@@ -885,19 +885,26 @@ class Fenetre:
         gagne = self.game.state == WON
         titre = "VICTOIRE !" if gagne else "TU ES MORT"
         couleur = ESCALIER if gagne else PIEGE
+        bilan = self.game.summary
+        lignes = bilan.lines() if bilan else []
         cx, cy = self.largeur / 2, self.hauteur / 2
-        self.canvas.create_rectangle(cx - 210, cy - 76, cx + 210, cy + 76,
+        hauteur = 150 + len(lignes) * 20
+        self.canvas.create_rectangle(cx - 250, cy - hauteur / 2,
+                                     cx + 250, cy + hauteur / 2,
                                      fill=PANNEAU, outline=couleur, width=2)
-        self.canvas.create_text(cx, cy - 40, text=titre, fill=couleur,
-                                font=("TkDefaultFont", 28, "bold"))
-        detail = (f"Étage {self.game.depth} · "
-                  f"{self.game.player.skills.total_levels()} niveaux de "
-                  f"compétences · {self.game.turn} tours")
-        self.canvas.create_text(cx, cy - 2, text=detail, fill=TEXTE,
-                                font=("TkDefaultFont", 12))
-        self._bouton(cx - 150, cy + 26, 140, 30, "Rejouer (R)", self.rejouer)
-        self._bouton(cx + 10, cy + 26, 140, 30, "Quitter (q)", self.quitter)
+        haut = cy - hauteur / 2
+        self.canvas.create_text(cx, haut + 34, text=titre, fill=couleur,
+                                font=("TkDefaultFont", 26, "bold"))
+        for index, ligne in enumerate(lignes):
+            self.canvas.create_text(cx, haut + 72 + index * 20, text=ligne,
+                                    fill=TEXTE if index == 0 else TEXTE_PALE,
+                                    font=("TkDefaultFont", 11,
+                                          "bold" if index == 0 else "normal"))
+        self._bouton(cx - 150, haut + hauteur - 46, 140, 30,
+                     "Rejouer (R)", self.rejouer)
+        self._bouton(cx + 10, haut + hauteur - 46, 140, 30,
+                     "Quitter (q)", self.quitter)
 
 
-def run(seed=None, max_depth=5, tile=TILE):
+def run(seed=None, max_depth=None, tile=TILE):
     Fenetre(seed=seed, max_depth=max_depth, tile=tile).run()

@@ -18,6 +18,7 @@ from .events import Event
 from .geom import ALL_DIRS, add, chebyshev, is_diagonal, sub
 from .log import MessageLog
 from .rng import Rng
+from .run import RunSummary
 
 PLAYING, DEAD, WON = "en cours", "mort", "victoire"
 
@@ -40,7 +41,9 @@ class Game:
         self.log = MessageLog()
         self.turn = 0
         self.depth = 0
+        self.deepest = 0           # l'orbe ramènera au 1er étage : on garde le record
         self.state = PLAYING
+        self.summary = None        # bilan du run, une fois terminé
         self.player = Player(player_name, self.config)
         self.actors = [self.player]
         self.level = None
@@ -72,10 +75,12 @@ class Game:
 
     def next_floor(self, first=False):
         if self.depth >= self.config.max_depth:
-            self.state = WON
-            self.say(f"Tu atteins le fond du donjon (étage {self.depth}). Victoire !")
+            self.end_run(WON,
+                         f"Tu atteins le fond du donjon (étage {self.depth}). "
+                         f"Victoire !")
             return
         self.depth += 1
+        self.deepest = max(self.deepest, self.depth)
         self.level = dungeon.generate(self.rng)
         self.actors = [self.player]
         self.player.pos = dungeon.random_floor(self.level, self.rng,
@@ -108,9 +113,22 @@ class Game:
                 continue
             break
         monster = Monster(species)
+        self._scale_to_depth(monster)
         monster.pos = pos
         self.actors.append(monster)
         return monster
+
+    def _scale_to_depth(self, monster):
+        """Les créatures s'endurcissent avec l'étage.
+
+        Sans ça, un donjon de 30 étages n'aurait plus rien à offrir passé le
+        huitième : le bestiaire s'arrête là.
+        """
+        facteur = 1 + self.config.monster_scaling * (self.depth - 1)
+        monster.base_max_hp = max(1, int(round(monster.base_max_hp * facteur)))
+        monster.base_attack = max(1, int(round(monster.base_attack * facteur)))
+        monster.base_defense = int(round(monster.base_defense * facteur))
+        monster.hp = monster.max_hp
 
     # ------------------------------------------------------------------ #
     # Utilitaires
@@ -218,6 +236,14 @@ class Game:
         else:
             player.take_damage(1)
             self.check_death(player)
+
+    def xp_multiplier(self):
+        """Une même action rapporte davantage en profondeur.
+
+        C'est ce qui empêche de farmer tranquillement le premier étage : la
+        progression est là où c'est dangereux.
+        """
+        return 1 + self.config.xp_depth_bonus * (self.depth - 1)
 
     def regen_interval(self):
         """Tours entre deux PV regagnés, selon qu'on agit ou qu'on souffle.
@@ -340,8 +366,8 @@ class Game:
         if actor.alive:
             return False
         if actor.is_player:
-            self.state = DEAD
-            self.say("Tu t'effondres... Game over.")
+            tueur = f" Tué par {killer.name}." if killer and not killer.is_player else ""
+            self.end_run(DEAD, f"Tu t'effondres... Game over.{tueur}")
             return True
         self.say(f"{actor.name} est vaincu !")
         if killer is self.player:
@@ -349,6 +375,16 @@ class Game:
                         arme=self.player.weapon,
                         distance=chebyshev(self.player.pos, actor.pos))
         return True
+
+    def end_run(self, state, message):
+        """Clôt la partie et fige son bilan — le seul objet que lira le méta."""
+        self.state = state
+        self.say(message)
+        self.summary = RunSummary(
+            state=state, depth=self.depth, deepest=self.deepest,
+            turns=self.turn, skills=dict(self.player.skills.levels),
+            cause=message, seed=self.seed)
+        return self.summary
 
     def is_visible(self, pos):
         return pos in self.visible_cells()

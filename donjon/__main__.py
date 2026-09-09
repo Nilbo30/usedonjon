@@ -22,8 +22,9 @@ def build_parser():
                         help="taille des cases en pixels (fenêtre graphique)")
     parser.add_argument("--seed", type=int, default=None,
                         help="graine aléatoire (partie reproductible)")
-    parser.add_argument("--depth", type=int, default=5,
-                        help="nombre d'étages à franchir pour gagner")
+    parser.add_argument("--depth", type=int, default=None,
+                        help="nombre d'étages à franchir pour gagner "
+                             "(par défaut celui de RunConfig)")
     parser.add_argument("--script", metavar="CMDS",
                         help="joue une suite de commandes sans interface")
     parser.add_argument("--auto", type=int, metavar="N",
@@ -74,6 +75,8 @@ def main(argv=None):
 
     print(game.render_text(reveal=args.reveal, log_lines=8))
     print(f"état : {game.state}")
+    if game.summary:
+        print("\n".join("  " + ligne for ligne in game.summary.lines()))
     return 0
 
 

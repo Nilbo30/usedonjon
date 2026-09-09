@@ -233,10 +233,11 @@ class Trainer:
 
     def __call__(self, game, event):
         competences = game.player.skills
+        multiplicateur = game.xp_multiplier()
         for regle in self.table.get(event.nom, ()):
             cle = regle.resoudre(event)
             if cle is None:
                 continue
-            for niveau in competences.gain(cle, regle.xp):
+            for niveau in competences.gain(cle, regle.xp * multiplicateur):
                 nom = self.catalogue[cle].name
                 game.say(f"{nom} niveau {niveau} !")
