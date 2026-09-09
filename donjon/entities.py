@@ -5,6 +5,8 @@ scheduler dans game.py). Ajouter une créature = ajouter une entrée de données
 dans monsters.py, pas une sous-classe.
 """
 
+from .config import RunConfig
+
 ACTION_COST = 100
 
 # Statuts qui empêchent d'agir pendant leur durée.
@@ -88,18 +90,19 @@ class Monster(Actor):
 
 
 class Player(Actor):
-    MAX_FULLNESS = 100
-
-    def __init__(self, name="Shiren"):
-        super().__init__(name, "@", hp=20, attack=6, defense=2)
+    def __init__(self, name="Shiren", config=None):
+        config = config or RunConfig()
+        super().__init__(name, "@", hp=config.start_hp,
+                         attack=config.start_attack, defense=config.start_defense)
         self.is_player = True
         self.level = 1
         self.exp = 0
-        self.fullness = self.MAX_FULLNESS
+        self.max_fullness = config.max_fullness
+        self.fullness = self.max_fullness
         self.inventory = []
         self.weapon = None
         self.shield = None
-        self.max_items = 12
+        self.max_items = config.inventory_size
 
     @property
     def attack(self):

@@ -1,0 +1,58 @@
+"""Réglages d'un run : tout ce qui peut varier d'une partie à l'autre.
+
+C'est le **seul canal** par lequel la progression permanente (le futur méta)
+influencera une partie. Un `Game` reçoit une `RunConfig` et ne la modifie
+jamais : elle est calculée au démarrage du run, puis lue.
+
+    Meta ──(au lancement)──> RunConfig ──(injectée)──> Game
+
+Concrètement, un bonus de prestige du type « jauge de faim plus grande » sera
+un champ de plus ici et une ligne dans la table des bonus — jamais une
+modification du moteur.
+"""
+
+
+class RunConfig:
+    """Paramètres immuables d'une partie. `replace()` en produit une variante."""
+
+    def __init__(
+        self,
+        max_depth=5,
+        spawn_interval=30,
+        monsters_per_floor=(3, 6),
+        items_per_floor=(2, 4),
+        traps_per_floor=(1, 3),
+        regen_interval=8,
+        miss_chance=0.08,
+        max_fullness=100,
+        start_hp=20,
+        start_attack=6,
+        start_defense=2,
+        inventory_size=12,
+        starting_kit=("epee_bois", "bouclier_bois", "onigiri", "herbe_soin"),
+    ):
+        self.max_depth = max_depth
+        self.spawn_interval = spawn_interval
+        self.monsters_per_floor = monsters_per_floor
+        self.items_per_floor = items_per_floor
+        self.traps_per_floor = traps_per_floor
+        self.regen_interval = regen_interval
+        self.miss_chance = miss_chance
+        self.max_fullness = max_fullness
+        self.start_hp = start_hp
+        self.start_attack = start_attack
+        self.start_defense = start_defense
+        self.inventory_size = inventory_size
+        self.starting_kit = tuple(starting_kit)
+
+    def replace(self, **changements):
+        """Copie modifiée : `config.replace(max_depth=10)`."""
+        valeurs = dict(self.__dict__)
+        inconnus = set(changements) - set(valeurs)
+        if inconnus:
+            raise TypeError(f"réglage inconnu : {', '.join(sorted(inconnus))}")
+        valeurs.update(changements)
+        return RunConfig(**valeurs)
+
+    def __repr__(self):
+        return f"RunConfig({self.__dict__})"

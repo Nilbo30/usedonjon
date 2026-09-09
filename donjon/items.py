@@ -107,7 +107,7 @@ def _manger(game, user, item):
     if not user.is_player:
         return False
     before = user.fullness
-    user.fullness = min(user.MAX_FULLNESS, user.fullness + item.power)
+    user.fullness = min(user.max_fullness, user.fullness + item.power)
     game.say(f"Tu manges {item.name}. Ventre : {before} -> {user.fullness}.")
     return True
 

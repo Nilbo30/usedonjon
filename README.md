@@ -108,6 +108,8 @@ de `monsters.py` et les réglages en tête de `game.py`.
 
 ```
 donjon/
+  config.py     RunConfig : réglages d'une partie (canal vers le futur méta)
+  events.py     évènements d'action (socle de l'XP par compétence)
   rng.py        hasard centralisé et graine → parties reproductibles
   geom.py       positions et 8 directions
   tiles.py      types de cases (table de propriétés)
@@ -169,6 +171,15 @@ def _voleur(game, monster):
 ```
 
 **Un piège** — même schéma dans `donjon/traps.py`.
+
+## Où va le projet
+
+Le jeu évolue vers un hybride roguelike / incrémental : XP séparée par
+compétence (marcher, épée, pyromancie…) plutôt qu'un niveau global, puis
+prestige — à la mort les compétences sont perdues, un niveau global permanent
+monte et débloque des mécaniques. Le plan détaillé, la frontière entre état de
+run et état permanent, et les décisions déjà prises sont dans
+[`docs/plan-incremental.md`](docs/plan-incremental.md).
 
 ## Pistes pour la suite
 

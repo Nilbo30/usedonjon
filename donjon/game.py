@@ -11,53 +11,63 @@ Deux idées portent l'extensibilité :
    appellent exactement les mêmes fonctions.
 """
 
-from . import ai, dungeon, items, monsters, tiles, traps
+from . import ai, dungeon, events, items, monsters, tiles, traps
+from .config import RunConfig
 from .entities import ACTION_COST, Monster, Player, exp_threshold
+from .events import Event
 from .geom import ALL_DIRS, add, chebyshev, is_diagonal
 from .log import MessageLog
 from .rng import Rng
 
 PLAYING, DEAD, WON = "en cours", "mort", "victoire"
 
-# Réglages faciles à bouger pour équilibrer.
-SPAWN_INTERVAL = 30          # un monstre supplémentaire tous les N tours
-MONSTERS_PER_FLOOR = (3, 6)
-ITEMS_PER_FLOOR = (2, 4)
-TRAPS_PER_FLOOR = (1, 3)
-REGEN_INTERVAL = 8           # 1 PV régénéré tous les N tours si rassasié
-MISS_CHANCE = 0.08
-
 
 class Game:
-    def __init__(self, seed=None, max_depth=5, player_name="Shiren"):
+    """État d'une partie. Tout ce qui est ici meurt avec le run.
+
+    Les réglages ne sont plus des constantes de module mais une `RunConfig`
+    injectée : c'est par là que la progression permanente influencera les
+    parties suivantes (voir config.py).
+    """
+
+    def __init__(self, seed=None, max_depth=None, config=None,
+                 player_name="Shiren"):
+        self.config = config or RunConfig()
+        if max_depth is not None:      # raccourci pratique (CLI, interfaces)
+            self.config = self.config.replace(max_depth=max_depth)
         self.rng = Rng(seed)
         self.seed = self.rng.seed
-        self.max_depth = max_depth
         self.log = MessageLog()
         self.turn = 0
         self.depth = 0
         self.state = PLAYING
-        self.player = Player(player_name)
+        self.player = Player(player_name, self.config)
         self.actors = [self.player]
         self.level = None
-        self._spawn_countdown = SPAWN_INTERVAL
-        self._regen_countdown = REGEN_INTERVAL
+        self.listeners = []        # auditeurs d'évènements (voir events.py)
+        self._spawn_countdown = self.config.spawn_interval
+        self._regen_countdown = self.config.regen_interval
         self._starting_kit()
         self.next_floor(first=True)
+
+    @property
+    def max_depth(self):
+        return self.config.max_depth
 
     # ------------------------------------------------------------------ #
     # Mise en place
     # ------------------------------------------------------------------ #
     def _starting_kit(self):
-        self.player.add_item(items.make("epee_bois"))
-        self.player.add_item(items.make("bouclier_bois"))
-        self.player.add_item(items.make("onigiri"))
-        self.player.add_item(items.make("herbe_soin"))
-        self.player.weapon = self.player.inventory[0]
-        self.player.shield = self.player.inventory[1]
+        for cle in self.config.starting_kit:
+            objet = items.make(cle)
+            self.player.add_item(objet)
+            if objet.category == items.WEAPON and self.player.weapon is None:
+                self.player.weapon = objet
+            elif objet.category == items.SHIELD and self.player.shield is None:
+                self.player.shield = objet
 
     def next_floor(self, first=False):
-        if self.depth >= self.max_depth:
+        if self.depth >= self.config.max_depth:
             self.state = WON
             self.say(f"Tu atteins le fond du donjon (étage {self.depth}). Victoire !")
             return
@@ -67,16 +77,16 @@ class Game:
         self.player.pos = dungeon.random_floor(self.level, self.rng,
                                                exclude={self.level.stairs})
         self.player.energy = ACTION_COST
-        self._spawn_countdown = SPAWN_INTERVAL
+        self._spawn_countdown = self.config.spawn_interval
 
         occupied = {self.player.pos, self.level.stairs}
-        for _ in range(self.rng.randint(*MONSTERS_PER_FLOOR)):
+        for _ in range(self.rng.randint(*self.config.monsters_per_floor)):
             self.spawn_monster(occupied)
-        for _ in range(self.rng.randint(*ITEMS_PER_FLOOR)):
+        for _ in range(self.rng.randint(*self.config.items_per_floor)):
             pos = dungeon.random_floor(self.level, self.rng, exclude=occupied)
             occupied.add(pos)
             self.level.items[pos] = items.random_item(self.rng, self.depth)
-        for _ in range(self.rng.randint(*TRAPS_PER_FLOOR)):
+        for _ in range(self.rng.randint(*self.config.traps_per_floor)):
             pos = dungeon.random_floor(self.level, self.rng, exclude=occupied)
             occupied.add(pos)
             self.level.traps[pos] = traps.random_trap(self.rng)
@@ -112,6 +122,17 @@ class Game:
         if actor.is_player:
             return f"Tu {second_person}"
         return f"{actor.name} {third_person}"
+
+    def notify(self, nom, **donnees):
+        """Annonce une action accomplie du héros (contrat : voir events.py).
+
+        Le moteur ne sait pas ce qu'en feront les auditeurs — c'est ce qui
+        permettra de brancher les compétences sans le modifier.
+        """
+        event = Event(nom, donnees)
+        for listener in list(self.listeners):
+            listener(self, event)
+        return event
 
     def monsters(self):
         return [a for a in self.actors if a is not self.player and a.alive]
@@ -171,7 +192,7 @@ class Game:
                 self.say("Tu meurs de faim !")
             self._regen_countdown -= 1
             if self._regen_countdown <= 0:
-                self._regen_countdown = REGEN_INTERVAL
+                self._regen_countdown = self.config.regen_interval
                 player.heal(1)
         else:
             player.take_damage(1)
@@ -180,7 +201,7 @@ class Game:
     def _spawn_tick(self):
         self._spawn_countdown -= 1
         if self._spawn_countdown <= 0:
-            self._spawn_countdown = SPAWN_INTERVAL
+            self._spawn_countdown = self.config.spawn_interval
             self.spawn_monster(away_from_player=True)
 
     def process(self):
@@ -252,14 +273,20 @@ class Game:
 
     def attack(self, attacker, defender):
         self.spend(attacker)
-        if self.rng.chance(MISS_CHANCE):
+        arme = attacker.weapon if attacker.is_player else None
+        if self.rng.chance(self.config.miss_chance):
             self.say(f"{self.who(attacker)} rate {defender.name}.")
+            if attacker.is_player:
+                self.notify(events.COUP, arme=arme, cible=defender,
+                            touche=False, degats=0)
             return
         raw = max(1.0, attacker.attack - defender.defense * 0.7)
         dmg = max(1, int(round(self.rng.variance(raw))))
         defender.take_damage(dmg)
         if attacker.is_player:
             self.say(f"Tu frappes {defender.name} ({dmg} dégâts).")
+            self.notify(events.COUP, arme=arme, cible=defender,
+                        touche=True, degats=dmg)
         else:
             self.say(f"{attacker.name} te frappe ({dmg} dégâts).")
         self.check_death(defender, killer=attacker)
@@ -273,6 +300,9 @@ class Game:
             return True
         self.say(f"{actor.name} est vaincu !")
         if killer is self.player:
+            self.notify(events.MONSTRE_VAINCU, monstre=actor,
+                        arme=self.player.weapon,
+                        distance=chebyshev(self.player.pos, actor.pos))
             self.grant_exp(actor.exp)
         return True
 
@@ -307,13 +337,17 @@ class Game:
         if target and target is not player:
             self.attack(player, target)
             return self._finish(True)
+        depart = player.pos
         if self.try_move(player, delta):
+            self.notify(events.PAS, depart=depart, arrivee=player.pos,
+                        diagonale=is_diagonal(delta))
             return self._finish(True)
         self.say("Impossible d'aller par là.")
         return False
 
     def cmd_wait(self):
         self.pass_turn(self.player)
+        self.notify(events.ATTENTE)
         return self._finish(True)
 
     def cmd_pickup(self):
@@ -327,13 +361,17 @@ class Game:
         del self.level.items[self.player.pos]
         self.say(f"Tu ramasses {item.name}.")
         self.pass_turn(self.player)
+        self.notify(events.RAMASSAGE, objet=item)
         return self._finish(True)
 
     def cmd_descend(self):
         if self.player.pos != self.level.stairs:
             self.say("Il n'y a pas d'escalier ici.")
             return False
+        avant = self.depth
         self.next_floor()
+        if self.depth > avant:
+            self.notify(events.DESCENTE, etage=self.depth)
         if self.state == PLAYING:
             self.process()
         return True
@@ -356,6 +394,7 @@ class Game:
         item.use(self, self.player)
         self.player.remove_item(item)
         self.pass_turn(self.player)
+        self.notify(events.USAGE_OBJET, objet=item, categorie=item.category)
         return self._finish(True)
 
     def cmd_equip(self, slot):
@@ -375,6 +414,8 @@ class Game:
             self.say(f"{item.name} ne s'équipe pas.")
             return False
         self.pass_turn(player)
+        self.notify(events.EQUIPEMENT, objet=item, categorie=item.category,
+                    equipe=item in (player.weapon, player.shield))
         return self._finish(True)
 
     def cmd_drop(self, slot):
@@ -388,6 +429,7 @@ class Game:
         self.level.items[self.player.pos] = item
         self.say(f"Tu poses {item.name}.")
         self.pass_turn(self.player)
+        self.notify(events.POSE, objet=item)
         return self._finish(True)
 
     def cmd_throw(self, slot, delta, max_range=8):
@@ -410,11 +452,13 @@ class Game:
                     self.say(f"{item.name} inflige {dmg} dégâts.")
                     self.check_death(target, killer=self.player)
                 self.pass_turn(self.player)
+                self.notify(events.JET, objet=item, cible=target, direction=delta)
                 return self._finish(True)
         if pos not in self.level.items:
             self.level.items[pos] = item
         self.say(f"Tu lances {item.name} dans le vide.")
         self.pass_turn(self.player)
+        self.notify(events.JET, objet=item, cible=None, direction=delta)
         return self._finish(True)
 
     # ------------------------------------------------------------------ #

@@ -628,7 +628,7 @@ class Fenetre:
         self._barre(95, 10, 110, joueur.hp, joueur.max_hp,
                     BARRE_PV if joueur.hp > joueur.max_hp * 0.3 else BARRE_PV_BAS,
                     f"PV {joueur.hp}/{joueur.max_hp}")
-        self._barre(95, 27, 110, joueur.fullness, joueur.MAX_FULLNESS,
+        self._barre(95, 27, 110, joueur.fullness, joueur.max_fullness,
                     BARRE_VENTRE, f"Ventre {joueur.fullness}")
 
         arme = joueur.weapon.name if joueur.weapon else "mains nues"
