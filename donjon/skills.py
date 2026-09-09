@@ -38,6 +38,20 @@ EFFETS = {
 }
 
 
+#: Étiquettes courtes des effets, pour dire au joueur ce qu'il gagnera.
+LIBELLES = {
+    "attaque": "attaque",
+    "defense": "défense",
+    "pv_max": "PV max",
+    "endurance": "de faim en moins",
+    "soin": "soin par herbe",
+    "satiete": "ventre par repas",
+    "degats_jet": "dégâts de jet",
+    "duree_effet": "tour d'effet",
+    "regeneration": "tour de repos en moins",
+}
+
+
 class Skill:
     """Une compétence : une courbe d'XP et des bonus proportionnels au niveau."""
 
@@ -60,6 +74,16 @@ class Skill:
 
     def bonus(self, effet, level):
         return self.effects.get(effet, 0) * level
+
+    def gain_par_niveau(self):
+        """Ce qu'un niveau de plus apportera, en clair."""
+        morceaux = []
+        for effet, valeur in self.effects.items():
+            if effet == "endurance":
+                morceaux.append(f"{valeur * 100:g} % {LIBELLES[effet]}")
+            else:
+                morceaux.append(f"+{valeur:g} {LIBELLES[effet]}")
+        return " · ".join(morceaux)
 
 
 # --------------------------------------------------------------------------
@@ -204,7 +228,7 @@ class SkillSet:
             niveau += 1
             franchis.append(niveau)
         self.levels[key] = niveau
-        self.xp[key] = acquis
+        self.xp[key] = round(acquis, 3)     # le multiplicateur donne des flottants
         return franchis
 
     # --- bonus ----------------------------------------------------------

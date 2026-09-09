@@ -72,7 +72,7 @@ class TestFenetre(unittest.TestCase):
         self.assertGreater(joueur.fullness, 10)
 
     def test_le_dessin_ne_plante_dans_aucun_mode(self):
-        for mode in ("jeu", "sac", "action", "direction", "aide"):
+        for mode in ("jeu", "sac", "action", "direction", "aide", "competences"):
             self.fenetre.mode = mode
             self.fenetre.slot = 0
             self.fenetre.dessiner()
@@ -176,6 +176,45 @@ class TestSouris(unittest.TestCase):
         self._cliquer_zone("Utiliser")
         self.assertEqual(fenetre.mode, "jeu")
         self.assertGreater(joueur.fullness, 10)
+
+    def test_viser_efface_le_sac_pour_voir_la_carte(self):
+        from donjon import items
+        fenetre = self.fenetre
+        fenetre.game.player.inventory = [items.make("fleche")]
+        fenetre.mode = "sac"
+        fenetre.dessiner()
+        self._cliquer_zone("objet 0")
+        self._cliquer_zone("Lancer")
+        self.assertEqual(fenetre.mode, "direction")
+        etiquettes = [zone[5] for zone in fenetre.zones]
+        self.assertNotIn("objet 0", etiquettes)   # le sac a disparu
+        self.assertIn("Annuler", etiquettes)
+
+    def test_annuler_la_visee_rouvre_le_sac(self):
+        self.fenetre.mode = "direction"
+        self.fenetre.slot = 0
+        self.fenetre.dessiner()
+        self._cliquer_zone("Annuler")
+        self.assertEqual(self.fenetre.mode, "sac")
+
+    def test_les_panneaux_tiennent_dans_la_fenetre(self):
+        """Régression : les chiffres de compétences débordaient du cadre."""
+        fenetre = self.fenetre
+        fenetre.game.player.skills.levels.update(
+            {"marche": 2, "combat": 2, "recuperation": 1})
+        fenetre.game.player.skills.xp.update({"marche": 15.2})
+        for mode in ("competences", "sac", "action", "direction", "aide"):
+            fenetre.mode = mode
+            fenetre.slot = 0
+            fenetre.dessiner()
+            for zone in fenetre.zones:
+                self.assertGreaterEqual(zone[0], 0, mode)
+                self.assertLessEqual(zone[2], fenetre.largeur, mode)
+
+    def test_la_mesure_de_texte_suit_la_longueur(self):
+        court = self.fenetre.largeur_texte("ab")
+        long = self.fenetre.largeur_texte("abcdefghijklmnop")
+        self.assertGreater(long, court > 0)
 
     def test_le_bouton_fermer_referme_le_sac(self):
         self.fenetre.mode = "sac"

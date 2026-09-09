@@ -16,6 +16,7 @@ entièrement cliquables ; le survol décrit ce qu'il y a sous le curseur.
 
 import textwrap
 import tkinter as tk
+import tkinter.font as tkfont
 
 from . import items as items_mod
 from . import path
@@ -160,6 +161,7 @@ class Fenetre:
         self.canvas = tk.Canvas(self.root, width=self.largeur, height=self.hauteur,
                                 bg=FOND, highlightthickness=0)
         self.canvas.pack()
+        self._polices = {}         # mesures de texte, pour ne rien faire déborder
         self.root.bind("<Key>", self.on_key)
         self.canvas.bind("<Button-1>", self.on_click)
         self.canvas.bind("<Button-3>", self.on_click_droit)
@@ -464,8 +466,10 @@ class Fenetre:
         self._dessiner_hud()
         self._dessiner_carte()
         self._dessiner_journal()
-        if self.mode in ("sac", "action", "direction"):
+        if self.mode in ("sac", "action"):
             self._dessiner_sac()
+        elif self.mode == "direction":
+            self._banniere_de_visee()
         elif self.mode == "aide":
             self._panneau("Aide", AIDE, bouton_fermer=True)
         elif self.mode == "competences":
@@ -628,7 +632,8 @@ class Fenetre:
         if not lignes:
             return
         largeur = min(self.largeur - 12,
-                      max(len(ligne) for ligne in lignes) * 6.4 + 16)
+                      max(self.largeur_texte(ligne, gras=index == 0, taille=9)
+                          for index, ligne in enumerate(lignes)) + 18)
         hauteur = 8 + len(lignes) * 15
         gauche = max(4, min(px + 14, self.largeur - largeur - 4))
         haut = max(4, min(py + 14, self.hauteur - hauteur - 4))
@@ -760,6 +765,18 @@ class Fenetre:
         if actif:
             self.zones.append(zone)
 
+    def largeur_texte(self, texte, gras=False, taille=10):
+        """Largeur réelle d'un texte à l'écran.
+
+        Estimer au nombre de caractères faisait déborder les panneaux : on
+        demande la mesure à la police plutôt que de la deviner.
+        """
+        cle = (taille, gras)
+        if cle not in self._polices:
+            self._polices[cle] = tkfont.Font(
+                font=("TkDefaultFont", taille, "bold" if gras else "normal"))
+        return self._polices[cle].measure(texte)
+
     def _texte(self, x, y, texte, pale=False, gras=False, ancre="nw", couleur=None):
         self.canvas.create_text(
             x, y, text=texte, anchor=ancre,
@@ -870,6 +887,20 @@ class Fenetre:
             self._bouton(gauche + largeur - 92, haut + hauteur - 34, 80, 26,
                          "Fermer", lambda: setattr(self, "mode", "jeu"))
 
+    def _banniere_de_visee(self):
+        """Pendant la visée, un simple bandeau : la carte doit rester visible."""
+        objet = self._objet_decrit()
+        nom = objet.name if objet else "cet objet"
+        texte = f"Lancer {nom} — clique la cible, ou une direction au clavier"
+        largeur = self.largeur_texte(texte, gras=True) + 132
+        gauche = (self.largeur - largeur) / 2
+        haut = HUD_HEIGHT + 8
+        self.canvas.create_rectangle(gauche, haut, gauche + largeur, haut + 30,
+                                     fill=PANNEAU, outline=SURVOL)
+        self._texte(gauche + 14, haut + 8, texte, gras=True)
+        self._bouton(gauche + largeur - 90, haut + 2, 80, 26, "Annuler",
+                     lambda: setattr(self, "mode", "sac"))
+
     def _dessiner_competences(self):
         """Panneau des compétences : niveau et progression vers le suivant."""
         lignes = self.game.skill_lines()
@@ -879,19 +910,23 @@ class Fenetre:
                            "Marche, frappe, mange : tout s'apprend à l'usage."],
                           bouton_fermer=True)
             return
-        largeur, hauteur = 430, 78 + len(lignes) * 26
+        largeur = min(self.largeur - 40, 700)
+        hauteur = 96 + len(lignes) * 26
         gauche = (self.largeur - largeur) / 2
         haut = (HUD_HEIGHT + self.game.level.height * self.tile - hauteur) / 2
         self.canvas.create_rectangle(gauche, haut, gauche + largeur,
                                      haut + hauteur, fill=PANNEAU,
                                      outline=BORDURE, width=2)
         self._texte(gauche + 16, haut + 14, "Compétences de ce run", gras=True)
-        for index, (nom, niveau, acquis, requis) in enumerate(lignes):
+        self._texte(gauche + largeur - 16, haut + 14,
+                    "au niveau suivant", ancre="ne", pale=True)
+        for index, (nom, niveau, acquis, requis, prochain) in enumerate(lignes):
             y = haut + 44 + index * 26
-            self._texte(gauche + 16, y, f"{nom}")
-            self._texte(gauche + 190, y, f"niv. {niveau}", gras=True)
-            self._barre(gauche + 250, y + 2, 90, acquis, requis,
-                        BARRE_PV, f"{acquis}/{requis}")
+            self._texte(gauche + 16, y, nom)
+            self._texte(gauche + 150, y, f"niv. {niveau}", gras=True)
+            self._barre(gauche + 210, y + 2, 80, acquis, requis, BARRE_PV,
+                        f"{acquis:.0f}/{requis}")
+            self._texte(gauche + 358, y, prochain, pale=True)
         self._bouton(gauche + largeur - 92, haut + hauteur - 36, 80, 26,
                      "Fermer", lambda: setattr(self, "mode", "jeu"))
 

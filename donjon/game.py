@@ -54,6 +54,8 @@ class Game:
         self._regen_acc = 0.0
         self._hunger_acc = 0.0
         self._repos_ce_tour = False
+        # Les apparences des objets mystérieux sont rebattues à chaque run.
+        self.identification = items.Registre(self.rng)
         self._starting_kit()
         self.next_floor(first=True)
 
@@ -66,7 +68,7 @@ class Game:
     # ------------------------------------------------------------------ #
     def _starting_kit(self):
         for cle in self.config.starting_kit:
-            objet = items.make(cle)
+            objet = items.make(cle, registre=self.identification)
             self.player.add_item(objet)
             if objet.category == items.WEAPON and self.player.weapon is None:
                 self.player.weapon = objet
@@ -94,7 +96,8 @@ class Game:
         for _ in range(self.rng.randint(*self.config.items_per_floor)):
             pos = dungeon.random_floor(self.level, self.rng, exclude=occupied)
             occupied.add(pos)
-            self.level.items[pos] = items.random_item(self.rng, self.depth)
+            self.level.items[pos] = items.random_item(self.rng, self.depth,
+                                                      self.identification)
         for _ in range(self.rng.randint(*self.config.traps_per_floor)):
             pos = dungeon.random_floor(self.level, self.rng, exclude=occupied)
             occupied.add(pos)
@@ -333,11 +336,29 @@ class Game:
         if actor.is_player:
             self.update_explored()
             item = self.level.items.get(actor.pos)
-            if item:
-                self.say(f"Il y a {item.name} ici. (touche « , » pour ramasser)")
+            if item and not self._gerer_objet_au_sol(item):
+                self.say(f"Il y a {item.name} ici. "
+                         f"(« , » ou le bouton pour ramasser)")
         trap = self.level.traps.get(actor.pos)
         if trap and self.rng.chance(0.85):
             trap.trigger(self, actor)
+
+    def _gerer_objet_au_sol(self, item):
+        """Ramasse les consommables au passage. Vrai si le cas est traité.
+
+        Les consommables se ramassent en marchant dessus, sans coûter un tour.
+        L'équipement reste un choix délibéré : on ne veut pas encombrer le sac
+        d'armes qu'on n'a pas décidé d'emporter — d'où le message d'invite.
+        """
+        if item.type.equippable:
+            return False
+        if not self.player.add_item(item):
+            self.say(f"Tu marches sur {item.name}, mais ton sac est plein.")
+            return True
+        del self.level.items[self.player.pos]
+        self.say(f"Tu ramasses {item.name}.")
+        self.notify(events.RAMASSAGE, objet=item)
+        return True
 
     def attack(self, attacker, defender):
         self.spend(attacker)
@@ -502,7 +523,10 @@ class Game:
         if not item.type.usable:
             self.say(f"{item.name} ne s'utilise pas comme ça (essaie de le lancer).")
             return False
+        mystere = not item.identifie
         item.use(self, self.player)
+        if mystere and self.identification.identifier(item.type.key):
+            self.say(f"Identifié : {item.type.name}.")
         self.player.remove_item(item)
         self.pass_turn(self.player)
         self.notify(events.USAGE_OBJET, objet=item, categorie=item.category)
@@ -586,13 +610,13 @@ class Game:
                 f"[{weapon} / {shield}]  T{self.turn}")
 
     def skill_lines(self):
-        """Compétences pratiquées, prêtes à afficher (nom, niveau, progression)."""
+        """Compétences pratiquées : nom, niveau, progression, prochain gain."""
         lignes = []
         for cle in self.player.skills.known():
             competence = skills.CATALOGUE[cle]
             acquis, requis = self.player.skills.progress(cle)
             lignes.append((competence.name, self.player.skills.level(cle),
-                           acquis, requis))
+                           acquis, requis, competence.gain_par_niveau()))
         return lignes
 
     def render(self, reveal=False):

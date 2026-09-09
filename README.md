@@ -28,7 +28,8 @@ Tout se joue au clic, sans rien connaître du clavier :
   `path.py`, uniquement à travers ce qu'il a déjà vu) et s'arrête dès qu'un
   monstre apparaît, qu'il est blessé ou qu'il marche sur quelque chose ;
 - **clic sur le héros** : ramasser l'objet sous lui, descendre l'escalier, ou
-  attendre un tour selon la situation ;
+  attendre un tour selon la situation — les consommables, eux, se ramassent
+  tout seuls en marchant dessus ;
 - **bouton « Se reposer »** : patienter jusqu'à guérison, au prix du ventre —
   l'attente s'interrompt seule si un monstre paraît ;
 - **survol** : une étiquette décrit la case (nom et PV du monstre, objet, piège) ;
@@ -112,6 +113,8 @@ manquent, donc la suite reste verte sur un serveur sans affichage.
 | Statuts (endormi, confus, paralysé) avec durée | ✅ |
 | Pièges cachés | ✅ |
 | Fiches d'objets au survol (effet, compétence entraînée) | ✅ |
+| Parchemins non identifiés tant qu'on ne les a pas essayés | ✅ |
+| Consommables ramassés en marchant dessus | ✅ |
 | Vitesses différentes (rapide / lent) | ✅ |
 | Trois IA (chasseur, erratique, peureux) + pathfinding | ✅ |
 | Jeu complet à la souris (clic, déplacement auto, survol, boutons) | ✅ |

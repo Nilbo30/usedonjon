@@ -89,8 +89,8 @@ def _main(stdscr, seed, max_depth, sauvegarde=True):
 
 
 def _skill_lines(game):
-    lignes = [f"{nom:<16} niv. {niveau:<3} {acquis}/{requis}"
-              for nom, niveau, acquis, requis in game.skill_lines()]
+    lignes = [f"{nom:<16} niv. {niveau:<3} {acquis:.0f}/{requis:<4} {prochain}"
+              for nom, niveau, acquis, requis, prochain in game.skill_lines()]
     return lignes or ["Tu n'as encore rien pratiqué."]
 
 

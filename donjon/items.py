@@ -17,6 +17,55 @@ SCROLL = "parchemin"
 FOOD = "nourriture"
 AMMO = "projectile"
 
+#: Apparences des objets non identifiés, par catégorie. Ajouter une catégorie
+#: ici suffit à la rendre mystérieuse — les potions, le jour venu.
+APPARENCES = {
+    SCROLL: ["parchemin ocre", "parchemin taché", "parchemin froissé",
+             "parchemin scellé", "parchemin runique", "parchemin poussiéreux"],
+}
+
+#: Catégories dont on ignore l'effet tant qu'on ne les a pas essayées.
+CATEGORIES_A_IDENTIFIER = set(APPARENCES)
+
+
+class Registre:
+    """Ce que le héros a identifié, et sous quel nom il voit le reste.
+
+    C'est de l'état de run : chaque partie rebat les apparences, et tout est
+    perdu à la mort.
+    """
+
+    def __init__(self, rng=None):
+        self.connus = set()
+        self.apparences = {}
+        if rng is not None:
+            self.melanger(rng)
+
+    def melanger(self, rng):
+        for categorie, pool in APPARENCES.items():
+            cles = sorted(cle for cle, type_objet in ITEM_TYPES.items()
+                          if type_objet.category == categorie)
+            noms = rng.shuffle(list(pool))
+            for cle, nom in zip(cles, noms):
+                self.apparences[cle] = nom
+
+    def a_identifier(self, type_objet):
+        return type_objet.category in CATEGORIES_A_IDENTIFIER
+
+    def connu(self, cle):
+        return cle in self.connus
+
+    def identifier(self, cle):
+        """Marque l'objet comme identifié. Vrai si c'est une découverte."""
+        if cle in self.connus:
+            return False
+        self.connus.add(cle)
+        return True
+
+    def apparence(self, cle):
+        return self.apparences.get(cle, "objet inconnu")
+
+
 #: Compétence entraînée par défaut, selon la catégorie de l'objet.
 SKILL_PAR_CATEGORIE = {
     WEAPON: "epee",
@@ -61,14 +110,28 @@ class ItemType:
 
 
 class Item:
-    """Instance concrète : un type + un bonus d'amélioration (+1, +2...)."""
+    """Instance concrète : un type + un bonus d'amélioration (+1, +2...).
 
-    def __init__(self, item_type, plus=0):
+    `registre` est celui du run : il décide si l'objet se montre sous son vrai
+    nom ou sous une apparence. Un objet créé hors partie (tests) n'en a pas et
+    reste donc toujours identifié.
+    """
+
+    def __init__(self, item_type, plus=0, registre=None):
         self.type = item_type
         self.plus = plus
+        self.registre = registre
+
+    @property
+    def identifie(self):
+        if self.registre is None or not self.registre.a_identifier(self.type):
+            return True
+        return self.registre.connu(self.type.key)
 
     @property
     def name(self):
+        if not self.identifie:
+            return self.registre.apparence(self.type.key)
         if self.type.equippable:
             sign = "+" if self.plus >= 0 else ""
             return f"{self.type.name} {sign}{self.plus}"
@@ -90,6 +153,8 @@ class Item:
     def description(self):
         """Une ligne expliquant l'effet. Les chiffres d'équipement sont calculés
         pour tenir compte du bonus (+1, +2...) de l'exemplaire."""
+        if not self.identifie:
+            return "Effet inconnu — il faudra l'essayer pour le savoir."
         if self.category == WEAPON:
             return f"Arme : +{self.power} en attaque."
         if self.category == SHIELD:
@@ -260,14 +325,14 @@ _register(
 )
 
 
-def make(key, plus=0):
-    return Item(ITEM_TYPES[key], plus)
+def make(key, plus=0, registre=None):
+    return Item(ITEM_TYPES[key], plus, registre)
 
 
-def random_item(rng, depth=1):
+def random_item(rng, depth=1, registre=None):
     """Tire un objet au hasard; les objets s'améliorent avec la profondeur."""
     item_type = rng.weighted([(t, t.weight) for t in ITEM_TYPES.values()])
     plus = 0
     if item_type.equippable:
         plus = max(0, rng.randint(-1, 1 + depth // 3))
-    return Item(item_type, plus)
+    return Item(item_type, plus, registre)

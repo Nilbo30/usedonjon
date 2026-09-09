@@ -253,6 +253,22 @@ perd parce qu'il ignore une cible qu'il ne peut pas frapper et continue sa
 route en encaissant ; un joueur humain, lui, y gagne un outil défensif (rompre
 le contact en passant un coin) que le bot n'exploite pas.
 
+## Retours de partie intégrés
+
+- **Parchemins non identifiés.** Leur apparence est tirée au sort à chaque run
+  (`items.Registre`) ; les essayer les identifie pour tous les exemplaires du
+  run. C'est de l'état de run, donc perdu à la mort. Rendre une identification
+  permanente serait un champ dans `Meta` — à décider quand les potions
+  arriveront, elles suivront le même chemin (une ligne dans `APPARENCES`).
+- **Consommables ramassés au passage**, sans coûter de tour. L'équipement reste
+  un choix délibéré, pour ne pas encombrer le sac.
+- **Prochain avantage affiché**, pour les compétences comme pour le niveau
+  global : les tables savaient déjà ce qu'elles donnaient, il suffisait de le
+  dire.
+- **Le sac s'efface pendant la visée**, sinon on ne voit pas où l'on lance.
+- Les largeurs de panneaux sont mesurées par la police et non estimées au
+  nombre de caractères — c'est ce qui faisait déborder les chiffres.
+
 ## Dette assumée
 
 - `bouclier` s'entraîne en encaissant : c'est le seul évènement (`coup_recu`)

@@ -103,6 +103,17 @@ class Meta:
         return base.replace(**{champ: getattr(base, champ) + valeur
                                for champ, valeur in acquis.items()})
 
+    def prochain_avantage(self):
+        """Ce que le prochain niveau global débloquera, en clair."""
+        apports = BONUS.get(self.level + 1)
+        if not apports:
+            return None
+        libelles = {"max_fullness": "de ventre", "start_hp": "PV de départ",
+                    "start_attack": "d'attaque", "start_defense": "de défense",
+                    "inventory_size": "places dans le sac"}
+        return " · ".join(f"+{valeur} {libelles.get(champ, champ)}"
+                          for champ, valeur in sorted(apports.items()))
+
     def lines(self):
         """Résumé affichable de la progression permanente."""
         xp, requis = self.progress()
@@ -111,6 +122,9 @@ class Meta:
         if self.best_depth:
             lignes.append(f"Record : étage {self.best_depth} · "
                           f"{self.best_levels} niveaux de compétences")
+        prochain = self.prochain_avantage()
+        if prochain:
+            lignes.append(f"Niveau {self.level + 1} débloquera : {prochain}")
         acquis = self.bonuses()
         if acquis:
             lignes.append("Acquis : " + " · ".join(
