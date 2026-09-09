@@ -115,9 +115,11 @@ _enregistrer(
           branche="Trouvailles", parents=("nourriture",), unlocks=("herbes",),
           classes=("embusque",), effets={"items_per_floor": (1, 1)}),
     Noeud("projectiles", "Projectiles", 35,
-          "Des flèches apparaissent au sol : de quoi frapper sans s'approcher.",
+          "Des flèches apparaissent au sol : de quoi frapper sans s'approcher. "
+          "Le donjon apprend à viser aussi : on te tire dessus de loin.",
           branche="Trouvailles", parents=("nourriture",),
-          unlocks=("projectiles",), effets={"items_per_floor": (1, 1)}),
+          unlocks=("projectiles",), classes=("archer",),
+          effets={"items_per_floor": (1, 1)}),
     Noeud("grimoires", "Grimoires", 35,
           "Les parchemins rejoignent les trouvailles — non identifiés.",
           branche="Trouvailles", parents=("nourriture",), unlocks=("grimoires",),

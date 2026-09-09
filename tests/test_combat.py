@@ -103,3 +103,84 @@ class TestAngles(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTirADistance(unittest.TestCase):
+    """L'archer : la première créature qui peut te toucher sans t'approcher."""
+
+    def setUp(self):
+        from tests.helpers import place_monster, sandbox
+
+        self.game = sandbox(seed=4)
+        self.joueur = self.game.player
+        self.placer = place_monster
+
+    def _archer(self, case):
+        monstre = self.placer(self.game, case)
+        monstre.behaviour = "archer"
+        monstre.base_attack = 10
+        return monstre
+
+    def test_il_touche_de_loin_en_ligne_droite(self):
+        depart = self.joueur.hp
+        case = (self.joueur.pos[0] + 4, self.joueur.pos[1])
+        if not self.game.level.walkable(case):
+            self.skipTest("pas de couloir dégagé sur cette graine")
+        archer = self._archer(case)
+        self.assertTrue(self.game.tirer(archer, (-1, 0)))
+        self.assertLess(self.joueur.hp, depart)
+
+    def test_un_trait_qui_ne_rencontre_personne_ne_touche_rien(self):
+        case = (self.joueur.pos[0] + 2, self.joueur.pos[1])
+        if not self.game.level.walkable(case):
+            self.skipTest("pas de couloir dégagé sur cette graine")
+        archer = self._archer(case)
+        vie = self.joueur.hp
+        self.assertFalse(self.game.tirer(archer, (1, 0)))   # dos tourné
+        self.assertEqual(self.joueur.hp, vie)
+
+    def test_une_creature_qui_passe_devant_prend_le_trait(self):
+        """Se mettre derrière un monstre est un abri réel."""
+        case_proche = (self.joueur.pos[0] + 1, self.joueur.pos[1])
+        case_loin = (self.joueur.pos[0] + 3, self.joueur.pos[1])
+        for case in (case_proche, case_loin):
+            if not self.game.level.walkable(case):
+                self.skipTest("pas de couloir dégagé sur cette graine")
+        bouclier_vivant = self.placer(self.game, case_proche)
+        archer = self._archer(case_loin)
+        vie_joueur, vie_bouclier = self.joueur.hp, bouclier_vivant.hp
+        self.game.tirer(archer, (-1, 0))
+        self.assertEqual(self.joueur.hp, vie_joueur)
+        self.assertLess(bouclier_vivant.hp, vie_bouclier)
+
+    def test_il_tire_de_lui_meme_quand_tu_es_sur_sa_ligne(self):
+        from donjon import ai
+
+        case = (self.joueur.pos[0] + 3, self.joueur.pos[1])
+        if not all(self.game.level.walkable((self.joueur.pos[0] + n,
+                                             self.joueur.pos[1]))
+                   for n in (1, 2, 3)):
+            self.skipTest("pas de couloir dégagé sur cette graine")
+        archer = self._archer(case)
+        vie = self.joueur.hp
+        ai.take_turn(self.game, archer)
+        self.assertLess(self.joueur.hp, vie)
+        self.assertEqual(archer.pos, case)      # il n'a pas bougé : il a tiré
+
+    def test_sans_ligne_de_tir_il_se_replace_au_lieu_de_tirer(self):
+        from donjon import ai
+
+        case = (self.joueur.pos[0] + 3, self.joueur.pos[1] + 2)
+        if not self.game.level.walkable(case):
+            self.skipTest("pas de place sur cette graine")
+        archer = self._archer(case)
+        vie = self.joueur.hp
+        ai.take_turn(self.game, archer)
+        self.assertEqual(self.joueur.hp, vie)
+        self.assertNotEqual(archer.pos, case)
+
+    def test_tirer_coute_moins_que_frapper(self):
+        """Frapper de loin est plus sûr : ça doit faire moins mal."""
+        from donjon.game import DEGATS_A_DISTANCE
+
+        self.assertLess(DEGATS_A_DISTANCE, 1.0)

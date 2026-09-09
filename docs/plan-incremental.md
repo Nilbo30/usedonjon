@@ -88,7 +88,8 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 8 | L'orbe : remonter au refuge avec ses acquis | ✅ fait |
 | 9 | L'arbre des talents : le jeu entier se déverrouille | ✅ fait |
 | 10 | Familles et classes de créatures ; ce qu'on apprend, le donjon l'apprend | ✅ fait |
-| 11 | Le butin des créatures | à faire |
+| 11 | L'archer : le tir, et ce qu'il change au déplacement | ✅ fait |
+| 12 | L'esquive, puis le butin des créatures | à faire |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -449,6 +450,43 @@ Créatures (6,3) · **L'épée** (8,3) · **Le bouclier** (9,5) · Nourriture (1
 C'est l'ordre du bot, qui prend toujours le moins cher : un joueur qui voit que
 « Nourriture » double son revenu la prendra bien plus tôt. Le choix existe,
 c'est ce qui compte.
+
+### Étape 11 — l'archer
+
+La première créature qui peut te toucher **sans t'approcher**. Elle arrive avec
+le nœud « Projectiles », qui te donne les flèches : *tu apprends à lancer, le
+donjon aussi*. Un arc viendra plus tard comme amélioration de ce nœud — les
+objets à lancer, eux, restent : les retirer priverait le héros de sa seule
+réponse à distance et casserait le miroir.
+
+**Le comportement** : il tire dès que tu es sur sa ligne (huit directions,
+portée 7), et sinon **se décale d'un pas pour t'y mettre**. Une tourelle
+immobile se contourne et cesse d'exister ; celui-ci rend les couloirs
+dangereux et apprend à casser l'alignement. Il ne tire jamais à travers un des
+siens, donc **se mettre derrière une autre créature est un abri réel**.
+
+Le moteur y gagne une seule fonction, `ligne_de_tir`, partagée par le jet du
+héros et le tir des créatures — et comme elle s'arrête au premier acteur, la
+créature qui passe devant prend le trait à ta place.
+
+**Ce que la mesure a corrigé** : à sa fréquence naturelle, l'archer mangeait
+tout le gain de son nœud.
+
+| fréquence à l'étage 5 | XP/vie |
+|---|---|
+| 21 % des apparitions | 22,9 ± 1,1 |
+| 15 % | 23,6 ± 1,3 |
+| **11 %** | **25,0 ± 1,3** |
+| 9 % | 26,4 ± 1,4 |
+
+Le nœud sans archers valait 27,5 ; le donjon sans le nœud, 24,0. Retenu : 11 %,
+soit un archer croisé régulièrement sans qu'il occupe le donjon. Aucune de ces
+paires n'est significative prise seule — c'est la **monotonie de la série** qui
+tranche, pas un écart isolé.
+
+**Reste à faire** : l'esquive, la compétence qui va avec — elle monterait en se
+déplaçant sous le feu, et réduirait la chance d'être touché à distance. C'est le
+seul morceau qui coûtera une extension au moteur (un effet lu à un endroit).
 
 ## Règles fixées en cours de route
 

@@ -89,6 +89,50 @@ def _peureux(game, monster):
     _chasseur(game, monster)
 
 
+@behaviour("archer")
+def _archer(game, monster):
+    """Tire dès qu'il t'a dans sa ligne, et se décale d'un pas pour t'y mettre.
+
+    Une tourelle immobile se contourne et cesse d'exister ; celui-ci cherche
+    l'alignement, ce qui rend les couloirs dangereux et apprend à casser sa
+    ligne. Il ne tire jamais à travers un des siens — se mettre derrière une
+    autre créature est donc un abri réel.
+    """
+    joueur = game.player
+    direction = _direction_de_tir(game, monster.pos, joueur)
+    if direction:
+        game.tirer(monster, direction)
+        return
+    if game.can_attack(monster, joueur):
+        game.attack(monster, joueur)      # au contact il se défend, mal
+        return
+    if _sees_player(game, monster) and _se_placer(game, monster):
+        return
+    _chasseur(game, monster)
+
+
+def _direction_de_tir(game, depuis, cible):
+    """La direction où tirer pour toucher la cible depuis cette case, ou None."""
+    from .game import PORTEE_TIR
+
+    for direction in ALL_DIRS:
+        _pos, touche = game.ligne_de_tir(depuis, direction, PORTEE_TIR)
+        if touche is cible:
+            return direction
+    return None
+
+
+def _se_placer(game, monster):
+    """Un pas de côté qui donne une ligne de tir, s'il y en a un."""
+    for direction in ALL_DIRS:
+        case = add(monster.pos, direction)
+        if not game.level.walkable(case) or game.actor_at(case):
+            continue
+        if _direction_de_tir(game, case, game.player):
+            return game.try_move(monster, direction)
+    return False
+
+
 def _wander(game, monster):
     dirs = list(ALL_DIRS)
     game.rng.shuffle(dirs)

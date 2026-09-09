@@ -54,6 +54,10 @@ CLASSES = {
         "nom": "Guerrier", "behaviour": "chasseur",
         "note": "Frappe fort : on choisit ses combats.",
     },
+    "archer": {
+        "nom": "Archer", "behaviour": "archer",
+        "note": "Te vise de loin dès que tu es sur sa ligne : casse l'alignement.",
+    },
     "blinde": {
         "nom": "Blindé", "behaviour": "chasseur",
         "note": "Encaisse tout, mais lentement : frapper plus fort, ou fuir.",
@@ -95,6 +99,15 @@ BESTIAIRE = [
         "depth": (3, 7), "weight": 10, "color": "#9c8b6a", "shape": "carre",
     },
     {
+        "key": "limace", "name": "Limace cracheuse", "glyph": "l",
+        "famille": "animal", "classe": "archer",
+        "hp": 12, "attack": 7, "defense": 1, "speed": 90,
+        # Rare à dessein : à 21 % des apparitions, l'archer coûtait plus que
+        # son nœud ne rapporte (22,9 contre 24,0 XP/vie). À 11 %, il se croise
+        # assez pour enseigner sa leçon sans occuper le donjon.
+        "depth": (3, 7), "weight": 5, "color": "#8fd0a8",
+    },
+    {
         "key": "gobelin", "name": "Gobelin", "glyph": "g",
         "famille": "humanoide", "classe": "rodeur",
         "hp": 16, "attack": 8, "defense": 3,
@@ -105,6 +118,12 @@ BESTIAIRE = [
         "famille": "humanoide", "classe": "guerrier",
         "hp": 22, "attack": 11, "defense": 4,
         "depth": (5, 10), "weight": 12, "color": "#3e8f6d",
+    },
+    {
+        "key": "arbaletrier", "name": "Arbalétrier gobelin", "glyph": "a",
+        "famille": "humanoide", "classe": "archer",
+        "hp": 15, "attack": 9, "defense": 3,
+        "depth": (5, 10), "weight": 5, "color": "#6fae8f",
     },
     {
         "key": "tas_de_chair", "name": "Tas de chair", "glyph": "c",

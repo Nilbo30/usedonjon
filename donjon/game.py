@@ -28,6 +28,11 @@ VERS_DONJON = "vers le donjon"
 #: États où la partie courante est close et où la session doit enchaîner.
 TERMINES = (DEAD, WON, RETOUR, VERS_DONJON)
 
+#: Portée d'un tir de créature, et part de son attaque qui porte à distance :
+#: tirer est plus sûr que frapper, donc doit faire moins mal.
+PORTEE_TIR = 7
+DEGATS_A_DISTANCE = 0.75
+
 
 class Game:
     """État d'une partie. Tout ce qui est ici meurt avec le run.
@@ -602,29 +607,60 @@ class Game:
         self.notify(events.POSE, objet=item)
         return self._finish(True)
 
+    def ligne_de_tir(self, depuis, direction, portee):
+        """Où s'arrête un projectile : (dernière case, premier acteur touché).
+
+        Une seule traversée pour le jet du héros et le tir des créatures — et
+        comme elle s'arrête au premier acteur, une créature qui passe devant
+        prend le trait à ta place.
+        """
+        pos = depuis
+        for _ in range(portee):
+            suivant = add(pos, direction)
+            if not self.level.walkable(suivant):
+                break
+            pos = suivant
+            cible = self.actor_at(pos)
+            if cible is not None:
+                return pos, cible
+        return pos, None
+
+    def tirer(self, tireur, direction, portee=PORTEE_TIR):
+        """Une créature décoche en ligne droite. Moins fort qu'un coup, mais de loin."""
+        self.spend(tireur)
+        _pos, cible = self.ligne_de_tir(tireur.pos, direction, portee)
+        if cible is None:
+            self.say(f"{tireur.name} tire et manque.")
+            return False
+        brut = max(1.0, tireur.attack * DEGATS_A_DISTANCE - cible.defense * 0.7)
+        degats = max(1, int(round(self.rng.variance(brut))))
+        cible.take_damage(degats)
+        self.say(f"{tireur.name} te touche à distance ({degats} dégâts)."
+                 if cible.is_player
+                 else f"{tireur.name} touche {cible.name} ({degats} dégâts).")
+        if cible.is_player:
+            self.notify(events.COUP_RECU, bouclier=cible.shield, source=tireur,
+                        degats=degats)
+        self.check_death(cible, killer=tireur)
+        return True
+
     def cmd_throw(self, slot, delta, max_range=8):
         item = self._item_at_slot(slot)
         if not item:
             return False
         self.player.remove_item(item)
-        pos = self.player.pos
-        for _ in range(max_range):
-            nxt = add(pos, delta)
-            if not self.level.walkable(nxt):
-                break
-            pos = nxt
-            target = self.actor_at(pos)
-            if target:
-                self.say(f"Tu lances {item.name} sur {target.name}.")
-                if not item.hit(self, self.player, target):
-                    puissance = max(1, item.power or 2) + self.player.bonus("degats_jet")
-                    dmg = max(1, int(self.rng.variance(puissance)))
-                    target.take_damage(dmg)
-                    self.say(f"{item.name} inflige {dmg} dégâts.")
-                    self.check_death(target, killer=self.player)
-                self.pass_turn(self.player)
-                self.notify(events.JET, objet=item, cible=target, direction=delta)
-                return self._finish(True)
+        pos, target = self.ligne_de_tir(self.player.pos, delta, max_range)
+        if target:
+            self.say(f"Tu lances {item.name} sur {target.name}.")
+            if not item.hit(self, self.player, target):
+                puissance = max(1, item.power or 2) + self.player.bonus("degats_jet")
+                dmg = max(1, int(self.rng.variance(puissance)))
+                target.take_damage(dmg)
+                self.say(f"{item.name} inflige {dmg} dégâts.")
+                self.check_death(target, killer=self.player)
+            self.pass_turn(self.player)
+            self.notify(events.JET, objet=item, cible=target, direction=delta)
+            return self._finish(True)
         if pos not in self.level.items:
             self.level.items[pos] = item
         self.say(f"Tu lances {item.name} dans le vide.")
