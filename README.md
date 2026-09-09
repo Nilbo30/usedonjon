@@ -53,8 +53,19 @@ formes dessinées à la main, prête à recevoir des sprites PNG) et le terminal
 
 ### Sous Windows
 
-`python -m donjon` suffit : tkinter est livré avec l'installeur officiel de
-python.org. Seul le mode `--tui` demande en plus `pip install windows-curses`.
+**Le plus simple : double-clique `jouer.bat`.** Il se place tout seul dans le
+bon dossier et lance le jeu — pas de ligne de commande, et pas d'erreur
+« No module named donjon ».
+
+En ligne de commande, `python -m donjon` suffit aussi, à condition d'être dans
+le dossier **qui contient** le dossier `donjon` (celui où se trouve ce README).
+Si tu vois `No module named donjon`, tape `dir` : tu dois voir `donjon` et
+`README.md` dans la liste ; sinon, descends d'un cran avec `cd`.
+
+tkinter est livré avec l'installeur officiel de python.org, donc rien à
+installer. Seul le mode `--tui` demande en plus `pip install windows-curses`.
+
+Sur Mac et Linux, `./jouer.sh` fait la même chose.
 
 ## Tester vite
 
