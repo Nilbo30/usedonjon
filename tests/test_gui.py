@@ -43,7 +43,7 @@ class Clic:
 class TestFenetre(unittest.TestCase):
     def setUp(self):
         from donjon.gui import Fenetre
-        self.fenetre = Fenetre(seed=11, max_depth=5)
+        self.fenetre = Fenetre(seed=11, max_depth=5, sauvegarde=False)
 
     def tearDown(self):
         self.fenetre.root.destroy()
@@ -87,7 +87,7 @@ class TestFenetre(unittest.TestCase):
 class TestSouris(unittest.TestCase):
     def setUp(self):
         from donjon.gui import Fenetre
-        self.fenetre = Fenetre(seed=11, max_depth=5)
+        self.fenetre = Fenetre(seed=11, max_depth=5, sauvegarde=False)
         self.fenetre.game.actors = [self.fenetre.game.player]   # scène calme
 
     def tearDown(self):

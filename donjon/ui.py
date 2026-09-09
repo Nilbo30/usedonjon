@@ -6,7 +6,9 @@ brancher une autre interface (web, pygame) sans toucher au moteur.
 
 import curses
 
-from .game import DEAD, PLAYING, WON, Game
+from .config import RunConfig
+from .game import DEAD, PLAYING, WON
+from .session import Session
 from .geom import DIRECTIONS
 from .script import MOVE_KEYS
 
@@ -34,20 +36,26 @@ COLOR_OF_GLYPH = {
 }
 
 
-def run(seed=None, max_depth=None):
-    curses.wrapper(lambda stdscr: _main(stdscr, seed, max_depth))
+def run(seed=None, max_depth=None, sauvegarde=True):
+    curses.wrapper(lambda stdscr: _main(stdscr, seed, max_depth, sauvegarde))
 
 
-def _main(stdscr, seed, max_depth):
+def _main(stdscr, seed, max_depth, sauvegarde=True):
     curses.curs_set(0)
     _init_colors()
-    game = Game(seed=seed, max_depth=max_depth)
+    base = RunConfig(max_depth=max_depth) if max_depth else None
+    session = Session(sauvegarde=sauvegarde, seed=seed, config=base)
+    game = session.nouvelle_partie()
     message = None
     while True:
         _draw(stdscr, game, message)
         message = None
         if game.state != PLAYING:
-            stdscr.getch()
+            session.encaisser(game)
+            lignes = (game.summary.lines() if game.summary else [])
+            _overlay(stdscr, "Fin du run",
+                     lignes + [""] + session.lignes_de_gain()
+                     + session.meta.lines())
             return
         key = stdscr.getch()
         try:

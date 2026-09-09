@@ -15,6 +15,7 @@ class RunSummary:
         self.skills = dict(skills)  # clé -> niveau
         self.cause = cause
         self.seed = seed
+        self.absorbed = False   # marqué par la session, pour n'encaisser qu'une fois
 
     @property
     def total_levels(self):

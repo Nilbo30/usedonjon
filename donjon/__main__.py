@@ -33,17 +33,28 @@ def build_parser():
                         help="affiche la carte après chaque commande")
     parser.add_argument("--reveal", action="store_true",
                         help="affiche tout l'étage (débogage)")
+    parser.add_argument("--no-save", action="store_true",
+                        help="ne pas toucher à la progression permanente")
+    parser.add_argument("--meta", action="store_true",
+                        help="affiche la progression permanente et quitte")
     return parser
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+
+    if args.meta:
+        from . import meta as meta_mod
+        print("\n".join(meta_mod.load().lines()))
+        return 0
+
     headless = args.script is not None or args.auto is not None
 
     if not headless:
         if args.tui:
             from . import ui
-            ui.run(seed=args.seed, max_depth=args.depth)
+            ui.run(seed=args.seed, max_depth=args.depth,
+                   sauvegarde=not args.no_save)
             return 0
         try:
             from . import gui
@@ -53,9 +64,12 @@ def main(argv=None):
                   "tkinter (Linux : « sudo apt install python3-tk »).",
                   file=sys.stderr)
             return 3
-        gui.run(seed=args.seed, max_depth=args.depth, tile=args.tile)
+        gui.run(seed=args.seed, max_depth=args.depth, tile=args.tile,
+                sauvegarde=not args.no_save)
         return 0
 
+    # Les modes script et bot ne touchent jamais à la sauvegarde : ce sont des
+    # outils de test, ils n'ont pas à faire progresser un joueur.
     game = Game(seed=args.seed, max_depth=args.depth)
     print(f"graine : {game.seed}")
 

@@ -83,9 +83,9 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 3 | Pipeline de stats ; suppression du niveau global de run | ✅ fait |
 | 4 | Profondeur récompensée : 30 étages, XP et monstres à l'échelle | ✅ fait |
 | 5 | Fin de run + `RunSummary` | ✅ fait |
-| 6 | `Meta` + sauvegarde JSON ; la boucle est bouclée | à faire |
+| 6 | `Meta` + sauvegarde JSON ; la boucle est bouclée | ✅ fait |
 | 7 | Le hub après la mort (bilan, méta, « nouveau run ») | à faire |
-| 8 | L'orbe (soft reset) et l'entrepôt | à faire |
+| 8 | L'orbe (soft reset, retour au hub) et l'entrepôt | à faire |
 | 9 | Déblocages en table | à faire |
 
 Chaque étape laisse le jeu lançable et jouable.
@@ -164,13 +164,50 @@ redémarre. Rien à sérialiser, et `Meta` reste alimenté uniquement par la mor
 la frontière tient sans effort.
 
 L'orbe est un objet trouvé dans le donjon, rare et plutôt profond, invisible
-tant que le méta ne l'a pas débloqué. Il ne rend ni PV ni satiété : l'utiliser à
+tant que le méta ne l'a pas débloqué. **À décider :** dans un second temps, il
+ne ramènera plus à l'étage 1 mais au hub — discussion à venir. Il ne rend ni PV ni satiété : l'utiliser à
 l'agonie reste un pari.
 
 **Conséquence assumée :** le donjon passe à 30 étages. Un donjon qu'on termine
 en un passage ne laisserait nulle part où aller après un usage de l'orbe. Le run
 se juge donc à l'étage le plus profond atteint (`RunSummary.deepest`, suivi
 séparément de `depth` puisque l'orbe fait revenir à 1).
+
+### Étape 6 — la boucle, telle qu'elle tourne
+
+**Conversion.** `XP méta = niveaux de compétences × (1 + 0,1 × (étage − 1))`,
+l'étage étant le plus profond du passage en cours. C'est ce facteur qui fera de
+l'orbe un pari : mourir plus haut qu'avant rapportera moins, même mieux
+entraîné.
+
+| Scénario | Niveaux | Facteur | Méta |
+|---|---|---|---|
+| Mort au 12, sans orbe | 20 | ×2,1 | 42 |
+| Orbe au 12, mort au 8 | 26 | ×1,7 | 44 |
+| Orbe au 12, poussé au 16 | 30 | ×2,5 | 75 |
+
+**Qui parle à qui.** `Game` ignore toujours l'existence de `Meta` — un test
+lit le source de `game.py` pour s'en assurer. C'est `Session` (session.py) qui
+fait le lien : elle construit la `RunConfig` depuis le méta, et encaisse le
+`RunSummary` à la fin. Les interfaces ne connaissent qu'elle.
+
+**Sauvegarde** : `~/.usedonjon/meta.json`. Un fichier absent, corrompu ou
+partiel donne une progression neuve plutôt qu'un plantage. Les modes `--script`
+et `--auto` n'y touchent jamais : ce sont des outils de test, ils n'ont pas à
+faire progresser un joueur.
+
+**Rythme mesuré**, campagne de 40 runs enchaînés par le bot :
+
+| Runs | Étage moyen atteint |
+|---|---|
+| 1-10 | 5,0 |
+| 11-20 | 6,8 |
+| 21-30 | 6,7 |
+| 31-40 | 7,3 (record : 11) |
+
+Le premier niveau global tombe après deux runs, le huitième après quarante.
+La courbe monte puis s'aplatit — c'est le moment où l'orbe et les déblocages
+devront prendre le relais.
 
 ## Règles fixées en cours de route
 

@@ -20,8 +20,10 @@ import tkinter as tk
 from . import items as items_mod
 from . import path
 from . import skills as skills_mod
-from .game import PLAYING, WON, Game
+from .config import RunConfig
+from .game import PLAYING, WON
 from .geom import DIRECTIONS, chebyshev, step_toward
+from .session import Session
 
 TILE = 20
 HUD_HEIGHT = 46
@@ -127,11 +129,15 @@ def fiche_objet(objet):
 
 
 class Fenetre:
-    def __init__(self, seed=None, max_depth=None, tile=TILE):
+    def __init__(self, seed=None, max_depth=None, tile=TILE, session=None,
+                 sauvegarde=True):
         self.seed = seed
         self.max_depth = max_depth
         self.tile = tile
-        self.game = Game(seed=seed, max_depth=max_depth)
+        base = RunConfig(max_depth=max_depth) if max_depth else None
+        self.session = session or Session(sauvegarde=sauvegarde, seed=seed,
+                                          config=base)
+        self.game = self.session.nouvelle_partie()
         # jeu | sac | action | direction | aide | competences
         self.mode = "jeu"
         self.slot = None
@@ -205,8 +211,14 @@ class Fenetre:
             self._touche_action(touche, char)
         elif self.mode == "direction":
             self._touche_direction(touche, char)
+        self._verifier_fin()
         if not self.ferme:
             self.dessiner()
+
+    def _verifier_fin(self):
+        """Un run terminé alimente la progression permanente, une seule fois."""
+        if self.game.state != PLAYING:
+            self.session.encaisser(self.game)
 
     def _fin_de_partie(self, char, touche):
         if char.lower() == "r":
@@ -277,6 +289,7 @@ class Fenetre:
             if x1 <= event.x <= x2 and y1 <= event.y <= y2:
                 self.arreter_trajet()
                 action()
+                self._verifier_fin()
                 if not self.ferme:
                     self.dessiner()
                 return
@@ -291,6 +304,7 @@ class Fenetre:
             self._lancer_vers(case)
         else:
             self.clic_carte(case)
+        self._verifier_fin()
         self.dessiner()
 
     def on_click_droit(self, event):
@@ -407,6 +421,7 @@ class Fenetre:
                        or joueur.pos == self.game.level.stairs
                        or joueur.hp < pv_avant
                        or not joueur.can_act())
+        self._verifier_fin()
         if arrive or interessant:
             self.arreter_trajet()
         else:
@@ -433,7 +448,8 @@ class Fenetre:
         self.lancer(step_toward(self.game.player.pos, case))
 
     def rejouer(self):
-        self.game = Game(seed=None, max_depth=self.max_depth)
+        """Nouveau run, avec tout ce que les précédents ont fait gagner."""
+        self.game = self.session.nouvelle_partie()
         self.mode = "jeu"
         self.slot = None
         self.destination = None
@@ -887,6 +903,9 @@ class Fenetre:
         couleur = ESCALIER if gagne else PIEGE
         bilan = self.game.summary
         lignes = bilan.lines() if bilan else []
+        gains = self.session.lignes_de_gain()
+        if gains:
+            lignes += [""] + gains + self.session.meta.lines()[:1]
         cx, cy = self.largeur / 2, self.hauteur / 2
         hauteur = 150 + len(lignes) * 20
         self.canvas.create_rectangle(cx - 250, cy - hauteur / 2,
@@ -906,5 +925,6 @@ class Fenetre:
                      "Quitter (q)", self.quitter)
 
 
-def run(seed=None, max_depth=None, tile=TILE):
-    Fenetre(seed=seed, max_depth=max_depth, tile=tile).run()
+def run(seed=None, max_depth=None, tile=TILE, sauvegarde=True):
+    Fenetre(seed=seed, max_depth=max_depth, tile=tile,
+            sauvegarde=sauvegarde).run()

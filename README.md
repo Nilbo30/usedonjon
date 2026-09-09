@@ -15,6 +15,8 @@ python3 -m donjon --seed 42      # partie reproductible
 python3 -m donjon --depth 10     # raccourcir le donjon (30 étages par défaut)
 python3 -m donjon --tile 26      # cases plus grandes
 python3 -m donjon --tui          # version terminal (ASCII, curses)
+python3 -m donjon --meta         # voir sa progression permanente
+python3 -m donjon --no-save      # jouer sans toucher à la sauvegarde
 ```
 
 ### À la souris
@@ -99,6 +101,7 @@ manquent, donc la suite reste verte sur un serveur sans affichage.
 | 30 étages générés (salles + couloirs), escalier | ✅ |
 | XP et monstres qui montent avec la profondeur | ✅ |
 | Bilan de fin de run (étage record, tours, compétences, cause) | ✅ |
+| Progression permanente : mourir fait monter un niveau global | ✅ |
 | Visibilité « salle entière », mémoire de la carte | ✅ |
 | Combat au tour par tour, diagonales bloquées par les angles de murs | ✅ |
 | Compétences : on progresse dans ce qu'on pratique | ✅ |
@@ -133,6 +136,9 @@ donjon/
   config.py     RunConfig : réglages d'une partie (canal vers le futur méta)
   events.py     évènements d'action (socle de l'XP par compétence)
   skills.py     catalogue des compétences, règles de gain, bonus
+  run.py        RunSummary : le bilan d'un run terminé
+  meta.py       progression permanente et sa sauvegarde JSON
+  session.py    le lien entre les runs (le seul endroit méta + partie)
   rng.py        hasard centralisé et graine → parties reproductibles
   geom.py       positions et 8 directions
   tiles.py      types de cases (table de propriétés)
@@ -206,6 +212,14 @@ def _voleur(game, monster):
 ```
 
 **Un piège** — même schéma dans `donjon/traps.py`.
+
+## Progression permanente
+
+Chaque mort fait monter un **niveau global**, calculé à partir des niveaux de
+compétences du run multipliés par la profondeur atteinte. Ces niveaux rendent
+les runs suivants plus généreux — ventre plus grand, plus de PV, sac plus
+grand — selon une table dans `meta.py`. La sauvegarde vit dans
+`~/.usedonjon/meta.json`.
 
 ## Où va le projet
 
