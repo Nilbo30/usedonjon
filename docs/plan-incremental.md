@@ -56,6 +56,13 @@ nourriture qu'il trouve.** Le levier d'équilibrage est donc un poids dans
 `items.py` et une taille de jauge dans `RunConfig` — deux nombres en données,
 aucune règle dans le moteur.
 
+*Correctif de méthode :* ces 18 points par étage sont ce que le donjon **fait
+apparaître**, pas ce qu'un joueur ramasse. Le bot ne ramassait longtemps que ce
+qu'il piétinait, ce qui rendait toute mesure sur l'économie des objets muette.
+Il fait maintenant un détour vers l'objet connu le plus proche ; doubler ou
+tripler le poids de l'onigiri ne change toujours rien à ses résultats, ce qui
+suggère que le mur est ailleurs (le combat) — à confirmer en jouant.
+
 Conséquence pour la couche 3 : « jauge de faim plus grande » ne vend pas du
 confort, elle vend **du temps de progression**.
 
@@ -127,6 +134,29 @@ qu'« épée ». C'est ce qui a dicté les courbes : `marche` coûte 25 XP le pr
 niveau, `epee` seulement 5.
 
 ## Règles fixées en cours de route
+
+**Le repos.** Deux vitesses de régénération : 1 PV tous les 8 tours en agissant,
+tous les 3 tours à l'arrêt (`RunConfig.regen_interval` et
+`rest_regen_interval`). S'arrêter convertit donc la nourriture en PV près de
+trois fois mieux que marcher — c'est ce qui fait du repos une décision et pas
+un raccourci clavier. La commande `cmd_rest` patiente jusqu'à guérison et
+s'interrompt d'elle-même (guéri, blessé, affamé, monstre en vue) ; elle refuse
+même de commencer si un monstre est visible. La compétence `récupération`,
+entraînée uniquement quand le repos soigne réellement, raccourcit l'intervalle
+de repos — jamais celui de la marche.
+
+*Première intention corrigée en route :* j'avais d'abord accéléré la
+régénération globale (1 PV / 4 tours). Mesure faite, le bot ne se reposait
+jamais — il guérissait déjà en marchant, donc « s'arrêter pour se soigner »
+n'était pas une technique. D'où les deux vitesses.
+
+**Ce que ça vaut, mesuré :** à profondeur 5, le bot gagne 78 fois sur 120 en se
+reposant contre 81 en s'en privant. Le repos reste donc **défavorable à qui
+court après l'escalier** : la nourriture est l'horloge du run, et acheter des PV
+avec raccourcit la descente plus que les PV ne la sécurisent. C'est un outil de
+détresse, pas une routine — ce qui se défend (Shiren aussi fait payer le repos
+cher), mais si on veut en faire une routine, le levier est l'abondance de
+nourriture, pas le taux de régénération.
 
 **Diagonales et angles de murs.** Une diagonale n'est franchissable — ni en
 déplacement, ni en coup — que si les deux cases orthogonales sont libres. La

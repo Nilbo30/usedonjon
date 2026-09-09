@@ -27,6 +27,8 @@ Tout se joue au clic, sans rien connaître du clavier :
   monstre apparaît, qu'il est blessé ou qu'il marche sur quelque chose ;
 - **clic sur le héros** : ramasser l'objet sous lui, descendre l'escalier, ou
   attendre un tour selon la situation ;
+- **bouton « Se reposer »** : patienter jusqu'à guérison, au prix du ventre —
+  l'attente s'interrompt seule si un monstre paraît ;
 - **survol** : une étiquette décrit la case (nom et PV du monstre, objet, piège) ;
 - **clic droit** : annuler le déplacement en cours ou fermer un panneau ;
 - les **boutons en bas à droite** (Ramasser, Descendre, Attendre, Sac, Aide) et
@@ -98,7 +100,8 @@ manquent, donc la suite reste verte sur un serveur sans affichage.
 | Visibilité « salle entière », mémoire de la carte | ✅ |
 | Combat au tour par tour, diagonales bloquées par les angles de murs | ✅ |
 | Compétences : on progresse dans ce qu'on pratique | ✅ |
-| Faim (ventre), régénération, mort de faim | ✅ |
+| Faim (ventre), mort de faim | ✅ |
+| Repos : s'arrêter convertit le ventre en PV, trois fois mieux qu'en marchant | ✅ |
 | Objets : herbes, parchemins, nourriture, armes, boucliers, flèches | ✅ |
 | Jet d'objets sur les monstres | ✅ |
 | Statuts (endormi, confus, paralysé) avec durée | ✅ |

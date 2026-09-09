@@ -23,10 +23,14 @@ Contrat des évènements — les clés listées sont toujours présentes :
 | `usage_objet`    | `objet`, `categorie`                                        |
 | `equipement`     | `objet`, `categorie`, `equipe` (True si porté, False rangé) |
 | `jet`            | `objet`, `cible` (Actor ou None), `direction`               |
-| `descente`       | `etage` (le nouvel étage)                                   |
+| `descente`       | `etage` (le nouvel étage)                                    |
+| `repos`          | `pv` (points de vie regagnés en se reposant)                 |
 
 `arme` vaut None à mains nues : c'est volontaire, une compétence « pugilat »
 s'y accroche sans rien changer ici. Même logique pour `bouclier`.
+
+`repos` n'est émis que lorsque l'attente soigne réellement : patienter à pleine
+vie n'entraîne rien.
 
 `coup_recu` est le seul évènement que le héros ne déclenche pas lui-même : on
 apprend à parer en encaissant. Les coups portés *par* les monstres sur d'autres
@@ -44,10 +48,11 @@ USAGE_OBJET = "usage_objet"
 EQUIPEMENT = "equipement"
 JET = "jet"
 DESCENTE = "descente"
+REPOS = "repos"
 
 #: Tous les évènements que le moteur sait émettre, pour vérifier les tables.
 NOMS = (PAS, ATTENTE, COUP, COUP_RECU, MONSTRE_VAINCU, RAMASSAGE, POSE,
-        USAGE_OBJET, EQUIPEMENT, JET, DESCENTE)
+        USAGE_OBJET, EQUIPEMENT, JET, DESCENTE, REPOS)
 
 
 class Event:

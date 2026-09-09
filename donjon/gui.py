@@ -81,16 +81,19 @@ AIDE = [
     "  Clic sur une case voisine : s'y déplacer, ou attaquer ce qui s'y trouve.",
     "  Clic plus loin : le héros y va tout seul (il s'arrête s'il voit un monstre).",
     "  Clic sur le héros : ramasser, descendre l'escalier, ou attendre un tour.",
+    "  Bouton « Se reposer » : patienter pour se soigner, au prix du ventre.",
     "  Clic droit : annuler le déplacement ou fermer un panneau.",
     "  Les boutons en bas et le sac sont cliquables.",
     "",
     "PROGRESSION",
     "  On progresse dans ce qu'on pratique : marcher entraîne la marche,",
-    "  frapper entraîne l'arme en main. Tout est perdu à la mort.",
+    "  frapper entraîne l'arme en main, se reposer entraîne la récupération.",
+    "  Tout est perdu à la mort.",
     "",
     "CLAVIER",
     "  Flèches, pavé numérique ou hjkl / yubn : se déplacer et attaquer.",
     "  « , » ramasser    « > » descendre    « . » attendre    « i » sac",
+    "  « s » se reposer jusqu'à guérison (interrompu si un monstre paraît)",
     "  « c » compétences    « ? » cette aide    « q » quitter",
     "  « R » rejouer après la partie",
     "",
@@ -219,6 +222,8 @@ class Fenetre:
             self.game.cmd_move(direction)
         elif char == ".":
             self.game.cmd_wait()
+        elif char == "s":
+            self.game.cmd_rest()
         elif char == ",":
             self.game.cmd_pickup()
         elif char == ">":
@@ -356,8 +361,7 @@ class Fenetre:
             game.cmd_wait()
 
     def monstres_en_vue(self):
-        vus = self.game.visible_cells()
-        return any(m.pos in vus for m in self.game.monsters())
+        return self.game.monsters_visible()
 
     # --- déplacement automatique ---------------------------------------
     def demarrer_trajet(self, destination):
@@ -631,7 +635,11 @@ class Fenetre:
                 return [f"Toi — clic pour ramasser {objet.name}"] + fiche_objet(objet)
             if case == level.stairs:
                 return ["Toi — clic pour descendre l'escalier"]
-            return ["Toi — clic pour attendre un tour"]
+            lignes = ["Toi — clic pour attendre un tour"]
+            if game.player.hp < game.player.max_hp:
+                lignes.append("« s » ou le bouton pour te reposer jusqu'à "
+                              "guérison.")
+            return lignes
         if case in game.visible_cells():
             monstre = game.actor_at(case)
             if monstre:
@@ -709,6 +717,8 @@ class Fenetre:
             ("Ramasser", self.game.cmd_pickup, joueur.pos in level.items),
             ("Descendre", self.game.cmd_descend, joueur.pos == level.stairs),
             ("Attendre", self.game.cmd_wait, True),
+            ("Se reposer", self.game.cmd_rest,
+             joueur.hp < joueur.max_hp and not self.game.monsters_visible()),
             ("Sac", lambda: setattr(self, "mode", "sac"), True),
             ("Compétences", lambda: setattr(self, "mode", "competences"), True),
             ("Aide", lambda: setattr(self, "mode", "aide"), True),

@@ -34,6 +34,7 @@ EFFETS = {
     "satiete": "points de ventre en plus par repas",
     "degats_jet": "dégâts en plus des objets lancés",
     "duree_effet": "tours en plus sur les effets de parchemins",
+    "regeneration": "tours en moins entre deux points de vie regagnés",
 }
 
 
@@ -94,6 +95,9 @@ _enregistrer(
     Skill("nourriture", "Cuisine", base=2, growth=1.6,
           effects={"satiete": 5},
           note="On tire plus de chaque repas."),
+    Skill("recuperation", "Récupération", base=10, growth=1.6,
+          effects={"regeneration": 0.25},
+          note="Se reposer soigne plus vite."),
     Skill("jet", "Jet", base=3,
           effects={"degats_jet": 1},
           note="Viser fait mal."),
@@ -141,6 +145,7 @@ REGLES = (
     Regle(events.COUP, "combat", si=lambda e: e["touche"]),
     Regle(events.MONSTRE_VAINCU, "combat", xp=3),
     Regle(events.COUP_RECU, "bouclier", si=lambda e: e["bouclier"] is not None),
+    Regle(events.REPOS, "recuperation"),
     Regle(events.USAGE_OBJET, "@objet"),
     Regle(events.JET, "jet"),
     Regle(events.JET, "@objet", si=lambda e: e["cible"] is not None),

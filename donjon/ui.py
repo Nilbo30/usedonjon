@@ -14,6 +14,7 @@ LOG_LINES = 5
 HELP = [
     "hjkl / yubn / flèches : se déplacer et attaquer",
     ",  ramasser      >  descendre l'escalier      .  attendre",
+    "s  se reposer jusqu'à guérison (interrompu si un monstre paraît)",
     "i  inventaire     c  compétences             q  quitter",
     "?  aide",
     "",
@@ -71,6 +72,8 @@ def _main(stdscr, seed, max_depth):
             game.cmd_move(MOVE_KEYS[char])
         elif char == ".":
             game.cmd_wait()
+        elif char == "s":
+            game.cmd_rest()
         elif char == ",":
             game.cmd_pickup()
         elif char == ">":

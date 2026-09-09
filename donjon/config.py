@@ -13,7 +13,12 @@ modification du moteur.
 
 
 class RunConfig:
-    """Paramètres immuables d'une partie. `replace()` en produit une variante."""
+    """Paramètres immuables d'une partie. `replace()` en produit une variante.
+
+    Deux vitesses de régénération : en marchant, le corps récupère à peine ;
+    à l'arrêt, il récupère vraiment. C'est ce qui fait du repos une décision
+    (échanger du ventre contre des PV) et pas un simple raccourci clavier.
+    """
 
     def __init__(
         self,
@@ -23,6 +28,7 @@ class RunConfig:
         items_per_floor=(2, 4),
         traps_per_floor=(1, 3),
         regen_interval=8,
+        rest_regen_interval=3,
         miss_chance=0.08,
         max_fullness=100,
         start_hp=20,
@@ -36,7 +42,8 @@ class RunConfig:
         self.monsters_per_floor = monsters_per_floor
         self.items_per_floor = items_per_floor
         self.traps_per_floor = traps_per_floor
-        self.regen_interval = regen_interval
+        self.regen_interval = regen_interval            # en agissant
+        self.rest_regen_interval = rest_regen_interval  # en se reposant
         self.miss_chance = miss_chance
         self.max_fullness = max_fullness
         self.start_hp = start_hp

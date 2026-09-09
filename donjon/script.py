@@ -134,8 +134,13 @@ def autoplay(game, steps=200, on_step=None):
             acted = game.cmd_use(_find(game, "herbe_soin"))
         elif player.fullness <= 25 and _find(game, "onigiri") is not None:
             acted = game.cmd_use(_find(game, "onigiri"))
+        elif (player.hp < player.max_hp * 0.8 and player.fullness > 30
+              and not game.monsters_visible()):
+            acted = game.cmd_rest()          # souffler tant que le ventre suit
         elif game.level.items.get(player.pos) is not None:
             acted = game.cmd_pickup()
+        elif not game.monsters_visible() and _objet_proche(game, path):
+            acted = _seek(game, path, _objet_proche(game, path))
         elif player.pos == game.level.stairs:
             acted = game.cmd_descend()
         else:
@@ -152,6 +157,27 @@ def _find(game, key):
         if item.type.key == key:
             return index
     return None
+
+
+def _objet_proche(game, path, portee=14):
+    """L'objet connu le plus proche s'il vaut le détour, sinon None.
+
+    Sans ça le bot ne ramasse que ce qu'il piétine, et toute mesure sur
+    l'économie des objets ne dit rien du jeu — seulement de sa trajectoire.
+    """
+    if len(game.player.inventory) >= game.player.max_items:
+        return None
+    connus = [pos for pos in game.level.items if pos in game.level.explored]
+    if not connus:
+        return None
+    bloques = {m.pos for m in game.monsters()}
+    meilleur, distance = None, portee + 1
+    for pos in connus:
+        chemin = path.find_path(game.level, game.player.pos, pos, bloques,
+                                allowed=game.level.explored)
+        if chemin is not None and len(chemin) < distance:
+            meilleur, distance = pos, len(chemin)
+    return meilleur
 
 
 def _se_replacer(game, cible):

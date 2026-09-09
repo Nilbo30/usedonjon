@@ -48,8 +48,9 @@ class Game:
         # un autre : le moteur ne sait pas ce qu'il fait de ce qu'on lui dit.
         self.listeners = [skills.Trainer()]
         self._spawn_countdown = self.config.spawn_interval
-        self._regen_countdown = self.config.regen_interval
+        self._regen_acc = 0.0
         self._hunger_acc = 0.0
+        self._repos_ce_tour = False
         self._starting_kit()
         self.next_floor(first=True)
 
@@ -140,6 +141,11 @@ class Game:
     def monsters(self):
         return [a for a in self.actors if a is not self.player and a.alive]
 
+    def monsters_visible(self):
+        """Un monstre est-il dans le champ de vision du héros ?"""
+        vues = self.visible_cells()
+        return any(m.pos in vues for m in self.monsters())
+
     def actor_at(self, pos):
         for actor in self.actors:
             if actor.alive and actor.pos == pos:
@@ -182,6 +188,7 @@ class Game:
             if actor.alive:
                 actor.energy += actor.speed
         self.actors = [a for a in self.actors if a.alive or a.is_player]
+        self._repos_ce_tour = False
 
     def _hunger_tick(self):
         player = self.player
@@ -198,13 +205,30 @@ class Game:
                 self.say("Ton ventre gargouille. Tu as faim.")
             if player.fullness == 0:
                 self.say("Tu meurs de faim !")
-            self._regen_countdown -= 1
-            if self._regen_countdown <= 0:
-                self._regen_countdown = self.config.regen_interval
-                player.heal(1)
+            # Régénération : lente en agissant, rapide à l'arrêt. On accumule
+            # une fraction de PV par tour pour que les deux rythmes cohabitent.
+            self._regen_acc += 1.0 / self.regen_interval()
+            while self._regen_acc >= 1.0:
+                self._regen_acc -= 1.0
+                soigne = player.heal(1)
+                # Seul le repos entraîne « Récupération » : marcher soigne
+                # aussi, mais ce n'est pas là qu'on apprend à se remettre.
+                if soigne and self._repos_ce_tour:
+                    self.notify(events.REPOS, pv=soigne)
         else:
             player.take_damage(1)
             self.check_death(player)
+
+    def regen_interval(self):
+        """Tours entre deux PV regagnés, selon qu'on agit ou qu'on souffle.
+
+        « Récupération » ne raccourcit que le repos : c'est en se reposant
+        qu'on apprend à se remettre, et c'est là que ça se voit.
+        """
+        if not self._repos_ce_tour:
+            return self.config.regen_interval
+        brut = self.config.rest_regen_interval - self.player.bonus("regeneration")
+        return max(1, brut)
 
     def _spawn_tick(self):
         self._spawn_countdown -= 1
@@ -360,7 +384,46 @@ class Game:
     def cmd_wait(self):
         self.pass_turn(self.player)
         self.notify(events.ATTENTE)
+        self._repos_ce_tour = True
         return self._finish(True)
+
+    def cmd_rest(self, max_turns=300):
+        """Se reposer jusqu'à guérison — la technique classique du genre.
+
+        On échange du ventre contre des PV. L'attente s'interrompt d'elle-même
+        dès que la situation change : guéri, blessé, affamé, ou un monstre en
+        vue. Elle refuse même de commencer si un monstre est déjà visible.
+        """
+        player = self.player
+        if player.hp >= player.max_hp:
+            self.say("Tu es déjà au meilleur de ta forme.")
+            return False
+        if self.monsters_visible():
+            self.say("Impossible de souffler : un monstre est en vue.")
+            return False
+        if player.fullness <= 0:
+            self.say("Le ventre vide, ton corps ne récupère plus.")
+            return False
+
+        tours, raison = 0, "Tu te remets en route."
+        while tours < max_turns and self.state == PLAYING:
+            pv_avant = player.hp
+            self.cmd_wait()
+            tours += 1
+            if player.hp >= player.max_hp:
+                raison = "Te voilà d'aplomb."
+                break
+            if player.hp < pv_avant:
+                raison = "Quelque chose te frappe !"
+                break
+            if self.monsters_visible():
+                raison = "Un monstre approche !"
+                break
+            if player.fullness <= 0:
+                raison = "La faim te tire de ton repos."
+                break
+        self.say(f"Tu te reposes {tours} tours. {raison}")
+        return True
 
     def cmd_pickup(self):
         item = self.level.items.get(self.player.pos)
