@@ -39,11 +39,19 @@ class Clic:
         self.y = y
 
 
+def _entrer_dans_le_donjon(fenetre):
+    """La fenêtre s'ouvre au refuge ; ces tests portent sur le donjon."""
+    fenetre.game = fenetre.session.descendre()
+    fenetre.mode = "jeu"
+    fenetre.dessiner()
+
+
 @unittest.skipUnless(_ecran_disponible(), "tkinter ou écran indisponible")
 class TestFenetre(unittest.TestCase):
     def setUp(self):
         from donjon.gui import Fenetre
         self.fenetre = Fenetre(seed=11, max_depth=5, sauvegarde=False)
+        _entrer_dans_le_donjon(self.fenetre)
 
     def tearDown(self):
         self.fenetre.root.destroy()
@@ -84,10 +92,66 @@ class TestFenetre(unittest.TestCase):
 
 
 @unittest.skipUnless(_ecran_disponible(), "tkinter ou écran indisponible")
+class TestRefuge(unittest.TestCase):
+    """La fenêtre s'ouvre au refuge et sait enchaîner vers le donjon."""
+
+    def setUp(self):
+        from donjon.gui import Fenetre
+        self.fenetre = Fenetre(seed=7, sauvegarde=False)
+
+    def tearDown(self):
+        self.fenetre.root.destroy()
+
+    def test_on_ouvre_au_refuge_avec_le_mot_d_accueil(self):
+        self.assertTrue(self.fenetre.session.au_refuge)
+        self.assertEqual(self.fenetre.mode, "accueil")
+
+    def test_marcher_sur_le_coffre_l_ouvre(self):
+        fenetre = self.fenetre
+        fenetre.mode = "jeu"
+        coffre = fenetre.game.level.chest
+        fenetre.game.player.pos = (coffre[0], coffre[1] - 1)
+        fenetre.on_key(Evenement(keysym="Down"))
+        self.assertEqual(fenetre.game.player.pos, coffre)
+        self.assertEqual(fenetre.mode, "coffre")
+
+    def test_deposer_puis_reprendre_a_la_souris(self):
+        fenetre = self.fenetre
+        fenetre.mode = "coffre"
+        fenetre.dessiner()
+        objet = fenetre.game.player.inventory[0]
+        zone = next(z for z in fenetre.zones if z[5] == "sac 0")
+        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
+        self.assertNotIn(objet, fenetre.game.player.inventory)
+        self.assertEqual(len(fenetre.session.entrepot()), 1)
+        zone = next(z for z in fenetre.zones if z[5] == "coffre 0")
+        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
+        self.assertEqual(fenetre.session.entrepot(), [])
+
+    def test_l_escalier_du_refuge_lance_la_descente(self):
+        fenetre = self.fenetre
+        fenetre.mode = "jeu"
+        heros = fenetre.game.player
+        fenetre.game.player.pos = fenetre.game.level.stairs
+        fenetre.on_key(Evenement(char=">"))
+        self.assertFalse(fenetre.session.au_refuge)
+        self.assertIs(fenetre.game.player, heros)
+        self.assertEqual(fenetre.mode, "jeu")
+
+    def test_la_carte_du_refuge_est_centree(self):
+        fenetre = self.fenetre
+        fenetre.dessiner()
+        self.assertGreater(fenetre.offset_x, 0)
+        case = fenetre.case_sous(*fenetre._cellule(*fenetre.game.player.pos))
+        self.assertEqual(case, fenetre.game.player.pos)
+
+
+@unittest.skipUnless(_ecran_disponible(), "tkinter ou écran indisponible")
 class TestSouris(unittest.TestCase):
     def setUp(self):
         from donjon.gui import Fenetre
         self.fenetre = Fenetre(seed=11, max_depth=5, sauvegarde=False)
+        _entrer_dans_le_donjon(self.fenetre)
         self.fenetre.game.actors = [self.fenetre.game.player]   # scène calme
 
     def tearDown(self):

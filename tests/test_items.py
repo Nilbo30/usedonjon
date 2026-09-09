@@ -27,6 +27,22 @@ class TestFiches(unittest.TestCase):
             self.assertIn(type_objet.skill, skills.CATALOGUE, cle)
 
 
+class TestApparitionParProfondeur(unittest.TestCase):
+    def test_l_orbe_ne_se_trouve_pas_dans_les_premiers_etages(self):
+        from donjon.rng import Rng
+
+        rng = Rng(1)
+        haut = [items.random_item(rng, 1).type.key for _ in range(400)]
+        self.assertNotIn("orbe_retour", haut)
+
+    def test_il_apparait_en_profondeur(self):
+        from donjon.rng import Rng
+
+        rng = Rng(1)
+        bas = [items.random_item(rng, 10).type.key for _ in range(400)]
+        self.assertIn("orbe_retour", bas)
+
+
 class TestIdentification(unittest.TestCase):
     """Les parchemins ne disent leur nom qu'une fois essayés."""
 

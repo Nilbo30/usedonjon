@@ -7,7 +7,7 @@ brancher une autre interface (web, pygame) sans toucher au moteur.
 import curses
 
 from .config import RunConfig
-from .game import DEAD, PLAYING, WON
+from .game import DEAD, PLAYING, RETOUR, VERS_DONJON, WON
 from .session import Session
 from .geom import DIRECTIONS
 from .script import MOVE_KEYS
@@ -17,6 +17,7 @@ HELP = [
     "hjkl / yubn / flèches : se déplacer et attaquer",
     ",  ramasser      >  descendre l'escalier      .  attendre",
     "s  se reposer jusqu'à guérison (interrompu si un monstre paraît)",
+    "o  ouvrir le coffre (au refuge seulement)",
     "i  inventaire     c  compétences             q  quitter",
     "?  aide",
     "",
@@ -45,18 +46,22 @@ def _main(stdscr, seed, max_depth, sauvegarde=True):
     _init_colors()
     base = RunConfig(max_depth=max_depth) if max_depth else None
     session = Session(sauvegarde=sauvegarde, seed=seed, config=base)
-    game = session.nouvelle_partie()
+    game = session.demarrer()
     message = None
     while True:
         _draw(stdscr, game, message)
         message = None
         if game.state != PLAYING:
+            if game.state in (VERS_DONJON, RETOUR):
+                game = session.avancer()          # le refuge enchaîne tout seul
+                continue
             session.encaisser(game)
             lignes = (game.summary.lines() if game.summary else [])
-            _overlay(stdscr, "Fin du run",
+            _overlay(stdscr, "Fin de la descente",
                      lignes + [""] + session.lignes_de_gain()
                      + session.meta.lines())
-            return
+            game = session.avancer()              # retour au refuge
+            continue
         key = stdscr.getch()
         try:
             char = chr(key)
@@ -73,6 +78,9 @@ def _main(stdscr, seed, max_depth, sauvegarde=True):
         if char == "c":
             _overlay(stdscr, "Compétences de ce run", _skill_lines(game))
             continue
+        if char == "o" and session.au_refuge:
+            message = _coffre(stdscr, session, game)
+            continue
         if key in ARROWS:
             game.cmd_move(ARROWS[key])
             continue
@@ -86,6 +94,27 @@ def _main(stdscr, seed, max_depth, sauvegarde=True):
             game.cmd_pickup()
         elif char == ">":
             game.cmd_descend()
+
+
+def _coffre(stdscr, session, game):
+    """Le coffre du refuge, au clavier : une lettre pour déposer ou reprendre."""
+    garde = session.entrepot()
+    lignes = ["TON SAC (lettre pour déposer)"]
+    lignes += [f"  {chr(ord('a') + i)}) {o.name}"
+               for i, o in enumerate(game.player.inventory)]
+    lignes += ["", f"LE COFFRE (chiffre pour reprendre) "
+                   f"{len(garde)}/{session.meta.CAPACITE_ENTREPOT}"]
+    lignes += [f"  {i + 1}) {o.name}" for i, o in enumerate(garde)] or ["  (vide)"]
+    _overlay(stdscr, "Coffre du refuge", lignes, wait=False)
+    touche = stdscr.getch()
+    char = chr(touche) if 0 <= touche < 256 else ""
+    if char.isalpha():
+        index = ord(char.lower()) - ord("a")
+        if 0 <= index < len(game.player.inventory):
+            session.deposer(game.player.inventory[index])
+    elif char.isdigit() and char != "0":
+        session.retirer(int(char) - 1)
+    return None
 
 
 def _skill_lines(game):

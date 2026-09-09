@@ -103,6 +103,8 @@ manquent, donc la suite reste verte sur un serveur sans affichage.
 | XP et monstres qui montent avec la profondeur | ✅ |
 | Bilan de fin de run (étage record, tours, compétences, cause) | ✅ |
 | Progression permanente : mourir fait monter un niveau global | ✅ |
+| Un refuge où l'on marche, avec un coffre qui traverse la mort | ✅ |
+| L'orbe de retour : remonter avec ses acquis, sans gagner de méta | ✅ |
 | Visibilité « salle entière », mémoire de la carte | ✅ |
 | Combat au tour par tour, diagonales bloquées par les angles de murs | ✅ |
 | Compétences : on progresse dans ce qu'on pratique | ✅ |
@@ -215,6 +217,20 @@ def _voleur(game, monster):
 ```
 
 **Un piège** — même schéma dans `donjon/traps.py`.
+
+## Le refuge et les deux boucles
+
+La partie s'ouvre dans un **refuge** : une petite salle où l'on marche, avec un
+coffre et l'escalier du donjon. Ce qu'on laisse dans le coffre survit à la mort.
+
+Deux boucles s'y imbriquent :
+
+- **mourir** — on perd sac et compétences, mais le niveau global monte, et les
+  descentes suivantes partent mieux équipées ;
+- **l'orbe de retour**, trouvée à partir de l'étage 4 — on remonte au refuge
+  avec tout, sac et compétences comprises, mais la descente ne rapporte
+  **aucune** progression permanente et la profondeur repart de zéro. On est plus
+  fort pour descendre plus bas, à condition d'y arriver vraiment.
 
 ## Progression permanente
 

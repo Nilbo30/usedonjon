@@ -58,12 +58,18 @@ def valeur_du_run(summary):
 class Meta:
     """L'état permanent d'un joueur. Sérialisable tel quel."""
 
-    def __init__(self, level=0, xp=0.0, runs=0, best_depth=0, best_levels=0):
+    #: Places dans l'entrepôt du refuge.
+    CAPACITE_ENTREPOT = 8
+
+    def __init__(self, level=0, xp=0.0, runs=0, best_depth=0, best_levels=0,
+                 entrepot=None):
         self.level = level
         self.xp = xp                 # XP accumulée dans le niveau courant
         self.runs = runs
         self.best_depth = best_depth
         self.best_levels = best_levels
+        # Les objets déposés au refuge : la seule matière qui traverse la mort.
+        self.entrepot = list(entrepot or [])
 
     # --- progression -----------------------------------------------------
     def absorb(self, summary):
@@ -134,11 +140,12 @@ class Meta:
     # --- persistance -----------------------------------------------------
     def to_dict(self):
         return {"level": self.level, "xp": self.xp, "runs": self.runs,
-                "best_depth": self.best_depth, "best_levels": self.best_levels}
+                "best_depth": self.best_depth, "best_levels": self.best_levels,
+                "entrepot": self.entrepot}
 
     @classmethod
     def from_dict(cls, donnees):
-        connus = {"level", "xp", "runs", "best_depth", "best_levels"}
+        connus = {"level", "xp", "runs", "best_depth", "best_levels", "entrepot"}
         return cls(**{k: v for k, v in donnees.items() if k in connus})
 
 

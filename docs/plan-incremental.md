@@ -84,8 +84,8 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 4 | Profondeur récompensée : 30 étages, XP et monstres à l'échelle | ✅ fait |
 | 5 | Fin de run + `RunSummary` | ✅ fait |
 | 6 | `Meta` + sauvegarde JSON ; la boucle est bouclée | ✅ fait |
-| 7 | Le hub après la mort (bilan, méta, « nouveau run ») | à faire |
-| 8 | L'orbe (soft reset, retour au hub) et l'entrepôt | à faire |
+| 7 | Le refuge : un lieu où l'on marche, avec son coffre | ✅ fait |
+| 8 | L'orbe : remonter au refuge avec ses acquis | ✅ fait |
 | 9 | Déblocages en table | à faire |
 
 Chaque étape laisse le jeu lançable et jouable.
@@ -164,8 +164,7 @@ redémarre. Rien à sérialiser, et `Meta` reste alimenté uniquement par la mor
 la frontière tient sans effort.
 
 L'orbe est un objet trouvé dans le donjon, rare et plutôt profond, invisible
-tant que le méta ne l'a pas débloqué. **À décider :** dans un second temps, il
-ne ramènera plus à l'étage 1 mais au hub — discussion à venir. Il ne rend ni PV ni satiété : l'utiliser à
+tant que le méta ne l'a pas débloqué. Il ramène au refuge, et non à l'étage 1. Il ne rend ni PV ni satiété : l'utiliser à
 l'agonie reste un pari.
 
 **Conséquence assumée :** le donjon passe à 30 étages. Un donjon qu'on termine
@@ -208,6 +207,37 @@ faire progresser un joueur.
 Le premier niveau global tombe après deux runs, le huitième après quarante.
 La courbe monte puis s'aplatit — c'est le moment où l'orbe et les déblocages
 devront prendre le relais.
+
+### Étapes 7 et 8 — le refuge, le coffre, l'orbe
+
+**Le refuge est un étage comme un autre**, pas un menu : même carte, même
+déplacement, même souris. Ce qui le distingue tient dans sa `RunConfig` —
+`is_hub`, pas de faim, pas de monstres. Ajouter un marchand plus tard sera
+poser quelque chose dans cette pièce.
+
+**La `Session` possède le héros.** C'est le changement d'architecture qu'a
+demandé le refuge : `Game` accepte un joueur au lieu d'en fabriquer un, ce qui
+lui permet de traverser refuge et donjon avec son sac, ses compétences et ce
+qu'il a identifié. Une vie = un héros ; une descente = un `Game`.
+
+Trois façons de clore une partie, trois suites :
+
+| Fin | Ce qu'on garde | Méta |
+|---|---|---|
+| Mort / victoire | rien (sauf le coffre) | oui, sur la descente qui vient de finir |
+| Orbe (`retour`) | tout : sac, compétences, identifications | **non** |
+| Escalier du refuge | — | — |
+
+**L'orbe** est un objet trouvé à partir de l'étage 4. Il clôt la descente et
+renvoie au refuge. Comme chaque descente est un `Game` neuf, la profondeur
+repart de 1 — le pari est structurel, pas une règle ajoutée : la mort suivante
+ne comptera que la nouvelle descente. Il ne rend ni PV ni satiété.
+
+**Le coffre** vit dans `Meta` (donc sur disque) : huit places, les objets y
+survivent à la mort avec leur bonus. C'est la seule matière qui traverse.
+
+Détail savoureux : l'orbe étant un parchemin, il arrive **non identifié**.
+Le reconnaître est en soi une étape.
 
 ## Règles fixées en cours de route
 

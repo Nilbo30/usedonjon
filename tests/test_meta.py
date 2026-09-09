@@ -88,7 +88,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
     def test_le_run_recoit_bien_les_bonus(self):
         session = Session(sauvegarde=False)
         session.meta = Meta(level=3)
-        game = session.nouvelle_partie(seed=1)
+        game = session.descendre()
         self.assertGreater(game.player.max_fullness, RunConfig().max_fullness)
         self.assertGreater(game.player.max_hp, RunConfig().start_hp)
 
@@ -96,7 +96,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
 class TestSession(unittest.TestCase):
     def test_encaisser_une_seule_fois(self):
         session = Session(sauvegarde=False)
-        game = session.nouvelle_partie(seed=1)
+        game = session.descendre()
         game.end_run("mort", "Test.")
         self.assertIsNotNone(session.encaisser(game))
         self.assertIsNone(session.encaisser(game))
@@ -110,7 +110,7 @@ class TestSession(unittest.TestCase):
         """
         session = Session(sauvegarde=False)
         for numero in range(12):
-            game = session.nouvelle_partie(seed=numero)
+            game = session.descendre()
             game.player.skills.levels["marche"] = 1
             game.end_run("mort", "Test.")
             self.assertIsNotNone(session.encaisser(game), f"run {numero}")
@@ -118,7 +118,7 @@ class TestSession(unittest.TestCase):
 
     def test_une_partie_en_cours_ne_s_encaisse_pas(self):
         session = Session(sauvegarde=False)
-        game = session.nouvelle_partie(seed=1)
+        game = session.descendre()
         self.assertIsNone(session.encaisser(game))
         self.assertEqual(session.meta.runs, 0)
 
@@ -163,7 +163,7 @@ class TestPersistance(unittest.TestCase):
 
     def test_la_session_sauvegarde_a_la_fin_d_un_run(self):
         session = Session(chemin=self.chemin)
-        game = session.nouvelle_partie(seed=1)
+        game = session.descendre()
         game.player.skills.levels["marche"] = 30
         game.end_run("mort", "Test.")
         session.encaisser(game)
@@ -171,7 +171,7 @@ class TestPersistance(unittest.TestCase):
 
     def test_sans_sauvegarde_rien_n_est_ecrit(self):
         session = Session(chemin=self.chemin, sauvegarde=False)
-        game = session.nouvelle_partie(seed=1)
+        game = session.descendre()
         game.end_run("mort", "Test.")
         session.encaisser(game)
         self.assertFalse(os.path.exists(self.chemin))

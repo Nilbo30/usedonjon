@@ -22,11 +22,14 @@ from . import items as items_mod
 from . import path
 from . import skills as skills_mod
 from .config import RunConfig
-from .game import PLAYING, WON
+from .game import PLAYING, RETOUR, VERS_DONJON, WON
 from .geom import DIRECTIONS, chebyshev, step_toward
 from .session import Session
 
 TILE = 20
+#: La fenêtre est taillée pour le plus grand étage possible ; les cartes plus
+#: petites, comme le refuge, sont centrées dedans.
+CARTE_L, CARTE_H = 60, 22
 HUD_HEIGHT = 46
 LOG_LINES = 4
 LOG_HEIGHT = 18 * LOG_LINES + 22
@@ -138,9 +141,9 @@ class Fenetre:
         base = RunConfig(max_depth=max_depth) if max_depth else None
         self.session = session or Session(sauvegarde=sauvegarde, seed=seed,
                                           config=base)
-        self.game = self.session.nouvelle_partie()
-        # jeu | sac | action | direction | aide | competences
-        self.mode = "jeu"
+        self.game = self.session.demarrer()
+        # jeu | sac | action | direction | aide | competences | accueil | coffre
+        self.mode = "accueil"
         self.slot = None
         self.note = None
 
@@ -156,8 +159,10 @@ class Fenetre:
         self.root = tk.Tk()
         self.root.title("Donjon mystère")
         self.root.configure(bg=FOND)
-        self.largeur = self.game.level.width * tile
-        self.hauteur = self.game.level.height * tile + HUD_HEIGHT + LOG_HEIGHT
+        self.largeur = CARTE_L * tile
+        self.hauteur_carte = CARTE_H * tile
+        self.hauteur = self.hauteur_carte + HUD_HEIGHT + LOG_HEIGHT
+        self.offset_x = self.offset_y = 0
         self.canvas = tk.Canvas(self.root, width=self.largeur, height=self.hauteur,
                                 bg=FOND, highlightthickness=0)
         self.canvas.pack()
@@ -181,15 +186,25 @@ class Fenetre:
     # ------------------------------------------------------------------ #
     # Conversions écran <-> carte
     # ------------------------------------------------------------------ #
+    def _recadrer(self):
+        """Centre la carte courante dans la fenêtre (le refuge est plus petit)."""
+        self.offset_x = max(0, (self.largeur
+                                - self.game.level.width * self.tile) // 2)
+        self.offset_y = max(0, (self.hauteur_carte
+                                - self.game.level.height * self.tile) // 2)
+
     def _cellule(self, x, y):
         """Coin haut-gauche en pixels d'une case de la carte."""
-        return x * self.tile, y * self.tile + HUD_HEIGHT
+        return (self.offset_x + x * self.tile,
+                HUD_HEIGHT + self.offset_y + y * self.tile)
 
     def case_sous(self, px, py):
         """Case de la carte sous un point de l'écran, ou None."""
-        if py < HUD_HEIGHT or py >= HUD_HEIGHT + self.game.level.height * self.tile:
+        x = (px - self.offset_x) / self.tile
+        y = (py - HUD_HEIGHT - self.offset_y) / self.tile
+        if x < 0 or y < 0:
             return None
-        case = (int(px // self.tile), int((py - HUD_HEIGHT) // self.tile))
+        case = (int(x), int(y))
         return case if self.game.level.in_bounds(case) else None
 
     # ------------------------------------------------------------------ #
@@ -203,8 +218,11 @@ class Fenetre:
             self._fin_de_partie(char, touche)
             return
 
-        if self.mode in ("aide", "competences"):
+        if self.mode in ("aide", "competences", "accueil"):
             self.mode = "jeu"
+        elif self.mode == "coffre":
+            if touche == "Escape" or char in ("i", "c"):
+                self.mode = "jeu"
         elif self.mode == "jeu":
             self._touche_jeu(touche, char)
         elif self.mode == "sac":
@@ -218,9 +236,24 @@ class Fenetre:
             self.dessiner()
 
     def _verifier_fin(self):
-        """Un run terminé alimente la progression permanente, une seule fois."""
-        if self.game.state != PLAYING:
+        """Enchaîne ce qui s'enchaîne tout seul, et ouvre le coffre au passage.
+
+        La mort et la victoire, elles, attendent que le joueur ait lu son
+        bilan : c'est le bouton de l'écran de fin qui les fait avancer.
+        """
+        if self.game.state in (VERS_DONJON, RETOUR):
+            self.continuer()
+        elif self.game.state != PLAYING:
             self.session.encaisser(self.game)
+        elif self.session.au_refuge and self.mode == "jeu":
+            if self.game.player.pos == getattr(self.game.level, "chest", None):
+                self.mode = "coffre"
+
+    def continuer(self):
+        """Passe à la partie suivante : donjon, ou retour au refuge."""
+        self.arreter_trajet()
+        self.game = self.session.avancer()
+        self.mode = "accueil" if self.session.au_refuge else "jeu"
 
     def _fin_de_partie(self, char, touche):
         if char.lower() == "r":
@@ -296,7 +329,8 @@ class Fenetre:
                     self.dessiner()
                 return
         if self.game.state != PLAYING or self.mode in ("sac", "action", "aide",
-                                                       "competences"):
+                                                       "competences", "accueil",
+                                                       "coffre"):
             return
         case = self.case_sous(event.x, event.y)
         if case is None:
@@ -450,11 +484,10 @@ class Fenetre:
         self.lancer(step_toward(self.game.player.pos, case))
 
     def rejouer(self):
-        """Nouveau run, avec tout ce que les précédents ont fait gagner."""
-        self.game = self.session.nouvelle_partie()
-        self.mode = "jeu"
+        """Après la mort : on repart du refuge, avec les acquis permanents."""
         self.slot = None
         self.destination = None
+        self.continuer()
         self.dessiner()
 
     # ------------------------------------------------------------------ #
@@ -463,6 +496,7 @@ class Fenetre:
     def dessiner(self):
         self.canvas.delete("all")
         self.zones = []
+        self._recadrer()
         self._dessiner_hud()
         self._dessiner_carte()
         self._dessiner_journal()
@@ -474,6 +508,11 @@ class Fenetre:
             self._panneau("Aide", AIDE, bouton_fermer=True)
         elif self.mode == "competences":
             self._dessiner_competences()
+        elif self.mode == "accueil":
+            self._panneau("Refuge", self.session.lignes_d_accueil(),
+                          bouton_fermer=True)
+        elif self.mode == "coffre":
+            self._dessiner_coffre()
         if self.game.state != PLAYING:
             self._dessiner_fin()
         if self.case_survolee:
@@ -522,7 +561,9 @@ class Fenetre:
             fond = SOL if vue else sombre(SOL)
         self.canvas.create_rectangle(px, py, px + t, py + t,
                                      fill=fond, outline=fond)
-        if tuile == "stairs":
+        if tuile == "chest":
+            self._coffre(px, py, vue)
+        elif tuile == "stairs":
             self._escalier(px, py, vue)
         elif tuile == "floor":
             point = SOL_POINT if vue else sombre(SOL_POINT)
@@ -539,6 +580,14 @@ class Fenetre:
             self.canvas.create_rectangle(gauche, haut, px + t - 3,
                                          haut + max(2, (t - 6) // 3 - 1),
                                          fill=couleur, outline="")
+
+    def _coffre(self, px, py, vue):
+        t = self.tile
+        couleur = "#c9a227" if vue else sombre("#c9a227")
+        self.canvas.create_rectangle(px + 2, py + 5, px + t - 2, py + t - 3,
+                                     fill=couleur, outline="")
+        self.canvas.create_rectangle(px + 2, py + 5, px + t - 2, py + 9,
+                                     fill=melange(couleur, FOND, 0.35), outline="")
 
     def _piege(self, px, py, vue):
         t = self.tile
@@ -686,7 +735,8 @@ class Fenetre:
         joueur = self.game.player
         self.canvas.create_rectangle(0, 0, self.largeur, HUD_HEIGHT,
                                      fill="#16141d", outline="")
-        self._texte(10, 8, f"Étage {self.game.depth}", gras=True)
+        lieu = "Refuge" if self.game.config.is_hub else f"Étage {self.game.depth}"
+        self._texte(10, 8, lieu, gras=True)
         self._texte(10, 26, f"Comp. {joueur.skills.total_levels()}", pale=True)
 
         self._barre(95, 10, 110, joueur.hp, joueur.max_hp,
@@ -718,7 +768,7 @@ class Fenetre:
                                 font=("TkDefaultFont", 9, "bold"))
 
     def _dessiner_journal(self):
-        haut = HUD_HEIGHT + self.game.level.height * self.tile
+        haut = HUD_HEIGHT + self.hauteur_carte
         self.canvas.create_rectangle(0, haut, self.largeur, haut + LOG_HEIGHT,
                                      fill="#16141d", outline="")
         lignes = self.game.log.tail(LOG_LINES)
@@ -734,12 +784,17 @@ class Fenetre:
     def _barre_de_boutons(self, y):
         """Tout ce qui se fait au clavier se fait aussi d'un clic."""
         joueur, level = self.game.player, self.game.level
+        au_refuge = self.game.config.is_hub
         boutons = [
             ("Ramasser", self.game.cmd_pickup, joueur.pos in level.items),
-            ("Descendre", self.game.cmd_descend, joueur.pos == level.stairs),
+            ("Entrer dans le donjon" if au_refuge else "Descendre",
+             self.game.cmd_descend, joueur.pos == level.stairs),
             ("Attendre", self.game.cmd_wait, True),
             ("Se reposer", self.game.cmd_rest,
-             joueur.hp < joueur.max_hp and not self.game.monsters_visible()),
+             joueur.hp < joueur.max_hp and not self.game.monsters_visible()
+             and not au_refuge),
+            ("Coffre", lambda: setattr(self, "mode", "coffre"),
+             au_refuge and joueur.pos == getattr(level, "chest", None)),
             ("Sac", lambda: setattr(self, "mode", "sac"), True),
             ("Compétences", lambda: setattr(self, "mode", "competences"), True),
             ("Aide", lambda: setattr(self, "mode", "aide"), True),
@@ -819,7 +874,7 @@ class Fenetre:
         largeur = 520
         hauteur = 74 + lignes * 24 + 14 + len(fiche) * 16 + 44
         gauche = (self.largeur - largeur) / 2
-        haut = (HUD_HEIGHT + self.game.level.height * self.tile - hauteur) / 2
+        haut = (HUD_HEIGHT + self.hauteur_carte - hauteur) / 2
         self.canvas.create_rectangle(gauche, haut, gauche + largeur, haut + hauteur,
                                      fill=PANNEAU, outline=BORDURE, width=2)
         self._texte(gauche + 16, haut + 14, titres[self.mode], gras=True)
@@ -872,7 +927,7 @@ class Fenetre:
                            f"objet {index}"))
 
     def _panneau(self, titre, lignes, bouton_fermer=False):
-        hauteur_carte = self.game.level.height * self.tile + HUD_HEIGHT
+        hauteur_carte = self.hauteur_carte + HUD_HEIGHT
         largeur = min(self.largeur - 60,
                       max([len(titre)] + [len(l) for l in lignes]) * 7 + 50)
         hauteur = 54 + len(lignes) * 19 + (36 if bouton_fermer else 0)
@@ -913,7 +968,7 @@ class Fenetre:
         largeur = min(self.largeur - 40, 700)
         hauteur = 96 + len(lignes) * 26
         gauche = (self.largeur - largeur) / 2
-        haut = (HUD_HEIGHT + self.game.level.height * self.tile - hauteur) / 2
+        haut = (HUD_HEIGHT + self.hauteur_carte - hauteur) / 2
         self.canvas.create_rectangle(gauche, haut, gauche + largeur,
                                      haut + hauteur, fill=PANNEAU,
                                      outline=BORDURE, width=2)
@@ -929,6 +984,63 @@ class Fenetre:
             self._texte(gauche + 358, y, prochain, pale=True)
         self._bouton(gauche + largeur - 92, haut + hauteur - 36, 80, 26,
                      "Fermer", lambda: setattr(self, "mode", "jeu"))
+
+    def _dessiner_coffre(self):
+        """Le coffre du refuge : à gauche le sac, à droite ce qui survivra."""
+        session = self.session
+        sac = self.game.player.inventory
+        garde = session.entrepot()
+        largeur = min(self.largeur - 60, 660)
+        hauteur = 110 + max(len(sac), len(garde), 1) * 24
+        gauche = (self.largeur - largeur) / 2
+        haut = (HUD_HEIGHT + self.hauteur_carte - hauteur) / 2
+        colonne = largeur / 2 - 20
+        self.canvas.create_rectangle(gauche, haut, gauche + largeur,
+                                     haut + hauteur, fill=PANNEAU,
+                                     outline=BORDURE, width=2)
+        self._texte(gauche + 16, haut + 14, "Ton sac — clique pour déposer",
+                    gras=True)
+        self._texte(gauche + 32 + colonne, haut + 14,
+                    f"Le coffre ({len(garde)}/{session.meta.CAPACITE_ENTREPOT})"
+                    " — clique pour reprendre", gras=True)
+        self.canvas.create_line(gauche + colonne + 24, haut + 36,
+                                gauche + colonne + 24, haut + hauteur - 44,
+                                fill=BORDURE)
+
+        for index, objet in enumerate(sac):
+            self._ligne_coffre(gauche + 12, haut + 44 + index * 24, colonne,
+                               objet, f"sac {index}",
+                               lambda o=objet: self._deposer(o))
+        for index, objet in enumerate(garde):
+            self._ligne_coffre(gauche + 32 + colonne, haut + 44 + index * 24,
+                               colonne, objet, f"coffre {index}",
+                               lambda i=index: self._retirer(i))
+        if not garde:
+            self._texte(gauche + 36 + colonne, haut + 46,
+                        "Vide. Ce qu'on y laisse survit à la mort.", pale=True)
+        self._texte(gauche + 16, haut + hauteur - 38,
+                    "Tout ce qui reste dans ton sac sera perdu si tu meurs.",
+                    pale=True)
+        self._bouton(gauche + largeur - 92, haut + hauteur - 40, 80, 26,
+                     "Fermer", lambda: setattr(self, "mode", "jeu"))
+
+    def _ligne_coffre(self, x, y, largeur, objet, etiquette, action):
+        zone = (x, y, x + largeur, y + 22)
+        if self.zone_survolee == zone:
+            self.canvas.create_rectangle(*zone, fill=BOUTON_SURVOL, outline="")
+        couleur = COULEUR_OBJET.get(objet.category, "#cccccc")
+        self.canvas.create_oval(x + 6, y + 7, x + 14, y + 15,
+                                fill=couleur, outline="")
+        self._texte(x + 24, y + 4, objet.name)
+        self.zones.append((*zone, action, etiquette))
+
+    def _deposer(self, objet):
+        if not self.session.deposer(objet):
+            self.note = "Le coffre est plein."
+
+    def _retirer(self, index):
+        if not self.session.retirer(index):
+            self.note = "Ton sac est plein."
 
     def _dessiner_fin(self):
         self.canvas.create_rectangle(0, 0, self.largeur, self.hauteur,
@@ -954,9 +1066,9 @@ class Fenetre:
                                     fill=TEXTE if index == 0 else TEXTE_PALE,
                                     font=("TkDefaultFont", 11,
                                           "bold" if index == 0 else "normal"))
-        self._bouton(cx - 150, haut + hauteur - 46, 140, 30,
-                     "Rejouer (R)", self.rejouer)
-        self._bouton(cx + 10, haut + hauteur - 46, 140, 30,
+        self._bouton(cx - 160, haut + hauteur - 46, 160, 30,
+                     "Au refuge (R)", self.rejouer)
+        self._bouton(cx + 16, haut + hauteur - 46, 140, 30,
                      "Quitter (q)", self.quitter)
 
 

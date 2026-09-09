@@ -88,7 +88,7 @@ def effect(name):
 
 class ItemType:
     def __init__(self, key, name, glyph, category, power=0, weight=10,
-                 on_use=None, on_hit=None, note="", skill=None):
+                 on_use=None, on_hit=None, note="", skill=None, depth_min=1):
         self.key = key
         self.name = name
         self.glyph = glyph
@@ -99,6 +99,7 @@ class ItemType:
         self.on_use = on_use        # effet quand on consomme/lit l'objet
         self.on_hit = on_hit        # effet quand l'objet est lancé sur une cible
         self.note = note
+        self.depth_min = depth_min  # étage à partir duquel l'objet apparaît
 
     @property
     def equippable(self):
@@ -238,6 +239,19 @@ def _lire_panique(game, user, item):
     return True
 
 
+@effect("orbe_retour")
+def _orbe_retour(game, user, item):
+    """Interrompt la descente et renvoie au refuge, acquis compris.
+
+    Le prix est ailleurs : la profondeur atteinte repart de zéro, donc la
+    prochaine mort rapportera moins de progression permanente.
+    """
+    from .game import RETOUR
+
+    game.end_run(RETOUR, f"Tu brises {item.type.name} et tout devient blanc...")
+    return True
+
+
 @effect("lire_teleport")
 def _lire_teleport(game, user, item):
     game.teleport_random(user)
@@ -316,6 +330,10 @@ _register(
     ItemType("parchemin_teleport", "parchemin de téléportation", "?", SCROLL,
              weight=7, on_use="lire_teleport",
              note="Te téléporte au hasard sur l'étage. Utile pour fuir."),
+    ItemType("orbe_retour", "orbe de retour", "o", SCROLL, weight=6, depth_min=4,
+             on_use="orbe_retour", skill="parchemins",
+             note="Te ramène au refuge avec tes objets et tes compétences. "
+                  "En échange, la profondeur atteinte est remise à zéro."),
     ItemType("fleche", "une flèche", "(", AMMO, power=7, weight=12,
              on_hit="jet_degats", note="À lancer : 7 dégâts à distance."),
     ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8),
@@ -331,7 +349,8 @@ def make(key, plus=0, registre=None):
 
 def random_item(rng, depth=1, registre=None):
     """Tire un objet au hasard; les objets s'améliorent avec la profondeur."""
-    item_type = rng.weighted([(t, t.weight) for t in ITEM_TYPES.values()])
+    item_type = rng.weighted([(t, t.weight) for t in ITEM_TYPES.values()
+                              if depth >= t.depth_min])
     plus = 0
     if item_type.equippable:
         plus = max(0, rng.randint(-1, 1 + depth // 3))

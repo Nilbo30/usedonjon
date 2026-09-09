@@ -11,9 +11,9 @@ Deux idées portent l'extensibilité :
    appellent exactement les mêmes fonctions.
 """
 
-from . import ai, dungeon, events, items, monsters, skills, tiles, traps
+from . import ai, dungeon, events, hub, items, monsters, skills, tiles, traps
 from .config import RunConfig
-from .entities import ACTION_COST, Monster, Player
+from .entities import ACTION_COST, Monster, Player, equiper_kit
 from .events import Event
 from .geom import ALL_DIRS, add, chebyshev, is_diagonal, sub
 from .log import MessageLog
@@ -21,6 +21,12 @@ from .rng import Rng
 from .run import RunSummary
 
 PLAYING, DEAD, WON = "en cours", "mort", "victoire"
+#: L'orbe : la descente s'arrête, on remonte au refuge avec tous ses acquis.
+RETOUR = "retour"
+#: Depuis le refuge : on s'engage dans le donjon. Ce n'est pas une fin de vie.
+VERS_DONJON = "vers le donjon"
+#: États où la partie courante est close et où la session doit enchaîner.
+TERMINES = (DEAD, WON, RETOUR, VERS_DONJON)
 
 
 class Game:
@@ -32,7 +38,7 @@ class Game:
     """
 
     def __init__(self, seed=None, max_depth=None, config=None,
-                 player_name="Shiren"):
+                 player_name="Shiren", player=None):
         self.config = config or RunConfig()
         if max_depth is not None:      # raccourci pratique (CLI, interfaces)
             self.config = self.config.replace(max_depth=max_depth)
@@ -44,7 +50,10 @@ class Game:
         self.deepest = 0           # l'orbe ramènera au 1er étage : on garde le record
         self.state = PLAYING
         self.summary = None        # bilan du run, une fois terminé
-        self.player = Player(player_name, self.config)
+        # Le héros peut venir de l'extérieur : c'est ainsi qu'il traverse le
+        # refuge et le donjon avec son sac et ses compétences.
+        self.player = player if player is not None else Player(player_name,
+                                                               self.config)
         self.actors = [self.player]
         self.level = None
         # Auditeurs d'évènements. Le formateur de compétences en est un comme
@@ -54,9 +63,13 @@ class Game:
         self._regen_acc = 0.0
         self._hunger_acc = 0.0
         self._repos_ce_tour = False
-        # Les apparences des objets mystérieux sont rebattues à chaque run.
-        self.identification = items.Registre(self.rng)
-        self._starting_kit()
+        # Les apparences suivent le héros : ce qu'il a identifié le reste tant
+        # qu'il vit, refuge compris. Elles sont rebattues à chaque nouvelle vie.
+        if getattr(self.player, "registre", None) is None:
+            self.player.registre = items.Registre(self.rng)
+        self.identification = self.player.registre
+        if player is None:
+            self._starting_kit()
         self.next_floor(first=True)
 
     @property
@@ -67,15 +80,16 @@ class Game:
     # Mise en place
     # ------------------------------------------------------------------ #
     def _starting_kit(self):
-        for cle in self.config.starting_kit:
-            objet = items.make(cle, registre=self.identification)
-            self.player.add_item(objet)
-            if objet.category == items.WEAPON and self.player.weapon is None:
-                self.player.weapon = objet
-            elif objet.category == items.SHIELD and self.player.shield is None:
-                self.player.shield = objet
+        equiper_kit(self.player, self.config, self.identification)
 
     def next_floor(self, first=False):
+        if self.config.is_hub:
+            self.level = hub.generer()
+            self.actors = [self.player]
+            self.player.pos = hub.depart(self.level)
+            self.player.energy = ACTION_COST
+            self.say("Te voilà au refuge.")
+            return
         if self.depth >= self.config.max_depth:
             self.end_run(WON,
                          f"Tu atteins le fond du donjon (étage {self.depth}). "
@@ -213,7 +227,7 @@ class Game:
 
     def _hunger_tick(self):
         player = self.player
-        if not player.alive:
+        if not player.alive or not self.config.hunger_enabled:
             return
         if player.fullness > 0:
             # « Marche » réduit le coût d'un tour ; on accumule la fraction
@@ -500,6 +514,10 @@ class Game:
         if self.player.pos != self.level.stairs:
             self.say("Il n'y a pas d'escalier ici.")
             return False
+        if self.config.is_hub:
+            self.state = VERS_DONJON      # la session prend le relais
+            self.say("Tu t'engages dans le donjon.")
+            return True
         avant = self.depth
         self.next_floor()
         if self.depth > avant:

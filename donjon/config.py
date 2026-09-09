@@ -38,6 +38,8 @@ class RunConfig:
         start_defense=2,
         inventory_size=12,
         starting_kit=("epee_bois", "bouclier_bois", "onigiri", "herbe_soin"),
+        hunger_enabled=True,
+        is_hub=False,
     ):
         self.max_depth = max_depth
         self.spawn_interval = spawn_interval
@@ -58,6 +60,10 @@ class RunConfig:
         self.start_defense = start_defense
         self.inventory_size = inventory_size
         self.starting_kit = tuple(starting_kit)
+        # Le hub est une partie comme une autre, mais sans faim, sans monstre
+        # et sans étages : c'est la config qui le dit, pas un cas particulier.
+        self.hunger_enabled = hunger_enabled
+        self.is_hub = is_hub
 
     def replace(self, **changements):
         """Copie modifiée : `config.replace(max_depth=10)`."""

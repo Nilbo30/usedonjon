@@ -5,6 +5,7 @@ scheduler dans game.py). Ajouter une créature = ajouter une entrée de données
 dans monsters.py, pas une sous-classe.
 """
 
+from . import items as items_mod
 from .config import RunConfig
 from .skills import SkillSet
 
@@ -159,3 +160,16 @@ class Player(Actor):
 
     def slot_of(self, item):
         return self.inventory.index(item)
+
+
+def equiper_kit(player, config, registre=None):
+    """Donne au héros son matériel de départ, et le lui met sur le dos."""
+    for cle in config.starting_kit:
+        objet = items_mod.make(cle, registre=registre)
+        if not player.add_item(objet):
+            break
+        if objet.category == items_mod.WEAPON and player.weapon is None:
+            player.weapon = objet
+        elif objet.category == items_mod.SHIELD and player.shield is None:
+            player.shield = objet
+    return player
