@@ -1,4 +1,4 @@
-"""Affichage graphique (tkinter). Dessine le même jeu que l'UI texte.
+"""Affichage graphique (tkinter), jouable à la souris ou au clavier.
 
 tkinter est livré avec Python : aucune installation supplémentaire. Comme
 l'interface curses, ce fichier ne contient AUCUNE règle de jeu — il lit l'état
@@ -7,18 +7,25 @@ et appelle les commandes `game.cmd_*`.
 Les formes sont dessinées à la main (rectangles, ovales, polygones) : pas
 d'images à charger, mais la structure est prête à accueillir des sprites PNG
 plus tard (tkinter sait afficher des PhotoImage).
+
+Souris : un clic sur une case adjacente s'y déplace ou attaque, un clic plus
+loin lance un déplacement automatique (calculé par le BFS de path.py) qui
+s'interrompt dès qu'un monstre apparaît. Les boutons du bas et le sac sont
+entièrement cliquables ; le survol décrit ce qu'il y a sous le curseur.
 """
 
 import tkinter as tk
 
 from . import items as items_mod
-from .game import DEAD, PLAYING, WON, Game
-from .geom import DIRECTIONS
+from . import path
+from .game import PLAYING, WON, Game
+from .geom import DIRECTIONS, chebyshev, step_toward
 
 TILE = 20
 HUD_HEIGHT = 46
 LOG_LINES = 4
-LOG_HEIGHT = 18 * LOG_LINES + 10
+LOG_HEIGHT = 18 * LOG_LINES + 22
+PAS_TRAJET_MS = 55          # vitesse du déplacement automatique
 
 # --- palette ---------------------------------------------------------------
 FOND = "#0b0b10"
@@ -32,10 +39,15 @@ JOUEUR = "#4fd1e0"
 PIEGE = "#e0574f"
 TEXTE = "#e8e6f0"
 TEXTE_PALE = "#8e89a3"
+PANNEAU = "#1d1a26"
+BORDURE = "#4a4460"
+BOUTON = "#2b2739"
+BOUTON_SURVOL = "#3c374f"
 BARRE_FOND = "#26222f"
 BARRE_PV = "#5fd07a"
 BARRE_PV_BAS = "#e0574f"
 BARRE_VENTRE = "#e0a54f"
+SURVOL = "#f0e9a8"
 
 COULEUR_MONSTRE = "#c76b6b"
 COULEUR_OBJET = {
@@ -63,14 +75,20 @@ DIRECTION_SYMBOLES = {
 }
 
 AIDE = [
-    "Flèches ou hjkl / yubn : se déplacer, foncer sur un monstre pour l'attaquer",
-    "« , » ramasser      « > » descendre l'escalier      « . » attendre",
-    "« i » ouvrir le sac       « ? » cette aide       « q » quitter",
+    "SOURIS",
+    "  Clic sur une case voisine : s'y déplacer, ou attaquer ce qui s'y trouve.",
+    "  Clic plus loin : le héros y va tout seul (il s'arrête s'il voit un monstre).",
+    "  Clic sur le héros : ramasser, descendre l'escalier, ou attendre un tour.",
+    "  Clic droit : annuler le déplacement ou fermer un panneau.",
+    "  Les boutons en bas et le sac sont cliquables.",
     "",
-    "Dans le sac : la lettre de l'objet, puis",
-    "u utiliser   e équiper   t lancer (puis une direction)   d poser",
+    "CLAVIER",
+    "  Flèches, pavé numérique ou hjkl / yubn : se déplacer et attaquer.",
+    "  « , » ramasser    « > » descendre    « . » attendre    « i » sac",
+    "  « ? » cette aide    « q » quitter    « R » rejouer après la partie",
     "",
-    "Après la partie : R pour rejouer, q pour quitter.",
+    "  Dans le sac : la lettre de l'objet, puis u utiliser, e équiper,",
+    "  t lancer (puis une direction), d poser.",
 ]
 
 
@@ -97,36 +115,61 @@ class Fenetre:
         self.slot = None
         self.note = None
 
+        # zones cliquables : (x1, y1, x2, y2, action, étiquette)
+        self.zones = []
+        self.zone_survolee = None  # géométrie (x1, y1, x2, y2) de la zone survolée
+        self.ferme = False
+        self.case_survolee = None
+        self.destination = None    # cible du déplacement automatique
+        self._trajet_prevu = None
+
         self.root = tk.Tk()
         self.root.title("Donjon mystère")
         self.root.configure(bg=FOND)
-        width = self.game.level.width * tile
-        height = self.game.level.height * tile + HUD_HEIGHT + LOG_HEIGHT
-        self.canvas = tk.Canvas(self.root, width=width, height=height,
+        self.largeur = self.game.level.width * tile
+        self.hauteur = self.game.level.height * tile + HUD_HEIGHT + LOG_HEIGHT
+        self.canvas = tk.Canvas(self.root, width=self.largeur, height=self.hauteur,
                                 bg=FOND, highlightthickness=0)
         self.canvas.pack()
         self.root.bind("<Key>", self.on_key)
+        self.canvas.bind("<Button-1>", self.on_click)
+        self.canvas.bind("<Button-3>", self.on_click_droit)
+        self.canvas.bind("<Motion>", self.on_motion)
+        self.canvas.bind("<Leave>", self.on_leave)
         self.root.resizable(False, False)
         self.dessiner()
 
-    # ------------------------------------------------------------------ #
-    # Boucle
-    # ------------------------------------------------------------------ #
     def run(self):
         self.root.mainloop()
 
+    def quitter(self):
+        self.ferme = True
+        self.arreter_trajet()
+        self.root.destroy()
+
+    # ------------------------------------------------------------------ #
+    # Conversions écran <-> carte
+    # ------------------------------------------------------------------ #
+    def _cellule(self, x, y):
+        """Coin haut-gauche en pixels d'une case de la carte."""
+        return x * self.tile, y * self.tile + HUD_HEIGHT
+
+    def case_sous(self, px, py):
+        """Case de la carte sous un point de l'écran, ou None."""
+        if py < HUD_HEIGHT or py >= HUD_HEIGHT + self.game.level.height * self.tile:
+            return None
+        case = (int(px // self.tile), int((py - HUD_HEIGHT) // self.tile))
+        return case if self.game.level.in_bounds(case) else None
+
+    # ------------------------------------------------------------------ #
+    # Clavier
+    # ------------------------------------------------------------------ #
     def on_key(self, event):
-        touche = event.keysym
-        char = event.char
+        self.arreter_trajet()
+        touche, char = event.keysym, event.char
 
         if self.game.state != PLAYING:
-            if char.lower() == "r":
-                self.game = Game(seed=None, max_depth=self.max_depth)
-                self.mode = "jeu"
-            elif char.lower() == "q" or touche == "Escape":
-                self.root.destroy()
-                return
-            self.dessiner()
+            self._fin_de_partie(char, touche)
             return
 
         if self.mode == "aide":
@@ -139,7 +182,16 @@ class Fenetre:
             self._touche_action(touche, char)
         elif self.mode == "direction":
             self._touche_direction(touche, char)
-        self.dessiner()
+        if not self.ferme:
+            self.dessiner()
+
+    def _fin_de_partie(self, char, touche):
+        if char.lower() == "r":
+            self.rejouer()
+        elif char.lower() == "q" or touche == "Escape":
+            self.quitter()
+        else:
+            self.dessiner()
 
     def _touche_jeu(self, touche, char):
         direction = DIRECTION_SYMBOLES.get(touche) or DIRECTION_TOUCHES.get(char)
@@ -156,7 +208,7 @@ class Fenetre:
         elif char == "?":
             self.mode = "aide"
         elif char == "q" or touche == "Escape":
-            self.root.destroy()
+            self.quitter()
 
     def _touche_sac(self, touche, char):
         if touche == "Escape" or char == "i":
@@ -164,8 +216,7 @@ class Fenetre:
             return
         slot = ord(char.lower()) - ord("a") if char.isalpha() else -1
         if 0 <= slot < len(self.game.player.inventory):
-            self.slot = slot
-            self.mode = "action"
+            self.choisir_objet(slot)
         else:
             self.note = "Pas d'objet à cette lettre."
 
@@ -188,30 +239,198 @@ class Fenetre:
             return
         direction = DIRECTION_SYMBOLES.get(touche) or DIRECTION_TOUCHES.get(char)
         if direction:
-            self.game.cmd_throw(self.slot, direction)
-            self.mode = "jeu"
+            self.lancer(direction)
+
+    # ------------------------------------------------------------------ #
+    # Souris
+    # ------------------------------------------------------------------ #
+    def on_click(self, event):
+        """Un clic gauche : d'abord les boutons et panneaux, puis la carte."""
+        for x1, y1, x2, y2, action, _ in reversed(self.zones):
+            if x1 <= event.x <= x2 and y1 <= event.y <= y2:
+                self.arreter_trajet()
+                action()
+                if not self.ferme:
+                    self.dessiner()
+                return
+        if self.game.state != PLAYING or self.mode in ("sac", "action", "aide"):
+            return
+        case = self.case_sous(event.x, event.y)
+        if case is None:
+            return
+        self.arreter_trajet()
+        if self.mode == "direction":
+            self._lancer_vers(case)
+        else:
+            self.clic_carte(case)
+        self.dessiner()
+
+    def on_click_droit(self, event):
+        """Clic droit : tout annuler (déplacement en cours, panneau ouvert)."""
+        self.arreter_trajet()
+        self.mode = "jeu" if self.mode != "action" else "sac"
+        self.dessiner()
+
+    def on_motion(self, event):
+        """Survol : cadre + étiquette sur la carte, surbrillance sur les boutons.
+
+        On ne redessine tout que si la zone cliquable survolée change ; sur la
+        carte, seuls les objets marqués « survol » sont refaits.
+        """
+        zone = self._zone_sous(event.x, event.y)
+        geometrie = zone[:4] if zone else None
+        case = None if zone else self.case_sous(event.x, event.y)
+        if geometrie != self.zone_survolee:
+            self.zone_survolee = geometrie
+            self.case_survolee = case
+            self.dessiner()
+        elif case != self.case_survolee:
+            self.case_survolee = case
+            self._rafraichir_survol(event.x, event.y)
+
+    def on_leave(self, _event):
+        self.case_survolee = None
+        self.zone_survolee = None
+        self.dessiner()
+
+    def _zone_sous(self, px, py):
+        for zone in reversed(self.zones):
+            if zone[0] <= px <= zone[2] and zone[1] <= py <= zone[3]:
+                return zone
+        return None
+
+    def clic_carte(self, case):
+        """Règle simple : voisin = une action, loin = trajet automatique."""
+        joueur = self.game.player
+        if case == joueur.pos:
+            self.action_sur_place()
+            return
+        if chebyshev(case, joueur.pos) == 1:
+            self.game.cmd_move(step_toward(joueur.pos, case))
+            return
+        if self.monstres_en_vue():
+            # Jamais de pilote automatique en présence d'un monstre : un pas.
+            self.game.cmd_move(step_toward(joueur.pos, case))
+            return
+        if not self.game.level.walkable(case):
+            self.note = "Impossible d'aller là."
+            return
+        if case not in self.game.level.explored:
+            self.note = "Tu ne connais pas encore cet endroit."
+            return
+        self.demarrer_trajet(case)
+
+    def action_sur_place(self):
+        """Clic sur le héros : ramasser, descendre, ou attendre."""
+        game = self.game
+        if game.player.pos in game.level.items:
+            game.cmd_pickup()
+        elif game.player.pos == game.level.stairs:
+            game.cmd_descend()
+        else:
+            game.cmd_wait()
+
+    def monstres_en_vue(self):
+        vus = self.game.visible_cells()
+        return any(m.pos in vus for m in self.game.monsters())
+
+    # --- déplacement automatique ---------------------------------------
+    def demarrer_trajet(self, destination):
+        chemin = path.find_path(self.game.level, self.game.player.pos, destination,
+                                blocked={m.pos for m in self.game.monsters()},
+                                allowed=self.game.level.explored)
+        if not chemin:
+            self.note = "Aucun chemin connu jusque-là."
+            return
+        self.destination = destination
+        self.pas_trajet()
+
+    def arreter_trajet(self):
+        self.destination = None
+        if self._trajet_prevu is not None:
+            try:
+                self.root.after_cancel(self._trajet_prevu)
+            except tk.TclError:                       # pragma: no cover
+                pass
+            self._trajet_prevu = None
+
+    def pas_trajet(self):
+        """Un pas du trajet, puis on se replanifie tant que rien n'interrompt."""
+        self._trajet_prevu = None
+        if self.destination is None or self.game.state != PLAYING:
+            self.arreter_trajet()
+            return
+        if self.monstres_en_vue():
+            self.arreter_trajet()
+            self.dessiner()
+            return
+        joueur = self.game.player
+        direction = path.step_along(self.game.level, joueur.pos, self.destination,
+                                    {m.pos for m in self.game.monsters()},
+                                    allowed=self.game.level.explored)
+        pv_avant = joueur.hp
+        if direction is None or not self.game.cmd_move(direction):
+            self.arreter_trajet()
+            self.dessiner()
+            return
+        arrive = joueur.pos == self.destination
+        interessant = (joueur.pos in self.game.level.items
+                       or joueur.pos == self.game.level.stairs
+                       or joueur.hp < pv_avant
+                       or not joueur.can_act())
+        if arrive or interessant:
+            self.arreter_trajet()
+        else:
+            self._trajet_prevu = self.root.after(PAS_TRAJET_MS, self.pas_trajet)
+        self.dessiner()
+
+    # --- sac et objets à la souris --------------------------------------
+    def choisir_objet(self, slot):
+        self.slot = slot
+        self.mode = "action"
+
+    def utiliser(self, commande):
+        commande(self.slot)
+        self.mode = "jeu"
+
+    def lancer(self, direction):
+        self.game.cmd_throw(self.slot, direction)
+        self.mode = "jeu"
+
+    def _lancer_vers(self, case):
+        if case == self.game.player.pos:
+            self.mode = "sac"
+            return
+        self.lancer(step_toward(self.game.player.pos, case))
+
+    def rejouer(self):
+        self.game = Game(seed=None, max_depth=self.max_depth)
+        self.mode = "jeu"
+        self.slot = None
+        self.destination = None
+        self.dessiner()
 
     # ------------------------------------------------------------------ #
     # Dessin
     # ------------------------------------------------------------------ #
     def dessiner(self):
         self.canvas.delete("all")
+        self.zones = []
         self._dessiner_hud()
         self._dessiner_carte()
         self._dessiner_journal()
         if self.mode in ("sac", "action", "direction"):
             self._dessiner_sac()
         elif self.mode == "aide":
-            self._panneau("Aide", AIDE)
+            self._panneau("Aide", AIDE, bouton_fermer=True)
         if self.game.state != PLAYING:
             self._dessiner_fin()
-
-    def _cellule(self, x, y):
-        """Coin haut-gauche en pixels d'une case de la carte."""
-        return x * self.tile, y * self.tile + HUD_HEIGHT
+        if self.case_survolee:
+            px, py = self._cellule(*self.case_survolee)
+            self._rafraichir_survol(px + self.tile / 2, py + self.tile / 2)
 
     def _dessiner_carte(self):
-        game, level, tile = self.game, self.game.level, self.tile
+        game, level = self.game, self.game.level
         visibles = game.visible_cells()
         for (x, y) in level.explored:
             pos = (x, y)
@@ -224,12 +443,17 @@ class Fenetre:
             objet = level.items.get(pos)
             if objet:
                 self._objet(px, py, objet, vue)
+        if self.destination and self.destination in level.explored:
+            px, py = self._cellule(*self.destination)
+            self.canvas.create_rectangle(px + 1, py + 1, px + self.tile - 1,
+                                         py + self.tile - 1,
+                                         outline=SURVOL, dash=(2, 2))
         for monstre in game.monsters():
             if monstre.pos in visibles:
                 px, py = self._cellule(*monstre.pos)
                 self._creature(px, py, monstre)
         px, py = self._cellule(*game.player.pos)
-        self._heros(px, py)
+        self._corps(px, py, JOUEUR, "heros")
 
     def _case(self, px, py, tuile, vue):
         t = self.tile
@@ -316,9 +540,6 @@ class Fenetre:
         elif monstre.has_status("confus"):
             self._bulle(px, py, "?")
 
-    def _heros(self, px, py):
-        self._corps(px, py, JOUEUR, "heros")
-
     def _corps(self, px, py, couleur, forme):
         t = self.tile
         cx, cy = px + t / 2, py + t / 2
@@ -346,11 +567,60 @@ class Fenetre:
                                 fill="#ffffff", anchor="ne",
                                 font=("TkDefaultFont", 8, "bold"))
 
-    # --- HUD ------------------------------------------------------------
+    # --- survol ---------------------------------------------------------
+    def _rafraichir_survol(self, px, py):
+        """Cadre + étiquette sous le curseur, sans redessiner toute la scène."""
+        self.canvas.delete("survol")
+        case = self.case_survolee
+        if case is None or case not in self.game.level.explored:
+            return
+        cx, cy = self._cellule(*case)
+        self.canvas.create_rectangle(cx, cy, cx + self.tile, cy + self.tile,
+                                     outline=SURVOL, tags="survol")
+        texte = self.description(case)
+        if not texte:
+            return
+        largeur = len(texte) * 6.6 + 14
+        gauche = min(px + 14, self.largeur - largeur - 4)
+        haut = min(py + 14, self.hauteur - 30)
+        self.canvas.create_rectangle(gauche, haut, gauche + largeur, haut + 22,
+                                     fill=PANNEAU, outline=BORDURE, tags="survol")
+        self.canvas.create_text(gauche + 7, haut + 11, text=texte, anchor="w",
+                                fill=TEXTE, font=("TkDefaultFont", 9),
+                                tags="survol")
+
+    def description(self, case):
+        """Ce qu'il y a sur une case, en une ligne (étiquette de survol)."""
+        game, level = self.game, self.game.level
+        visible = case in game.visible_cells()
+        if case == game.player.pos:
+            if case in level.items:
+                return f"Toi — clic pour ramasser {level.items[case].name}"
+            if case == level.stairs:
+                return "Toi — clic pour descendre l'escalier"
+            return "Toi — clic pour attendre un tour"
+        if visible:
+            monstre = game.actor_at(case)
+            if monstre:
+                statuts = monstre.status_line()
+                detail = f" · {statuts}" if statuts else ""
+                return (f"{monstre.name} — PV {monstre.hp}/{monstre.max_hp}"
+                        f" · atq {monstre.attack}{detail}")
+        if case in level.items:
+            return level.items[case].name
+        piege = level.traps.get(case)
+        if piege and piege.revealed:
+            return piege.name
+        if case == level.stairs:
+            return "Escalier vers l'étage suivant"
+        if not level.walkable(case):
+            return "Mur"
+        return None
+
+    # --- HUD, journal, boutons -------------------------------------------
     def _dessiner_hud(self):
         joueur = self.game.player
-        largeur = self.game.level.width * self.tile
-        self.canvas.create_rectangle(0, 0, largeur, HUD_HEIGHT,
+        self.canvas.create_rectangle(0, 0, self.largeur, HUD_HEIGHT,
                                      fill="#16141d", outline="")
         self._texte(10, 8, f"Étage {self.game.depth}", gras=True)
         self._texte(10, 26, f"Niveau {joueur.level}", pale=True)
@@ -368,8 +638,7 @@ class Fenetre:
 
         statuts = joueur.status_line()
         if statuts:
-            self._texte(largeur - 10, 8, statuts, ancre="ne", couleur="#e0a54f")
-        self._texte(largeur - 10, 26, "« ? » pour l'aide", ancre="ne", pale=True)
+            self._texte(self.largeur - 10, 8, statuts, ancre="ne", couleur="#e0a54f")
 
     def _barre(self, x, y, largeur, valeur, maximum, couleur, legende):
         """Jauge + légende posée à droite (lisible quelle que soit la valeur)."""
@@ -386,8 +655,7 @@ class Fenetre:
 
     def _dessiner_journal(self):
         haut = HUD_HEIGHT + self.game.level.height * self.tile
-        largeur = self.game.level.width * self.tile
-        self.canvas.create_rectangle(0, haut, largeur, haut + LOG_HEIGHT,
+        self.canvas.create_rectangle(0, haut, self.largeur, haut + LOG_HEIGHT,
                                      fill="#16141d", outline="")
         lignes = self.game.log.tail(LOG_LINES)
         if self.note:
@@ -396,6 +664,37 @@ class Fenetre:
         for index, ligne in enumerate(lignes):
             dernier = index == len(lignes) - 1
             self._texte(10, haut + 6 + index * 18, ligne, pale=not dernier)
+        if self.game.state == PLAYING:
+            self._barre_de_boutons(haut + LOG_HEIGHT - 32)
+
+    def _barre_de_boutons(self, y):
+        """Tout ce qui se fait au clavier se fait aussi d'un clic."""
+        joueur, level = self.game.player, self.game.level
+        boutons = [
+            ("Ramasser", self.game.cmd_pickup, joueur.pos in level.items),
+            ("Descendre", self.game.cmd_descend, joueur.pos == level.stairs),
+            ("Attendre", self.game.cmd_wait, True),
+            ("Sac", lambda: setattr(self, "mode", "sac"), True),
+            ("Aide", lambda: setattr(self, "mode", "aide"), True),
+        ]
+        largeur = 88
+        x = self.largeur - 10 - len(boutons) * (largeur + 6)
+        for texte, action, actif in boutons:
+            self._bouton(x, y, largeur, 26, texte, action, actif)
+            x += largeur + 6
+
+    def _bouton(self, x, y, largeur, hauteur, texte, action, actif=True):
+        zone = (x, y, x + largeur, y + hauteur, action, texte)
+        survole = self.zone_survolee == zone[:4]
+        fond = BOUTON_SURVOL if (survole and actif) else BOUTON
+        self.canvas.create_rectangle(x, y, x + largeur, y + hauteur,
+                                     fill=fond if actif else "#211e2b",
+                                     outline=BORDURE if actif else "#2f2b3a")
+        self.canvas.create_text(x + largeur / 2, y + hauteur / 2, text=texte,
+                                fill=TEXTE if actif else TEXTE_PALE,
+                                font=("TkDefaultFont", 9, "bold" if actif else "normal"))
+        if actif:
+            self.zones.append(zone)
 
     def _texte(self, x, y, texte, pale=False, gras=False, ancre="nw", couleur=None):
         self.canvas.create_text(
@@ -403,63 +702,97 @@ class Fenetre:
             fill=couleur or (TEXTE_PALE if pale else TEXTE),
             font=("TkDefaultFont", 10, "bold" if gras else "normal"))
 
-    # --- panneaux -------------------------------------------------------
+    # --- panneaux --------------------------------------------------------
     def _dessiner_sac(self):
         joueur = self.game.player
         if not joueur.inventory:
-            self._panneau("Sac", ["(vide)", "", "Échap pour fermer"])
+            self._panneau("Sac", ["Ton sac est vide."], bouton_fermer=True)
             return
-        lignes = []
-        for index, objet in enumerate(joueur.inventory):
-            marque = ""
-            if objet is joueur.weapon or objet is joueur.shield:
-                marque = "   [équipé]"
-            fleche = "> " if index == self.slot and self.mode != "sac" else "  "
-            lignes.append(f"{fleche}{chr(ord('a') + index)})  {objet.name}{marque}")
-        if self.mode == "sac":
-            titre = "Sac — choisis une lettre (Échap ferme)"
-        elif self.mode == "action":
-            titre = "u utiliser · e équiper · t lancer · d poser"
-            lignes += ["", "Échap pour revenir au sac."]
-        else:
-            titre = "Dans quelle direction ? (flèches ou hjkl/yubn)"
-            lignes += ["", "Échap pour annuler."]
-        self._panneau(titre, lignes)
-
-    def _panneau(self, titre, lignes):
-        largeur_ecran = self.game.level.width * self.tile
-        hauteur_ecran = self.game.level.height * self.tile + HUD_HEIGHT
-        largeur = min(largeur_ecran - 60, max(
-            [len(titre)] + [len(l) for l in lignes]) * 8 + 50)
-        hauteur = 54 + len(lignes) * 19
-        gauche = (largeur_ecran - largeur) / 2
-        haut = (hauteur_ecran - hauteur) / 2
+        titres = {
+            "sac": "Sac — clique un objet (ou tape sa lettre)",
+            "action": "Que faire de cet objet ?",
+            "direction": "Clique la cible du jet (ou une direction au clavier)",
+        }
+        lignes = len(joueur.inventory)
+        largeur, hauteur = 430, 74 + lignes * 24 + 44
+        gauche = (self.largeur - largeur) / 2
+        haut = (HUD_HEIGHT + self.game.level.height * self.tile - hauteur) / 2
         self.canvas.create_rectangle(gauche, haut, gauche + largeur, haut + hauteur,
-                                     fill="#1d1a26", outline="#4a4460", width=2)
+                                     fill=PANNEAU, outline=BORDURE, width=2)
+        self._texte(gauche + 16, haut + 14, titres[self.mode], gras=True)
+
+        for index, objet in enumerate(joueur.inventory):
+            y = haut + 44 + index * 24
+            choisi = index == self.slot and self.mode != "sac"
+            self._ligne_objet(gauche + 12, y, largeur - 24, index, objet, choisi)
+
+        y_actions = haut + 48 + lignes * 24
+        if self.mode == "action":
+            actions = [("Utiliser", lambda: self.utiliser(self.game.cmd_use)),
+                       ("Équiper", lambda: self.utiliser(self.game.cmd_equip)),
+                       ("Lancer", lambda: setattr(self, "mode", "direction")),
+                       ("Poser", lambda: self.utiliser(self.game.cmd_drop))]
+            x = gauche + 12
+            for texte, action in actions:
+                self._bouton(x, y_actions, 92, 26, texte, action)
+                x += 96
+        else:
+            aide = ("Clique une case pour viser."
+                    if self.mode == "direction" else
+                    "u utiliser · e équiper · t lancer · d poser")
+            self._texte(gauche + 16, y_actions + 6, aide, pale=True)
+        self._bouton(gauche + largeur - 92, haut + hauteur - 36, 80, 26,
+                     "Fermer", lambda: setattr(self, "mode", "jeu"))
+
+    def _ligne_objet(self, x, y, largeur, index, objet, choisi):
+        equipe = objet is self.game.player.weapon or objet is self.game.player.shield
+        zone = (x, y, x + largeur, y + 22)
+        survole = self.zone_survolee == zone
+        if choisi or survole:
+            self.canvas.create_rectangle(*zone, fill=BOUTON_SURVOL if survole
+                                         else BOUTON, outline="")
+        couleur = COULEUR_OBJET.get(objet.category, "#cccccc")
+        self.canvas.create_oval(x + 8, y + 7, x + 16, y + 15,
+                                fill=couleur, outline="")
+        self._texte(x + 26, y + 4, f"{chr(ord('a') + index)})  {objet.name}")
+        if equipe:
+            self._texte(x + largeur - 10, y + 4, "équipé", ancre="ne", pale=True)
+        self.zones.append((*zone, lambda i=index: self.choisir_objet(i),
+                           f"objet {index}"))
+
+    def _panneau(self, titre, lignes, bouton_fermer=False):
+        hauteur_carte = self.game.level.height * self.tile + HUD_HEIGHT
+        largeur = min(self.largeur - 60,
+                      max([len(titre)] + [len(l) for l in lignes]) * 7 + 50)
+        hauteur = 54 + len(lignes) * 19 + (36 if bouton_fermer else 0)
+        gauche = (self.largeur - largeur) / 2
+        haut = (hauteur_carte - hauteur) / 2
+        self.canvas.create_rectangle(gauche, haut, gauche + largeur, haut + hauteur,
+                                     fill=PANNEAU, outline=BORDURE, width=2)
         self._texte(gauche + 16, haut + 14, titre, gras=True)
         for index, ligne in enumerate(lignes):
             self._texte(gauche + 16, haut + 40 + index * 19, ligne)
+        if bouton_fermer:
+            self._bouton(gauche + largeur - 92, haut + hauteur - 34, 80, 26,
+                         "Fermer", lambda: setattr(self, "mode", "jeu"))
 
     def _dessiner_fin(self):
-        largeur = self.game.level.width * self.tile
-        hauteur = self.game.level.height * self.tile + HUD_HEIGHT + LOG_HEIGHT
-        self.canvas.create_rectangle(0, 0, largeur, hauteur,
+        self.canvas.create_rectangle(0, 0, self.largeur, self.hauteur,
                                      fill="#000000", stipple="gray75", outline="")
         gagne = self.game.state == WON
         titre = "VICTOIRE !" if gagne else "TU ES MORT"
         couleur = ESCALIER if gagne else PIEGE
-        self.canvas.create_rectangle(largeur / 2 - 210, hauteur / 2 - 66,
-                                     largeur / 2 + 210, hauteur / 2 + 62,
-                                     fill="#1d1a26", outline=couleur, width=2)
-        self.canvas.create_text(largeur / 2, hauteur / 2 - 30, text=titre,
-                                fill=couleur, font=("TkDefaultFont", 28, "bold"))
+        cx, cy = self.largeur / 2, self.hauteur / 2
+        self.canvas.create_rectangle(cx - 210, cy - 76, cx + 210, cy + 76,
+                                     fill=PANNEAU, outline=couleur, width=2)
+        self.canvas.create_text(cx, cy - 40, text=titre, fill=couleur,
+                                font=("TkDefaultFont", 28, "bold"))
         detail = (f"Étage {self.game.depth} · niveau {self.game.player.level} · "
                   f"{self.game.turn} tours")
-        self.canvas.create_text(largeur / 2, hauteur / 2 + 8, text=detail,
-                                fill=TEXTE, font=("TkDefaultFont", 12))
-        self.canvas.create_text(largeur / 2, hauteur / 2 + 40,
-                                text="R pour rejouer   ·   q pour quitter",
-                                fill=TEXTE_PALE, font=("TkDefaultFont", 11))
+        self.canvas.create_text(cx, cy - 2, text=detail, fill=TEXTE,
+                                font=("TkDefaultFont", 12))
+        self._bouton(cx - 150, cy + 26, 140, 30, "Rejouer (R)", self.rejouer)
+        self._bouton(cx + 10, cy + 26, 140, 30, "Quitter (q)", self.quitter)
 
 
 def run(seed=None, max_depth=5, tile=TILE):

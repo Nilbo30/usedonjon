@@ -10,9 +10,11 @@ from collections import deque
 from .geom import ALL_DIRS, add, is_diagonal
 
 
-def _passable(level, src, delta, blocked):
+def _passable(level, src, delta, blocked, allowed=None):
     dest = add(src, delta)
     if not level.walkable(dest) or dest in blocked:
+        return False
+    if allowed is not None and dest not in allowed:
         return False
     if is_diagonal(delta):
         if not (level.walkable(add(src, (delta[0], 0)))
@@ -21,8 +23,13 @@ def _passable(level, src, delta, blocked):
     return True
 
 
-def find_path(level, start, goal, blocked=frozenset(), max_nodes=4000):
-    """Renvoie la liste des cases de start (exclu) à goal (inclus), ou None."""
+def find_path(level, start, goal, blocked=frozenset(), max_nodes=4000,
+              allowed=None):
+    """Renvoie la liste des cases de start (exclu) à goal (inclus), ou None.
+
+    `allowed`, s'il est fourni, limite le chemin à ces cases : c'est ainsi que
+    le déplacement à la souris ne traverse que ce que le joueur a déjà vu.
+    """
     if start == goal:
         return []
     frontier = deque([start])
@@ -38,7 +45,7 @@ def find_path(level, start, goal, blocked=frozenset(), max_nodes=4000):
             if nxt in came_from:
                 continue
             # La case d'arrivée est autorisée même si occupée (c'est la cible).
-            if nxt != goal and not _passable(level, current, delta, blocked):
+            if nxt != goal and not _passable(level, current, delta, blocked, allowed):
                 continue
             if nxt == goal and not level.walkable(nxt):
                 continue
@@ -59,9 +66,9 @@ def _rebuild(came_from, goal):
     return path
 
 
-def step_along(level, start, goal, blocked=frozenset()):
+def step_along(level, start, goal, blocked=frozenset(), allowed=None):
     """Direction du premier pas d'un chemin vers goal, ou None."""
-    path = find_path(level, start, goal, blocked)
+    path = find_path(level, start, goal, blocked, allowed=allowed)
     if not path:
         return None
     first = path[0]

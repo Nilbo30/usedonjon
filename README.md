@@ -17,11 +17,31 @@ python3 -m donjon --tile 26      # cases plus grandes
 python3 -m donjon --tui          # version terminal (ASCII, curses)
 ```
 
-Touches : les **flèches** (ou `hjkl` + `yubn`, ou le pavé numérique) pour se
-déplacer et attaquer, `,` ramasser, `>` descendre, `.` attendre, `i` sac,
-`?` aide, `q` quitter. Dans le sac : la lettre de l'objet, puis `u` utiliser,
-`e` équiper, `t` lancer (puis une direction), `d` poser. Après la partie,
-`R` relance une nouvelle descente.
+### À la souris
+
+Tout se joue au clic, sans rien connaître du clavier :
+
+- **clic sur une case voisine** : s'y déplacer, ou attaquer ce qui s'y trouve ;
+- **clic plus loin** : le héros s'y rend tout seul (chemin calculé par le BFS de
+  `path.py`, uniquement à travers ce qu'il a déjà vu) et s'arrête dès qu'un
+  monstre apparaît, qu'il est blessé ou qu'il marche sur quelque chose ;
+- **clic sur le héros** : ramasser l'objet sous lui, descendre l'escalier, ou
+  attendre un tour selon la situation ;
+- **survol** : une étiquette décrit la case (nom et PV du monstre, objet, piège) ;
+- **clic droit** : annuler le déplacement en cours ou fermer un panneau ;
+- les **boutons en bas à droite** (Ramasser, Descendre, Attendre, Sac, Aide) et
+  le **sac** sont entièrement cliquables — y compris viser un jet en cliquant
+  la cible.
+
+![Le sac à la souris](docs/sac.png)
+
+### Au clavier
+
+Les **flèches** (ou `hjkl` + `yubn`, ou le pavé numérique) pour se déplacer et
+attaquer, `,` ramasser, `>` descendre, `.` attendre, `i` sac, `?` aide,
+`q` quitter. Dans le sac : la lettre de l'objet, puis `u` utiliser, `e` équiper,
+`t` lancer (puis une direction), `d` poser. Après la partie, `R` relance une
+nouvelle descente.
 
 Il y a deux affichages pour le même moteur : la fenêtre graphique (`gui.py`,
 formes dessinées à la main, prête à recevoir des sprites PNG) et le terminal
@@ -38,7 +58,7 @@ Tout le jeu est pilotable sans interface : l'UI et les tests appellent les
 mêmes fonctions `Game.cmd_*`.
 
 ```bash
-python3 -m unittest discover -s tests      # la suite complète (~3 s)
+python3 -m unittest discover -s tests      # la suite complète (~3 s, 47 tests)
 python3 -m donjon --seed 7 --script "lljj,>" --frames   # rejouer une partition
 python3 -m donjon --seed 7 --auto 500 --reveal          # bot + carte dévoilée
 ```
@@ -50,6 +70,10 @@ Langage de script : `hjklyubn` déplacement, `.` attendre, `,` ramasser,
 
 Une graine fixe rejoue exactement la même partie : les tests de régression
 comparent simplement les journaux et les cartes.
+
+Les tests d'interface (clavier et souris) construisent une vraie fenêtre et lui
+envoient des évènements ; ils s'ignorent tout seuls si tkinter ou un écran
+manquent, donc la suite reste verte sur un serveur sans affichage.
 
 ## Ce qui est déjà là
 
@@ -65,6 +89,7 @@ comparent simplement les journaux et les cartes.
 | Pièges cachés | ✅ |
 | Vitesses différentes (rapide / lent) | ✅ |
 | Trois IA (chasseur, erratique, peureux) + pathfinding | ✅ |
+| Jeu complet à la souris (clic, déplacement auto, survol, boutons) | ✅ |
 
 ## Équilibrage de départ
 
@@ -87,7 +112,7 @@ donjon/
   geom.py       positions et 8 directions
   tiles.py      types de cases (table de propriétés)
   dungeon.py    génération d'étage, champ de vision
-  path.py       BFS (IA et bot de test)
+  path.py       BFS (IA, bot de test, déplacement à la souris)
   entities.py   Actor / Player / Monster, PV, statuts, énergie
   items.py      objets = données + effets enregistrés
   monsters.py   bestiaire = données pures
@@ -95,7 +120,7 @@ donjon/
   ai.py         un comportement = une fonction enregistrée
   game.py       état, ordonnanceur, API d'actions (cmd_*)
   script.py     partitions de commandes + bot (tests rapides)
-  gui.py        fenêtre tkinter (aucune règle de jeu)
+  gui.py        fenêtre tkinter, souris et clavier (aucune règle de jeu)
   ui.py         affichage curses (aucune règle de jeu)
   __main__.py   CLI
 ```
