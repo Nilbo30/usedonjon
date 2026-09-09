@@ -148,7 +148,7 @@ class TestVerrouillageDuContenu(unittest.TestCase):
         from donjon.rng import Rng
 
         meta = Meta(xp=1000)
-        meta.acheter("fouille")
+        meta.acheter("nourriture")
         meta.acheter("herbes")
         rng = Rng(2)
         cles = {items.random_item(rng, 5, unlocks=meta.run_config().unlocks).type.key

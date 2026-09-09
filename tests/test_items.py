@@ -43,6 +43,39 @@ class TestApparitionParProfondeur(unittest.TestCase):
         self.assertIn("orbe_retour", bas)
 
 
+class TestNourritureAuSol(unittest.TestCase):
+    """La faim est le premier tueur : elle ne doit pas dépendre du tirage."""
+
+    def test_chaque_etage_porte_de_quoi_manger(self):
+        """Sinon débloquer une famille d'objets revient à s'affamer.
+
+        La part de nourriture dans le tirage tombe de 100 % à 12 % quand tout
+        est ouvert : sans garantie, acheter du contenu réduirait les vivres au
+        sol d'un facteur trois.
+        """
+        from donjon.game import Game
+
+        for graine in range(12):
+            game = Game(seed=graine)
+            au_sol = [objet.category for objet in game.level.items.values()]
+            self.assertIn(items.FOOD, au_sol, f"graine {graine}")
+
+    def test_le_tirage_sait_se_limiter_a_une_categorie(self):
+        from donjon.rng import Rng
+
+        rng = Rng(3)
+        for _ in range(50):
+            objet = items.random_item(rng, 8, categorie=items.FOOD)
+            self.assertEqual(objet.category, items.FOOD)
+
+    def test_une_categorie_absente_ne_tire_rien(self):
+        """Au générateur d'étage de décider quoi faire du refus."""
+        from donjon.rng import Rng
+
+        self.assertIsNone(items.random_item(Rng(3), 8, unlocks={"herbes"},
+                                            categorie=items.FOOD))
+
+
 class TestIdentification(unittest.TestCase):
     """Les parchemins ne disent leur nom qu'une fois essayés."""
 

@@ -130,6 +130,9 @@ def autoplay(game, steps=200, on_step=None):
             acted = game.cmd_move(step_toward(player.pos, adjacent[0].pos))
         elif bloques:
             acted = _se_replacer(game, bloques[0])
+        elif _tir_possible(game) is not None:
+            slot, direction = _tir_possible(game)
+            acted = game.cmd_throw(slot, direction)
         elif _a_mieux_en_main(game) is not None:
             acted = game.cmd_equip(_a_mieux_en_main(game))
         elif player.hp <= player.max_hp // 3 and _find(game, "herbe_soin") is not None:
@@ -152,6 +155,31 @@ def autoplay(game, steps=200, on_step=None):
         if on_step:
             on_step(game, ("auto",), acted)
     return game
+
+
+def _tir_possible(game, portee=6):
+    """(slot, direction) pour lancer une flèche sur une cible alignée, sinon None.
+
+    Le bot ne lançait rien : mesurer un talent de projectiles avec lui, c'était
+    mesurer sa cécité. Il vise en ligne droite, la portée d'un jet.
+    """
+    from .geom import ALL_DIRS, add
+
+    slot = _find(game, "fleche")
+    if slot is None:
+        return None
+    for direction in ALL_DIRS:
+        pos = game.player.pos
+        for _ in range(portee):
+            pos = add(pos, direction)
+            if not game.level.walkable(pos):
+                break
+            cible = game.actor_at(pos)
+            if cible is not None:
+                if not cible.is_player:
+                    return slot, direction
+                break
+    return None
 
 
 def _a_mieux_en_main(game):

@@ -365,7 +365,7 @@ monter. Il a immédiatement condamné deux nœuds.
 | + créatures | 5,8 |
 | + l'épée | 8,7 |
 | + le bouclier | 11,6 |
-| + fouille | 23,1 |
+| + nourriture | 24,0 |
 
 « Faune variée » (23,1 → 21,3) ne donnait rien au joueur : rien qu'une densité
 de monstres plus forte. **Supprimé** — sous cette grammaire, aucun nœud n'a le
@@ -390,14 +390,44 @@ acheter du contenu faisait mourir de faim. Chaque famille ajoute désormais
 +1 trouvaille par étage, ce qui a demandé que les effets sachent s'additionner
 terme à terme (`Meta._somme`).
 
-**Rythme observé** après le découpage de « Barda » : Estomac (vie 1) ·
-Constitution (2) · Besace (4,3) · Créatures (6,3) · **L'épée** (8,3) ·
-**Le bouclier** (9,5) · Fouille (10,7). Le nœud supplémentaire coûte moins de
-deux vies.
+**« Nourriture » plutôt que « Fouille ».** Le nœud qui ouvre les trouvailles
+porte désormais son objet : les vivres passent derrière un verrou `vivres`, et
+les flèches derrière `projectiles` — leur nœud à elles, qui accueillera la
+classe des archers (*tu apprends à lancer, le donjon aussi*). C'est le seul
+nœud de l'arbre qui n'amène aucune menace : un répit assumé.
 
-**Ce qui reste ouvert** : « Abondance » (17,5 ± 0,8 contre 19,9 ± 0,9) est le
-seul recul qui survive à la marge d'erreur. Hypothèse : le bot se détourne pour
-ramasser et y perd plus de ventre qu'il n'y gagne. Non tranché.
+Ce découpage a révélé un défaut bien plus grave que ceux d'avant, invisible
+tant que la nourriture n'était pas verrouillée : **la part de nourriture dans
+le tirage s'effondre à mesure qu'on débloque des familles** — 100 %, puis 26 %
+avec les herbes, puis 11,7 % une fois tout ouvert. Trois vivres par étage
+devenaient moins d'un. Le +1 trouvaille par famille ne compensait rien du tout ;
+acheter du contenu affamait. Correction structurelle plutôt que d'ajustement de
+poids : **le premier objet de chaque étage est un vivre**. Un onigiri rend 50 de
+ventre et un étage en coûte à peu près autant — la tension reste, la faillite
+disparaît.
+
+| État | avant la garantie | après |
+|---|---|---|
+| épée + bouclier | 11,9 ± 0,4 | 11,9 ± 0,4 |
+| + nourriture | 24,0 ± 1,3 | 24,0 ± 1,3 |
+| + projectiles | 27,5 ± 1,4 | 28,1 ± 1,3 |
+| + herbes | 23,3 ± 1,4 | 26,0 ± 1,5 |
+| + grimoires | 20,9 ± 1,1 | 25,4 ± 1,3 |
+| + armurerie | 20,6 ± 1,0 | 27,1 ± 1,3 |
+| + abondance | — | 26,5 ± 1,0 |
+
+Plus aucun recul ne survit à la marge d'erreur, « Abondance » compris : la
+question laissée ouverte plus haut se referme, et sa cause était la même.
+
+Le bot lance désormais ses flèches sur une cible alignée (`_tir_possible`) : la
+même précaution que pour l'équipement, prise avant de mesurer un talent de
+projectiles plutôt qu'après.
+
+**Rythme observé** : Estomac (vie 1) · Constitution (2) · Besace (4,3) ·
+Créatures (6,3) · **L'épée** (8,3) · **Le bouclier** (9,5) · Nourriture (10,7).
+C'est l'ordre du bot, qui prend toujours le moins cher : un joueur qui voit que
+« Nourriture » double son revenu la prendra bien plus tôt. Le choix existe,
+c'est ce qui compte.
 
 ## Règles fixées en cours de route
 

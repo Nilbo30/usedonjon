@@ -39,7 +39,7 @@ class Clic:
         self.y = y
 
 
-TALENTS_DE_TEST = ("estomac", "creatures", "epee", "fouille", "herbes",
+TALENTS_DE_TEST = ("estomac", "creatures", "epee", "nourriture", "herbes",
                    "grimoires", "coffre")
 
 

@@ -114,7 +114,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
 
     def test_les_drapeaux_arrivent_dans_la_config(self):
         meta = Meta(xp=1000)
-        meta.acheter("fouille")
+        meta.acheter("nourriture")
         meta.acheter("herbes")
         self.assertIn("herbes", meta.run_config().unlocks)
         self.assertNotIn("grimoires", meta.run_config().unlocks)
@@ -158,7 +158,7 @@ class TestAchats(unittest.TestCase):
     def test_la_capacite_du_coffre_suit_l_arbre(self):
         meta = Meta(xp=1000)
         avant = meta.capacite_entrepot()
-        for cle in ("fouille", "coffre", "grand_coffre"):
+        for cle in ("nourriture", "coffre", "grand_coffre"):
             meta.acheter(cle)
         self.assertEqual(meta.capacite_entrepot(), avant + 4)
 

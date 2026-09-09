@@ -324,7 +324,7 @@ _register(
              note="À lancer : endort la cible 10 tours, sans défense. "
                   "Mangée, elle t'endort 8 tours.", unlock="herbes"),
     ItemType("onigiri", "un onigiri", "%", FOOD, power=50, weight=14,
-             on_use="manger", note="Rend 50 points de ventre."),
+             on_use="manger", note="Rend 50 points de ventre.", unlock="vivres"),
     ItemType("parchemin_lumiere", "parchemin de lumière", "?", SCROLL, weight=8,
              on_use="lire_lumiere", note="Révèle tout l'étage, escalier compris.", unlock="grimoires"),
     ItemType("parchemin_panique", "parchemin de panique", "?", SCROLL, weight=7,
@@ -338,7 +338,7 @@ _register(
              note="Te ramène au refuge avec tes objets et tes compétences. "
                   "En échange, la profondeur atteinte est remise à zéro.", unlock="orbe"),
     ItemType("fleche", "une flèche", "(", AMMO, power=7, weight=12,
-             on_hit="jet_degats", note="À lancer : 7 dégâts à distance."),
+             on_hit="jet_degats", note="À lancer : 7 dégâts à distance.", unlock="projectiles"),
     ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8, unlock="armurerie"),
     ItemType("epee_fer", "épée en fer", ")", WEAPON, power=6, weight=5, unlock="armurerie"),
     ItemType("bouclier_bois", "bouclier en bois", "[", SHIELD, power=3, weight=8, unlock="armurerie"),
@@ -350,10 +350,16 @@ def make(key, plus=0, registre=None):
     return Item(ITEM_TYPES[key], plus, registre)
 
 
-def random_item(rng, depth=1, registre=None, unlocks=None):
-    """Tire un objet au hasard; les objets s'améliorent avec la profondeur."""
+def random_item(rng, depth=1, registre=None, unlocks=None, categorie=None):
+    """Tire un objet au hasard; les objets s'améliorent avec la profondeur.
+
+    `categorie` restreint le tirage à une famille d'usage (nourriture, arme...)
+    et renvoie `None` si rien ne correspond : au générateur d'étage de décider
+    quoi faire de ce refus.
+    """
     candidats = [(t, t.weight) for t in ITEM_TYPES.values()
                  if depth >= t.depth_min
+                 and (categorie is None or t.category == categorie)
                  and (t.unlock is None or unlocks is None or t.unlock in unlocks)]
     if not candidats:
         return None
