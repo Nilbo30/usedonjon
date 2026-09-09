@@ -70,6 +70,8 @@ TALENT_OUVERTURE = (10, 170)
 #: qu'une branche réclame, donc de la part d'éventail qu'elle reçoit.
 TALENT_ESPACEMENT = 82
 RAYON_TALENT = 13
+#: Trait entre un nœud et son prérequis, tant que le nœud n'est pas acquis.
+LIEN = "#494263"
 COULEUR_BRANCHE = {
     "Survie": "#5fd07a",
     "Équipement": "#9aa6d0",
@@ -1058,9 +1060,7 @@ class Fenetre:
             self._noeud_de_talent(tree_mod.ARBRE[cle], place)
         survole = self._talent_survole()
         if survole:
-            self._texte(16, bas - 26,
-                        f"{survole.name} — {survole.description}"
-                        f"{self._prerequis_manquants(survole)}")
+            self._texte(16, bas - 26, f"{survole.name} — {survole.description}")
             self._texte(self.largeur - 16, bas - 26, f"{survole.cost} XP",
                         ancre="ne", gras=True)
         else:
@@ -1118,9 +1118,10 @@ class Fenetre:
             attaches = [places[parent][:2] for parent in noeud.parents
                         if parent in places] or [(cx, cy)]
             for (px, py) in attaches:
+                # Le trait porte seul le prérequis : il doit se lire.
                 self.canvas.create_line(
                     px, py, x, y, width=2 if acquis else 1,
-                    fill=melange(teinte, FOND, 0.5) if acquis else "#332e42")
+                    fill=melange(teinte, FOND, 0.5) if acquis else LIEN)
 
     def _coeur_de_l_eventail(self, meta):
         cx, cy = self._centre_de_l_eventail()
@@ -1206,12 +1207,6 @@ class Fenetre:
             self.canvas.create_oval(x, y, x + 9, y + 9, fill=teinte, outline="")
             self._texte(x + 15, y - 3, nom, pale=True, taille=9)
             x += 15 + self.largeur_texte(nom, taille=9) + 18
-
-    def _prerequis_manquants(self, noeud):
-        """Ce qu'il faut acheter avant, dit en clair plutôt qu'en traits."""
-        manquants = [tree_mod.ARBRE[cle].name for cle in noeud.parents
-                     if not self.session.meta.acquis(cle)]
-        return f"   (exige : {', '.join(manquants)})" if manquants else ""
 
     def _talent_survole(self):
         etiquette = self.etiquette_survolee or ""
