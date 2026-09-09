@@ -288,12 +288,26 @@ méta, et lui seul, qui verrouille.
 
 **L'affichage est un éventail**, pas une liste. Le centre porte l'XP
 disponible, chaque branche s'ouvre en rayons, et un nœud s'éloigne du centre
-d'un cran par prérequis. Rien n'est placé à la main : une branche reçoit une
-part de l'ouverture proportionnelle à la place qu'il lui faut — son rang le plus
-chargé, ramené à son rayon — donc l'éventail se réorganise tout seul quand on
-ajoute un nœud. Deux tests le tiennent : les ronds ne se touchent pas, et
-`len(places) == len(ARBRE)` (un nœud rangé dans une branche absente de
-`BRANCHES` disparaîtrait sans bruit).
+d'un cran par prérequis.
+
+Rien n'est placé à la main, et c'est un découpage emboîté : une branche reçoit
+une part de l'ouverture proportionnelle à la place qu'il lui faut — son rang le
+plus chargé, ramené à son rayon — puis, *dans* cette part, un nœud prend le
+centre de la sienne et ses enfants se partagent cette même part au prorata de
+leurs feuilles. Un enfant ne peut donc pas sortir du secteur de son parent :
+**aucun trait ne se croise à l'intérieur d'une branche**, par construction.
+
+Restent les prérequis qui traversent l'éventail — Barda derrière Créatures, la
+voie du retour derrière Grimoires *et* le coffre. Ceux-là dépendent de l'ordre
+des branches, et l'ordre a été cherché plutôt que deviné : sur les 720
+permutations possibles, plusieurs donnent zéro croisement, et
+`Survie · Monde vivant · Équipement · Le refuge · Profond · Trouvailles` est
+celle qui garde en plus l'ordre où le joueur découvre les trois premières.
+
+Trois tests le tiennent : les ronds ne se touchent pas, aucun trait n'en croise
+un autre (si ça tombe après l'ajout d'un nœud, c'est `BRANCHES` qu'il faut
+revoir), et `len(places) == len(ARBRE)` — un nœud rangé dans une branche absente
+de `BRANCHES` disparaîtrait sans bruit.
 
 **Rupture de sauvegarde assumée** : `Meta.level` et `BONUS` ont disparu au
 profit de `xp` / `xp_totale` / `noeuds`. Les anciennes sauvegardes repartent de

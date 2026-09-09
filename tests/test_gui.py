@@ -199,6 +199,32 @@ class TestRefuge(unittest.TestCase):
         self.assertNotIn("second_souffle", fenetre.session.meta.noeuds)
         self.assertEqual(fenetre.session.meta.xp, 10000)
 
+    def test_aucun_trait_ne_se_croise(self):
+        """Deux traits qui se croisent donnent un prérequis faux à l'œil.
+
+        La disposition l'interdit à l'intérieur d'une branche — un enfant reste
+        dans la part de son parent. Entre branches, c'est l'ordre de
+        `tree.BRANCHES` qui décide : si ce test tombe après l'ajout d'un nœud,
+        c'est cet ordre-là qu'il faut revoir.
+        """
+        def cote(un, deux, point):
+            valeur = ((deux[0] - un[0]) * (point[1] - un[1])
+                      - (deux[1] - un[1]) * (point[0] - un[0]))
+            return (valeur > 1e-9) - (valeur < -1e-9)
+
+        fenetre = self.fenetre
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        traits = fenetre.traits_de_talents(fenetre._disposition_talents())
+        for index, (un, deux, cle) in enumerate(traits):
+            for autre, (trois, quatre, cle_autre) in enumerate(traits):
+                if autre <= index or {un, deux} & {trois, quatre}:
+                    continue
+                self.assertFalse(
+                    cote(un, deux, trois) * cote(un, deux, quatre) < 0
+                    and cote(trois, quatre, un) * cote(trois, quatre, deux) < 0,
+                    f"{cle} croise {cle_autre}")
+
     def test_la_carte_du_refuge_est_centree(self):
         fenetre = self.fenetre
         fenetre.dessiner()

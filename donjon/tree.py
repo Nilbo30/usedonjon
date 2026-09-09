@@ -131,9 +131,13 @@ _enregistrer(
 #: Effets qui ne concernent pas la partie mais la progression elle-même.
 EFFETS_META = {"coffre_places"}
 
-#: Ordre d'affichage des branches.
-BRANCHES = ("Survie", "Équipement", "Monde vivant", "Trouvailles",
-            "Le refuge", "Profond")
+#: Ordre d'affichage des branches, de la gauche vers la droite de l'éventail.
+#: Il n'a aucun effet sur le jeu, mais il décide des croisements : un nœud dont
+#: le prérequis vit dans une autre branche tire un trait par-dessus tout ce qui
+#: les sépare. Cet ordre-ci n'en laisse aucun (un test le vérifie) ; les trois
+#: premières suivent l'ordre où le joueur les découvre.
+BRANCHES = ("Survie", "Monde vivant", "Équipement", "Le refuge", "Profond",
+            "Trouvailles")
 
 
 def par_branche():

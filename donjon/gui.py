@@ -61,7 +61,7 @@ SURVOL = "#f0e9a8"
 
 # --- l'arbre des talents, dessiné en éventail -------------------------------
 #: Un rayon par rang ; au-delà, les rangs s'ajoutent d'eux-mêmes.
-TALENT_RAYONS = (180, 270, 342)
+TALENT_RAYONS = (172, 250, 325)
 #: La fenêtre est large et basse : on étire l'éventail en ellipse.
 TALENT_ETIREMENT = 1.42
 #: Ouverture de l'éventail, en degrés, de la droite vers la gauche.
@@ -151,6 +151,37 @@ def rayon_de_rang(rang):
     if rang < len(TALENT_RAYONS):
         return TALENT_RAYONS[rang]
     return TALENT_RAYONS[-1] + (rang - len(TALENT_RAYONS) + 1) * 68
+
+
+def foret_de_branche(noeuds):
+    """Les nœuds d'une branche vus comme un arbre : ses racines et ses enfants.
+
+    Un nœud dont le prérequis vit dans une autre branche — Barda derrière
+    Créatures — est une racine ici : son trait traversera l'éventail, mais sa
+    descendance reste rangée sous lui.
+    """
+    dedans = {noeud.key for noeud in noeuds}
+    enfants = {noeud.key: [] for noeud in noeuds}
+    racines = []
+    for noeud in noeuds:
+        parent = next((cle for cle in noeud.parents if cle in dedans), None)
+        if parent is None:
+            racines.append(noeud)
+        else:
+            enfants[parent].append(noeud)
+    return racines, enfants
+
+
+def poids_des_feuilles(enfants):
+    """Combien de place réclame chaque nœud : le nombre de feuilles sous lui."""
+    poids = {}
+
+    def peser(cle):
+        if cle not in poids:
+            poids[cle] = sum(peser(fils.key) for fils in enfants[cle]) or 1
+        return poids[cle]
+
+    return {cle: peser(cle) for cle in enfants}
 
 
 def couper_en_deux(nom):
@@ -1071,57 +1102,86 @@ class Fenetre:
                      lambda: setattr(self, "mode", "jeu"))
 
     def _centre_de_l_eventail(self):
-        return self.largeur / 2, HUD_HEIGHT + self.hauteur_carte - 52
+        return self.largeur / 2, HUD_HEIGHT + self.hauteur_carte - 42
 
     def _disposition_talents(self):
         """Place chaque nœud : (x, y, angle, largeur disponible pour le nom).
 
-        La part d'éventail d'une branche vient de son rang le plus chargé,
-        ramené à son rayon : une branche qui s'épaissit s'élargit toute seule.
+        Deux découpages emboîtés, et aucun trait ne se croise à l'intérieur
+        d'une branche :
+
+        * une branche reçoit une part de l'ouverture proportionnelle à la place
+          qu'il lui faut — son rang le plus chargé, ramené à son rayon ;
+        * dans cette part, un nœud prend le centre de la sienne et ses enfants
+          se partagent cette même part, au prorata de leurs feuilles. Un enfant
+          ne peut donc pas sortir du secteur de son parent, ni croiser le
+          voisinage.
         """
         rangs = tree_mod.profondeurs()
-        cx, cy = self._centre_de_l_eventail()
         debut, fin = (math.radians(angle) for angle in TALENT_OUVERTURE)
         branches = []
         for _nom, noeuds in tree_mod.par_branche():
-            par_rang = {}
+            racines, enfants = foret_de_branche(noeuds)
+            compte = {}
             for noeud in noeuds:
-                par_rang.setdefault(rangs[noeud.key], []).append(noeud)
-            besoin = max(len(lot) * TALENT_ESPACEMENT / rayon_de_rang(rang)
-                         for rang, lot in par_rang.items())
-            branches.append((par_rang, besoin))
-        total = sum(besoin for _, besoin in branches) or 1
+                compte[rangs[noeud.key]] = compte.get(rangs[noeud.key], 0) + 1
+            besoin = max(nombre * TALENT_ESPACEMENT / rayon_de_rang(rang)
+                         for rang, nombre in compte.items())
+            branches.append((racines, enfants, poids_des_feuilles(enfants),
+                             besoin))
+        total = sum(besoin for *_, besoin in branches) or 1
         ouverture, angle, places = fin - debut, fin, {}
-        for par_rang, besoin in branches:
+        for racines, enfants, poids, besoin in branches:
             part = ouverture * besoin / total
-            for rang, lot in sorted(par_rang.items()):
-                rayon, pas = rayon_de_rang(rang), part / (len(lot) + 1)
-                for index, noeud in enumerate(lot):
-                    theta = angle - pas * (index + 1)
-                    places[noeud.key] = (
-                        cx + TALENT_ETIREMENT * rayon * math.cos(theta),
-                        cy - rayon * math.sin(theta),
-                        theta,
-                        max(48, TALENT_ETIREMENT * rayon * pas
-                            * abs(math.sin(theta))),
-                    )
+            self._partager(racines, enfants, poids, rangs, angle, part, places)
             angle -= part
         return places
 
-    def _liens_de_talents(self, places):
-        """Les traits entre un nœud et ses prérequis — le centre pour les racines."""
+    def _partager(self, noeuds, enfants, poids, rangs, haut, part, places):
+        """Découpe `part` entre ces nœuds, chacun au prorata de ses feuilles."""
+        total = sum(poids[noeud.key] for noeud in noeuds) or 1
+        for noeud in noeuds:
+            sienne = part * poids[noeud.key] / total
+            self._poser_talent(noeud, rangs[noeud.key], haut - sienne / 2,
+                               sienne, places)
+            self._partager(enfants[noeud.key], enfants, poids, rangs, haut,
+                           sienne, places)
+            haut -= sienne
+
+    def _poser_talent(self, noeud, rang, theta, part, places):
         cx, cy = self._centre_de_l_eventail()
+        rayon = rayon_de_rang(rang)
+        places[noeud.key] = (
+            cx + TALENT_ETIREMENT * rayon * math.cos(theta),
+            cy - rayon * math.sin(theta),
+            theta,
+            max(48, TALENT_ETIREMENT * rayon * part * abs(math.sin(theta))),
+        )
+
+    def traits_de_talents(self, places):
+        """Les segments à tracer : (départ, arrivée, clé du nœud tenu au bout).
+
+        Un nœud sans prérequis pend au cœur de l'éventail ; les autres à chacun
+        de leurs prérequis. Aucun de ces traits ne doit en croiser un autre :
+        c'est la disposition qui le garantit dans une branche, et l'ordre de
+        `tree.BRANCHES` entre elles.
+        """
+        coeur = self._centre_de_l_eventail()
+        traits = []
         for cle, (x, y, _theta, _place) in places.items():
-            noeud = tree_mod.ARBRE[cle]
+            departs = [places[parent][:2] for parent in tree_mod.ARBRE[cle].parents
+                       if parent in places] or [coeur]
+            traits += [(depart, (x, y), cle) for depart in departs]
+        return traits
+
+    def _liens_de_talents(self, places):
+        for depart, arrivee, cle in self.traits_de_talents(places):
             acquis = self.session.meta.acquis(cle)
-            teinte = COULEUR_BRANCHE.get(noeud.branche, BORDURE)
-            attaches = [places[parent][:2] for parent in noeud.parents
-                        if parent in places] or [(cx, cy)]
-            for (px, py) in attaches:
-                # Le trait porte seul le prérequis : il doit se lire.
-                self.canvas.create_line(
-                    px, py, x, y, width=2 if acquis else 1,
-                    fill=melange(teinte, FOND, 0.5) if acquis else LIEN)
+            teinte = COULEUR_BRANCHE.get(tree_mod.ARBRE[cle].branche, BORDURE)
+            # Le trait porte seul le prérequis : il doit se lire.
+            self.canvas.create_line(
+                *depart, *arrivee, width=2 if acquis else 1,
+                fill=melange(teinte, FOND, 0.5) if acquis else LIEN)
 
     def _coeur_de_l_eventail(self, meta):
         cx, cy = self._centre_de_l_eventail()
