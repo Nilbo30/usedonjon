@@ -49,10 +49,11 @@ EQUIPEMENT = "equipement"
 JET = "jet"
 DESCENTE = "descente"
 REPOS = "repos"
+BUTIN = "butin"
 
 #: Tous les évènements que le moteur sait émettre, pour vérifier les tables.
 NOMS = (PAS, ATTENTE, COUP, COUP_RECU, MONSTRE_VAINCU, RAMASSAGE, POSE,
-        USAGE_OBJET, EQUIPEMENT, JET, DESCENTE, REPOS)
+        USAGE_OBJET, EQUIPEMENT, JET, DESCENTE, REPOS, BUTIN)
 
 
 class Event:

@@ -36,6 +36,7 @@ EFFETS = {
     "duree_effet": "tours en plus sur les effets de parchemins",
     "regeneration": "tours en moins entre deux points de vie regagnés",
     "esquive": "chance d'éviter un coup entièrement (0.03 = 3 %)",
+    "chance": "chance qu'une créature vaincue laisse quelque chose",
 }
 
 
@@ -51,6 +52,7 @@ LIBELLES = {
     "duree_effet": "tour d'effet",
     "regeneration": "tour de repos en moins",
     "esquive": "d'esquive",
+    "chance": "de butin",
 }
 
 
@@ -83,7 +85,7 @@ class Skill:
         for effet, valeur in self.effects.items():
             if effet == "endurance":
                 morceaux.append(f"{valeur * 100:g} % {LIBELLES[effet]}")
-            elif effet == "esquive":
+            elif effet in ("esquive", "chance"):
                 morceaux.append(f"+{valeur * 100:g} % {LIBELLES[effet]}")
             else:
                 morceaux.append(f"+{valeur:g} {LIBELLES[effet]}")
@@ -126,6 +128,12 @@ _enregistrer(
           effects={"esquive": 0.09},
           note="S'apprend en encaissant sans bouclier : le corps apprend à "
                "se dérober."),
+    # Elle s'entretient de ce qu'elle produit : une boucle, donc plafonnée
+    # dans le moteur (CHANCE_BUTIN_MAX). Sans plafond, un run chanceux le
+    # resterait de plus en plus.
+    Skill("chance", "Chance", base=2, growth=1.6,
+          effects={"chance": 0.03},
+          note="Ce qu'on trouve donne l'œil pour trouver encore."),
     Skill("herboristerie", "Herboristerie", base=2, growth=1.6,
           effects={"soin": 2},
           note="Les herbes rendent davantage."),
@@ -191,6 +199,7 @@ REGLES = (
           si=lambda e: e.get("menace") and e.get("bouclier") is None),
     Regle(events.REPOS, "recuperation"),
     Regle(events.USAGE_OBJET, "@objet"),
+    Regle(events.BUTIN, "chance"),
     Regle(events.JET, "jet"),
     Regle(events.JET, "@objet", si=lambda e: e["cible"] is not None),
 )

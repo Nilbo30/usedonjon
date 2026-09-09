@@ -15,7 +15,8 @@ modification du moteur.
 from . import monsters
 
 #: Une config construite à la main (tests, bot, CLI) a tout le contenu.
-TOUT_DEBLOQUE = frozenset({"vivres", "projectiles", "herbes", "grimoires",
+TOUT_DEBLOQUE = frozenset({"butin", "vivres", "projectiles", "herbes",
+                           "grimoires",
                            "intuition", "armurerie", "coffre", "orbe"})
 
 #: De même pour le bestiaire : toutes les classes de créatures.

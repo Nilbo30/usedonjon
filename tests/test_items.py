@@ -240,3 +240,61 @@ class TestObjets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestButin(unittest.TestCase):
+    """Ce qu'une créature laisse en tombant, et la chance qui s'y entretient."""
+
+    def setUp(self):
+        from tests.helpers import place_monster, sandbox
+
+        self.game = sandbox(seed=9)
+        self.joueur = self.game.player
+        self.placer = place_monster
+
+    def _tuer(self, cle="rat", fois=1):
+        laisses = []
+        for _ in range(fois):
+            case = (self.joueur.pos[0] + 1, self.joueur.pos[1])
+            self.game.level.items.pop(case, None)
+            monstre = self.placer(self.game, case, cle)
+            monstre.take_damage(monstre.hp)
+            self.game.check_death(monstre, killer=self.joueur)
+            objet = self.game.level.items.get(case)
+            if objet is not None:
+                laisses.append(objet)
+        return laisses
+
+    def test_sans_le_talent_rien_ne_tombe(self):
+        from donjon.config import RunConfig
+
+        self.game.config = RunConfig(unlocks={"vivres"})
+        self.assertEqual(self._tuer(fois=60), [])
+
+    def test_avec_le_talent_il_tombe_quelque_chose(self):
+        laisses = self._tuer(fois=60)
+        self.assertTrue(laisses)
+        self.assertLess(len(laisses), 60)          # jamais garanti
+
+    def test_une_creature_ne_lache_pas_ce_qui_est_verrouille(self):
+        """L'archer laisse ses flèches parce que son talent les a ouvertes."""
+        from donjon.config import RunConfig
+
+        self.game.config = RunConfig(unlocks={"butin", "vivres"})
+        for objet in self._tuer("limace", fois=80):
+            self.assertEqual(objet.type.key, "onigiri")
+
+    def test_ramasser_du_butin_entraine_la_chance(self):
+        self._tuer(fois=60)
+        self.assertGreater(self.joueur.skills.level("chance"), 0)
+
+    def test_la_chance_est_plafonnee(self):
+        """Elle s'entretient de ce qu'elle produit : sans plafond, elle s'emballe."""
+        from donjon.game import CHANCE_BUTIN, CHANCE_BUTIN_MAX
+
+        self.joueur.skills.levels["chance"] = 500
+        self.assertGreater(self.joueur.bonus("chance"), 1)
+        self.assertLess(CHANCE_BUTIN_MAX, 1.0)
+        self.assertGreater(CHANCE_BUTIN_MAX, CHANCE_BUTIN)
+        laisses = self._tuer(fois=100)
+        self.assertLess(len(laisses), 90)

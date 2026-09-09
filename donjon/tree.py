@@ -103,6 +103,11 @@ _enregistrer(
           reglages={"monsters_per_floor": (3, 6), "traps_per_floor": (1, 3),
                     "spawn_interval": 30}),
 
+    Noeud("butin", "Butin", 35,
+          "Les créatures vaincues laissent parfois quelque chose : leur arme, "
+          "leur pitance. Ce qu'on ramasse ainsi aiguise l'œil.",
+          branche="Monde vivant", parents=("creatures",), unlocks=("butin",)),
+
     # --- Trouvailles : ce qui traîne par terre ----------------------------
     Noeud("nourriture", "Nourriture", 12,
           "Des vivres apparaissent au sol : de quoi tenir plus loin que ce "

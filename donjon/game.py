@@ -36,6 +36,10 @@ DEGATS_A_DISTANCE = 0.75
 #: invulnérable au lieu d'être une autre façon de jouer. Élevé parce qu'elle
 #: remplace à elle seule un bouclier ET la compétence qui va avec.
 ESQUIVE_MAX = 0.55
+#: Chance qu'une créature vaincue laisse quelque chose, et son plafond une fois
+#: la chance du héros ajoutée.
+CHANCE_BUTIN = 0.22
+CHANCE_BUTIN_MAX = 0.60
 
 
 class Game:
@@ -467,7 +471,31 @@ class Game:
             self.notify(events.MONSTRE_VAINCU, monstre=actor,
                         arme=self.player.weapon,
                         distance=chebyshev(self.player.pos, actor.pos))
+            self._laisser_butin(actor)
         return True
+
+    def _laisser_butin(self, monstre):
+        """Ce qu'une créature laisse en tombant : sa classe, ou sa famille.
+
+        Elle ne peut jamais lâcher ce que le donjon n'a pas encore ouvert : un
+        archer laisse ses flèches parce que le talent qui l'a réveillé est
+        celui-là même qui met des flèches au sol.
+        """
+        if "butin" not in self.config.unlocks:
+            return
+        possibles = [cle for cle in monsters.butin_possible(monstre.species)
+                     if items.ITEM_TYPES[cle].unlock in (None, *self.config.unlocks)]
+        if not possibles or monstre.pos in self.level.items:
+            return
+        chance = min(CHANCE_BUTIN_MAX,
+                     CHANCE_BUTIN + self.player.bonus("chance"))
+        if not self.rng.chance(chance):
+            return
+        objet = items.make(self.rng.choice(possibles),
+                           registre=self.identification)
+        self.level.items[monstre.pos] = objet
+        self.say(f"{monstre.name} laisse {objet.name}.")
+        self.notify(events.BUTIN, objet=objet, monstre=monstre)
 
     def end_run(self, state, message):
         """Clôt la partie et fige son bilan — le seul objet que lira le méta."""

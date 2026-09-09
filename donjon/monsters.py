@@ -152,6 +152,30 @@ BESTIAIRE = [
 ]
 
 
+#: Ce qu'une créature laisse, sur les deux axes : sa classe lâche son outil,
+#: sa famille lâche sa matière. Une case du bestiaire peut ajouter le sien.
+#: Rien n'est garanti — voir `Game._laisser_butin` pour le tirage.
+BUTIN_CLASSE = {
+    "archer": ("fleche",),
+    "guerrier": ("epee_bois",),
+    "blinde": ("bouclier_bois",),
+    "embusque": ("parchemin_teleport",),
+}
+BUTIN_FAMILLE = {
+    "animal": ("onigiri",),
+    "humanoide": ("onigiri", "herbe_soin"),
+    "homoncule": ("herbe_vie",),
+}
+
+
+def butin_possible(espece):
+    """Les clés d'objets que cette créature peut laisser."""
+    return tuple(dict.fromkeys(
+        BUTIN_CLASSE.get(espece["classe"], ())
+        + BUTIN_FAMILLE.get(espece["famille"], ())
+        + tuple(espece.get("butin", ()))))
+
+
 def _composer(entree):
     """Une entrée complétée par sa famille et sa classe.
 

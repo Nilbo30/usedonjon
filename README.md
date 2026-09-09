@@ -184,6 +184,10 @@ Deux choix structurent la suite :
  "depth": (4, 99), "weight": 10, "color": "#d0c05b", "shape": "pointu"}
 ```
 
+Ce qu'elle laisse en tombant vient des mêmes axes : la classe lâche son outil
+(l'archer ses flèches), la famille sa matière (l'animal de la viande) — et
+jamais ce que le donjon n'a pas encore ouvert.
+
 La famille donne l'allure par défaut et, bientôt, les forces et faiblesses ; la
 classe donne le comportement (voir `ai.py`) et le talent qui la réveille.
 `glyph` sert au terminal, `color` et `shape` (`rond`, `carre`, `pointu`) à la

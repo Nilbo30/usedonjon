@@ -90,7 +90,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 10 | Familles et classes de créatures ; ce qu'on apprend, le donjon l'apprend | ✅ fait |
 | 11 | L'archer : le tir, et ce qu'il change au déplacement | ✅ fait |
 | 12 | L'esquive : encaisser ou se dérober, deux runs différents | ✅ fait |
-| 13 | Le butin des créatures | à faire |
+| 13 | Le butin des créatures, et la compétence « Chance » | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -529,6 +529,37 @@ regardait pas le bras. Le run avec bouclier entraînait donc l'esquive sans
 jamais s'en servir, et comme le méta compte la somme des niveaux, il gagnait de
 l'XP pour une compétence morte — 27,3 → 32,8. Une compétence qui monte sans
 servir est de l'inflation, pas de la progression.
+
+### Étape 13 — le butin, et la chance qui s'y entretient
+
+Le nœud « Butin » revient dans l'arbre, cette fois avec quelque chose derrière.
+La table tient sur les deux axes du bestiaire, comme prévu de longue date :
+
+> **la classe lâche son outil, la famille lâche sa matière.**
+
+L'archer laisse ses flèches, le guerrier son épée, le blindé sa plaque,
+l'embusqué son parchemin de téléportation ; l'animal laisse de la viande,
+l'humanoïde ses provisions, l'homoncule une herbe de vie. Douze créatures, deux
+tables de quatre lignes, et chaque famille ou classe ajoutée remplit ses cases
+toute seule.
+
+**Une créature ne peut jamais lâcher ce que le donjon n'a pas ouvert.** L'archer
+laisse ses flèches précisément parce que le talent qui l'a réveillé est celui
+qui met des flèches au sol : la boucle se referme sur elle-même. Un gobelin tué
+par un joueur qui n'a pas « Nourriture » ne laisse pas de vivres.
+
+**La compétence « Chance »** monte en trouvant du butin et augmente la chance
+d'en trouver : elle s'entretient de ce qu'elle produit. C'est la première
+boucle positive du jeu, donc la première à devoir être plafonnée — le moteur
+borne le tirage à 60 %, sans quoi un run chanceux le deviendrait de plus en
+plus. Premier réglage : elle atteignait le niveau 0,3 en moyenne, c'est-à-dire
+qu'elle n'existait pas. Recalée (base 2, +3 % par niveau), elle atteint 1,0 en
+moyenne et 3 dans les bons runs.
+
+| | XP/vie |
+|---|---|
+| sans « Butin » | 27,3 ± 1,5 |
+| avec « Butin » | **32,7 ± 1,7** |
 
 ## Règles fixées en cours de route
 
