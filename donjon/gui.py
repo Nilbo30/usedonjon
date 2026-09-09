@@ -14,6 +14,7 @@ s'interrompt dès qu'un monstre apparaît. Les boutons du bas et le sac sont
 entièrement cliquables ; le survol décrit ce qu'il y a sous le curseur.
 """
 
+import math
 import textwrap
 import tkinter as tk
 import tkinter.font as tkfont
@@ -57,6 +58,26 @@ BARRE_PV = "#5fd07a"
 BARRE_PV_BAS = "#e0574f"
 BARRE_VENTRE = "#e0a54f"
 SURVOL = "#f0e9a8"
+
+# --- l'arbre des talents, dessiné en éventail -------------------------------
+#: Un rayon par rang ; au-delà, les rangs s'ajoutent d'eux-mêmes.
+TALENT_RAYONS = (180, 270, 342)
+#: La fenêtre est large et basse : on étire l'éventail en ellipse.
+TALENT_ETIREMENT = 1.42
+#: Ouverture de l'éventail, en degrés, de la droite vers la gauche.
+TALENT_OUVERTURE = (10, 170)
+#: Écart visé entre deux nœuds d'un même rang : il décide de la largeur
+#: qu'une branche réclame, donc de la part d'éventail qu'elle reçoit.
+TALENT_ESPACEMENT = 82
+RAYON_TALENT = 13
+COULEUR_BRANCHE = {
+    "Survie": "#5fd07a",
+    "Équipement": "#9aa6d0",
+    "Monde vivant": "#c76b6b",
+    "Trouvailles": "#ded1a8",
+    "Le refuge": "#e0a54f",
+    "Profond": "#b07ad0",
+}
 
 COULEUR_MONSTRE = "#c76b6b"
 COULEUR_OBJET = {
@@ -121,6 +142,24 @@ def melange(couleur, vers, facteur):
 def sombre(couleur, facteur=0.62):
     """Version « déjà visitée mais hors de vue » d'une couleur."""
     return melange(couleur, FOND, facteur)
+
+
+def rayon_de_rang(rang):
+    """À quelle distance du centre se place un nœud de ce rang."""
+    if rang < len(TALENT_RAYONS):
+        return TALENT_RAYONS[rang]
+    return TALENT_RAYONS[-1] + (rang - len(TALENT_RAYONS) + 1) * 68
+
+
+def couper_en_deux(nom):
+    """Coupe un nom en deux lignes aussi équilibrées que possible."""
+    mots = nom.split()
+    if len(mots) < 2:
+        return [nom]
+    coupe = min(range(1, len(mots)),
+                key=lambda i: abs(len(" ".join(mots[:i]))
+                                  - len(" ".join(mots[i:]))))
+    return [" ".join(mots[:coupe]), " ".join(mots[coupe:])]
 
 
 def fiche_objet(objet):
@@ -843,11 +882,12 @@ class Fenetre:
                 font=("TkDefaultFont", taille, "bold" if gras else "normal"))
         return self._polices[cle].measure(texte)
 
-    def _texte(self, x, y, texte, pale=False, gras=False, ancre="nw", couleur=None):
+    def _texte(self, x, y, texte, pale=False, gras=False, ancre="nw",
+               couleur=None, taille=10):
         self.canvas.create_text(
             x, y, text=texte, anchor=ancre,
             fill=couleur or (TEXTE_PALE if pale else TEXTE),
-            font=("TkDefaultFont", 10, "bold" if gras else "normal"))
+            font=("TkDefaultFont", taille, "bold" if gras else "normal"))
 
     # --- panneaux --------------------------------------------------------
     def _objet_decrit(self):
@@ -996,80 +1036,182 @@ class Fenetre:
         self._bouton(gauche + largeur - 92, haut + hauteur - 36, 80, 26,
                      "Fermer", lambda: setattr(self, "mode", "jeu"))
 
+    # --- l'arbre des talents ---------------------------------------------
     def _dessiner_talents(self):
-        """L'arbre : ce qui est acquis, ce qu'on peut prendre, ce qui attend."""
-        meta = self.session.meta
-        largeur = min(self.largeur - 40, 940)
-        gauche = (self.largeur - largeur) / 2
-        colonnes = self._colonnes_de_talents()
-        hauteur = 96 + max(len(c) for c in colonnes) * 20
-        haut = (HUD_HEIGHT + self.hauteur_carte - hauteur) / 2
-        self.canvas.create_rectangle(gauche, haut, gauche + largeur,
-                                     haut + hauteur, fill=PANNEAU,
-                                     outline=BORDURE, width=2)
-        self._texte(gauche + 16, haut + 14,
-                    f"Talents — {meta.xp:.0f} XP à dépenser", gras=True)
-        self._texte(gauche + largeur - 16, haut + 14,
-                    "Les choix sont définitifs.", ancre="ne", pale=True)
+        """L'arbre en éventail : le centre, et les branches qui s'en ouvrent.
 
-        largeur_colonne = (largeur - 48) / 2
-        for index, colonne in enumerate(colonnes):
-            x = gauche + 16 + index * (largeur_colonne + 16)
-            for rang, entree in enumerate(colonne):
-                self._ligne_talent(x, haut + 44 + rang * 20, largeur_colonne,
-                                   entree)
+        Rien n'est placé à la main. Chaque branche reçoit une part de
+        l'ouverture proportionnelle à la place qu'il lui faut, chaque rang
+        s'éloigne du centre : ajouter un nœud dans `tree.py` suffit à le voir
+        apparaître au bon endroit.
+        """
+        meta = self.session.meta
+        haut, bas = HUD_HEIGHT, HUD_HEIGHT + self.hauteur_carte
+        self.canvas.create_rectangle(0, haut, self.largeur, bas,
+                                     fill=PANNEAU, outline=BORDURE, width=2)
+        self._texte(16, haut + 12, "Talents", gras=True)
+        self._legende_des_branches(96, haut + 15)
+        places = self._disposition_talents()
+        self._liens_de_talents(places)
+        self._coeur_de_l_eventail(meta)
+        for cle, place in places.items():
+            self._noeud_de_talent(tree_mod.ARBRE[cle], place)
         survole = self._talent_survole()
         if survole:
-            self._texte(gauche + 16, haut + hauteur - 38, survole.description,
-                        pale=True)
-        self._bouton(gauche + largeur - 92, haut + hauteur - 40, 80, 26,
-                     "Fermer", lambda: setattr(self, "mode", "jeu"))
-
-    def _colonnes_de_talents(self):
-        """Les branches réparties en deux colonnes, titres compris."""
-        branches = tree_mod.par_branche()
-        milieu = (len(branches) + 1) // 2
-        colonnes = []
-        for moitie in (branches[:milieu], branches[milieu:]):
-            entrees = []
-            for nom, noeuds in moitie:
-                entrees.append(("titre", nom))
-                entrees += [("noeud", noeud) for noeud in noeuds]
-            colonnes.append(entrees)
-        return colonnes
-
-    def _ligne_talent(self, x, y, largeur, entree):
-        genre, valeur = entree
-        if genre == "titre":
-            self._texte(x, y, valeur.upper(), gras=True, couleur=TEXTE_PALE)
-            return
-        noeud = valeur
-        meta = self.session.meta
-        acquis = meta.acquis(noeud.key)
-        accessible = noeud.accessible(meta.noeuds)
-        achetable = meta.achetable(noeud.key)
-        zone = (x + 8, y, x + largeur, y + 19)
-        if achetable and self.zone_survolee == zone:
-            self.canvas.create_rectangle(*zone, fill=BOUTON_SURVOL, outline="")
-        if acquis:
-            marque, couleur = "✔", ESCALIER
-        elif achetable:
-            marque, couleur = "•", TEXTE
-        elif accessible:
-            marque, couleur = "•", TEXTE_PALE
+            self._texte(16, bas - 26,
+                        f"{survole.name} — {survole.description}"
+                        f"{self._prerequis_manquants(survole)}")
+            self._texte(self.largeur - 16, bas - 26, f"{survole.cost} XP",
+                        ancre="ne", gras=True)
         else:
-            marque, couleur = "·", "#5a5470"
-        self._texte(x + 12, y + 2, marque, couleur=couleur)
-        self._texte(x + 30, y + 2, noeud.name, couleur=couleur,
-                    gras=achetable)
-        if not acquis:
-            self._texte(x + largeur - 10, y + 2, f"{noeud.cost} XP", ancre="ne",
-                        couleur=couleur)
-        if achetable:
-            self.zones.append((*zone, lambda c=noeud.key: self._acheter(c),
-                               f"talent {noeud.key}"))
-        elif accessible or acquis:
-            self.zones.append((*zone, lambda: None, f"talent {noeud.key}"))
+            self._texte(16, bas - 26,
+                        "Survole un talent pour le lire, clique pour l'acheter."
+                        "   Les choix sont définitifs.", pale=True)
+        self._bouton(self.largeur - 96, haut + 8, 80, 26, "Fermer",
+                     lambda: setattr(self, "mode", "jeu"))
+
+    def _centre_de_l_eventail(self):
+        return self.largeur / 2, HUD_HEIGHT + self.hauteur_carte - 52
+
+    def _disposition_talents(self):
+        """Place chaque nœud : (x, y, angle, largeur disponible pour le nom).
+
+        La part d'éventail d'une branche vient de son rang le plus chargé,
+        ramené à son rayon : une branche qui s'épaissit s'élargit toute seule.
+        """
+        rangs = tree_mod.profondeurs()
+        cx, cy = self._centre_de_l_eventail()
+        debut, fin = (math.radians(angle) for angle in TALENT_OUVERTURE)
+        branches = []
+        for _nom, noeuds in tree_mod.par_branche():
+            par_rang = {}
+            for noeud in noeuds:
+                par_rang.setdefault(rangs[noeud.key], []).append(noeud)
+            besoin = max(len(lot) * TALENT_ESPACEMENT / rayon_de_rang(rang)
+                         for rang, lot in par_rang.items())
+            branches.append((par_rang, besoin))
+        total = sum(besoin for _, besoin in branches) or 1
+        ouverture, angle, places = fin - debut, fin, {}
+        for par_rang, besoin in branches:
+            part = ouverture * besoin / total
+            for rang, lot in sorted(par_rang.items()):
+                rayon, pas = rayon_de_rang(rang), part / (len(lot) + 1)
+                for index, noeud in enumerate(lot):
+                    theta = angle - pas * (index + 1)
+                    places[noeud.key] = (
+                        cx + TALENT_ETIREMENT * rayon * math.cos(theta),
+                        cy - rayon * math.sin(theta),
+                        theta,
+                        max(48, TALENT_ETIREMENT * rayon * pas
+                            * abs(math.sin(theta))),
+                    )
+            angle -= part
+        return places
+
+    def _liens_de_talents(self, places):
+        """Les traits entre un nœud et ses prérequis — le centre pour les racines."""
+        cx, cy = self._centre_de_l_eventail()
+        for cle, (x, y, _theta, _place) in places.items():
+            noeud = tree_mod.ARBRE[cle]
+            acquis = self.session.meta.acquis(cle)
+            teinte = COULEUR_BRANCHE.get(noeud.branche, BORDURE)
+            attaches = [places[parent][:2] for parent in noeud.parents
+                        if parent in places] or [(cx, cy)]
+            for (px, py) in attaches:
+                self.canvas.create_line(
+                    px, py, x, y, width=2 if acquis else 1,
+                    fill=melange(teinte, FOND, 0.5) if acquis else "#332e42")
+
+    def _coeur_de_l_eventail(self, meta):
+        cx, cy = self._centre_de_l_eventail()
+        self.canvas.create_oval(cx - 36, cy - 36, cx + 36, cy + 36,
+                                fill=BOUTON, outline=BORDURE, width=2)
+        self.canvas.create_text(cx, cy - 7, text=f"{meta.xp:.0f}", fill=TEXTE,
+                                font=("TkDefaultFont", 13, "bold"))
+        self.canvas.create_text(cx, cy + 13, text="XP", fill=TEXTE_PALE,
+                                font=("TkDefaultFont", 8))
+
+    def _noeud_de_talent(self, noeud, place):
+        x, y, theta, largeur = place
+        meta = self.session.meta
+        acquis, achetable = meta.acquis(noeud.key), meta.achetable(noeud.key)
+        accessible = noeud.accessible(meta.noeuds)
+        teinte = COULEUR_BRANCHE.get(noeud.branche, TEXTE)
+        zone = (x - RAYON_TALENT - 3, y - RAYON_TALENT - 3,
+                x + RAYON_TALENT + 3, y + RAYON_TALENT + 3)
+        survole = self.zone_survolee == zone
+        if acquis:
+            fond, bord, dedans, nom = teinte, teinte, FOND, TEXTE
+        elif achetable:
+            fond = BOUTON_SURVOL if survole else BOUTON
+            bord, dedans, nom = teinte, TEXTE, TEXTE
+        elif accessible:
+            fond, bord = BOUTON, melange(teinte, FOND, 0.55)
+            dedans = nom = TEXTE_PALE
+        else:
+            fond, bord = "#211e2b", "#3a3549"
+            dedans = nom = "#5a5470"
+        if survole:
+            self.canvas.create_oval(x - RAYON_TALENT - 5, y - RAYON_TALENT - 5,
+                                    x + RAYON_TALENT + 5, y + RAYON_TALENT + 5,
+                                    fill="", outline=melange(teinte, FOND, 0.4))
+        self.canvas.create_oval(x - RAYON_TALENT, y - RAYON_TALENT,
+                                x + RAYON_TALENT, y + RAYON_TALENT,
+                                fill=fond, outline=bord,
+                                width=3 if achetable else 2)
+        self.canvas.create_text(x, y, text="✔" if acquis else str(noeud.cost),
+                                fill=dedans, font=("TkDefaultFont", 8, "bold"))
+        self._nom_de_talent(noeud, x, y, theta, largeur, nom, gras=achetable)
+        # Tout nœud se survole — savoir ce qui attend derrière un rond éteint
+        # est la moitié de l'intérêt d'un arbre — mais seul l'achetable s'achète.
+        action = (lambda c=noeud.key: self._acheter(c)) if achetable else \
+            (lambda: None)
+        self.zones.append((*zone, action, f"talent {noeud.key}"))
+
+    def _nom_de_talent(self, noeud, x, y, theta, largeur, couleur, gras=False):
+        """Le nom, posé vers l'extérieur : à côté sur les flancs, au-dessus en haut.
+
+        Sur les flancs les nœuds voisins sont décalés en hauteur, le nom tient
+        donc sur une ligne ; en haut ils sont côte à côte, et le nom se coupe
+        en deux s'il est plus large que la place laissée par son voisin.
+        """
+        degres, marge = math.degrees(theta), RAYON_TALENT + 8
+        if degres > 118 or degres < 62:
+            gauche = degres > 118
+            bord = x - marge if gauche else x + marge
+            place = bord - 10 if gauche else self.largeur - 10 - bord
+            self._nom_de_cote(noeud.name, bord, y, place, gauche, couleur, gras)
+        else:
+            lignes = [noeud.name]
+            if self.largeur_texte(noeud.name, gras=gras, taille=9) > largeur:
+                lignes = couper_en_deux(noeud.name)
+            for index, ligne in enumerate(reversed(lignes)):
+                self._texte(x, y - marge - index * 14, ligne, ancre="s",
+                            couleur=couleur, gras=gras, taille=9)
+
+    def _nom_de_cote(self, nom, bord, y, place, gauche, couleur, gras):
+        """Nom posé sur un flanc, coupé en deux plutôt que de sortir du cadre."""
+        lignes = [nom]
+        if self.largeur_texte(nom, gras=gras, taille=9) > place:
+            lignes = couper_en_deux(nom)
+        depart = y - 7 * (len(lignes) - 1)
+        for index, ligne in enumerate(lignes):
+            self._texte(bord, depart + index * 14, ligne,
+                        ancre="e" if gauche else "w", couleur=couleur,
+                        gras=gras, taille=9)
+
+    def _legende_des_branches(self, x, y):
+        for nom, _noeuds in tree_mod.par_branche():
+            teinte = COULEUR_BRANCHE.get(nom, TEXTE)
+            self.canvas.create_oval(x, y, x + 9, y + 9, fill=teinte, outline="")
+            self._texte(x + 15, y - 3, nom, pale=True, taille=9)
+            x += 15 + self.largeur_texte(nom, taille=9) + 18
+
+    def _prerequis_manquants(self, noeud):
+        """Ce qu'il faut acheter avant, dit en clair plutôt qu'en traits."""
+        manquants = [tree_mod.ARBRE[cle].name for cle in noeud.parents
+                     if not self.session.meta.acquis(cle)]
+        return f"   (exige : {', '.join(manquants)})" if manquants else ""
 
     def _talent_survole(self):
         etiquette = self.etiquette_survolee or ""

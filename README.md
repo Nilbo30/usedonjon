@@ -245,6 +245,11 @@ l'orbe : chacun est un nœud à acheter, avec ses prérequis. Les choix sont
 définitifs. Chaque déblocage augmente ce qu'une vie rapporte, donc accélère le
 suivant.
 
+L'arbre s'affiche en éventail : au centre l'XP qu'il reste à dépenser, autour
+les branches qui s'ouvrent en rayons, un cran plus loin du centre par prérequis.
+Un rond plein est acquis, un rond vif s'achète, un rond éteint attend ses
+prérequis ; le survol en donne l'effet et le prix.
+
 ![L'arbre des talents](docs/talents.png)
 
 Ajouter du contenu, c'est un nœud dans `tree.py` et un `unlock="..."` sur les

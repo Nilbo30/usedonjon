@@ -62,6 +62,32 @@ class TestCoherence(unittest.TestCase):
             self.assertTrue(noeud.branche, noeud.key)
 
 
+class TestRangs(unittest.TestCase):
+    """Les rangs servent à placer les nœuds dans l'éventail de l'interface."""
+
+    def test_chaque_noeud_a_un_rang(self):
+        self.assertEqual(set(tree.profondeurs()), set(tree.ARBRE))
+
+    def test_un_enfant_est_plus_loin_que_ses_parents(self):
+        rangs = tree.profondeurs()
+        for noeud in tree.ARBRE.values():
+            for parent in noeud.parents:
+                self.assertGreater(rangs[noeud.key], rangs[parent], noeud.key)
+
+    def test_les_racines_sont_au_centre(self):
+        rangs = tree.profondeurs()
+        racines = {cle for cle, rang in rangs.items() if rang == 0}
+        self.assertEqual(racines,
+                         {cle for cle, noeud in tree.ARBRE.items()
+                          if not noeud.parents})
+
+    def test_chaque_branche_est_affichable(self):
+        """Une branche absente de `BRANCHES` ne serait dessinée nulle part."""
+        montrees = {nom for nom, _ in tree.par_branche()}
+        for noeud in tree.ARBRE.values():
+            self.assertIn(noeud.branche, montrees, noeud.key)
+
+
 class TestVerrouillageDuContenu(unittest.TestCase):
     def test_chaque_verrou_d_objet_est_donne_par_un_noeud(self):
         donnes = {drapeau for noeud in tree.ARBRE.values()

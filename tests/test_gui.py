@@ -186,16 +186,62 @@ class TestRefuge(unittest.TestCase):
         fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
         self.assertEqual(fenetre.session.meta.noeuds, [])
 
-    def test_un_talent_verrouille_n_est_pas_cliquable(self):
+    def test_un_talent_verrouille_se_lit_mais_ne_s_achete_pas(self):
+        """On peut regarder ce qui attend derrière un rond éteint, pas le prendre."""
         from donjon.gui import Fenetre
         fenetre = Fenetre(seed=7, sauvegarde=False)
         self.addCleanup(fenetre.root.destroy)
         fenetre.session.meta.xp = 10000
         fenetre.mode = "talents"
         fenetre.dessiner()
-        etiquettes = [z[5] for z in fenetre.zones]
-        self.assertIn("talent estomac", etiquettes)
-        self.assertNotIn("talent second_souffle", etiquettes)
+        zone = next(z for z in fenetre.zones if z[5] == "talent second_souffle")
+        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
+        self.assertNotIn("second_souffle", fenetre.session.meta.noeuds)
+        self.assertEqual(fenetre.session.meta.xp, 10000)
+
+    def test_le_survol_dit_ce_qui_manque(self):
+        from donjon import tree
+        from donjon.gui import Fenetre
+        fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(fenetre.root.destroy)
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        manque = fenetre._prerequis_manquants(tree.ARBRE["second_souffle"])
+        self.assertIn(tree.ARBRE["endurci"].name, manque)
+        self.assertEqual(fenetre._prerequis_manquants(tree.ARBRE["estomac"]), "")
+
+    def test_l_eventail_place_tous_les_noeuds_dans_le_cadre(self):
+        """Un nœud d'une branche oubliée dans `BRANCHES` disparaîtrait sans bruit."""
+        from donjon import tree
+        from donjon.gui import HUD_HEIGHT
+
+        fenetre = self.fenetre
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        places = fenetre._disposition_talents()
+        self.assertEqual(len(places), len(tree.ARBRE))
+        bas = HUD_HEIGHT + fenetre.hauteur_carte
+        for cle, (x, y, _angle, _place) in places.items():
+            # la marge laisse la place au nom, posé à côté du rond
+            self.assertTrue(40 <= x <= fenetre.largeur - 40, f"{cle} en x={x}")
+            self.assertTrue(HUD_HEIGHT + 40 <= y <= bas - 40, f"{cle} en y={y}")
+
+    def test_les_ronds_de_l_eventail_ne_se_touchent_pas(self):
+        """Deux talents collés seraient impossibles à distinguer et à cliquer."""
+        import math
+
+        from donjon.gui import RAYON_TALENT
+
+        fenetre = self.fenetre
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        places = fenetre._disposition_talents()
+        for premier, un in places.items():
+            for second, autre in places.items():
+                if premier < second:
+                    ecart = math.dist(un[:2], autre[:2])
+                    self.assertGreater(ecart, 2 * RAYON_TALENT + 6,
+                                       f"{premier} / {second}")
 
     def test_la_carte_du_refuge_est_centree(self):
         fenetre = self.fenetre
@@ -328,7 +374,8 @@ class TestSouris(unittest.TestCase):
         fenetre.game.player.skills.levels.update(
             {"marche": 2, "combat": 2, "recuperation": 1})
         fenetre.game.player.skills.xp.update({"marche": 15.2})
-        for mode in ("competences", "sac", "action", "direction", "aide"):
+        for mode in ("competences", "sac", "action", "direction", "aide",
+                     "talents"):
             fenetre.mode = mode
             fenetre.slot = 0
             fenetre.dessiner()

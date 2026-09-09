@@ -151,3 +151,22 @@ def disponibles(acquis):
     """Les nœuds qu'on pourrait acheter maintenant, prix mis à part."""
     return [noeud for cle, noeud in ARBRE.items()
             if cle not in acquis and noeud.accessible(acquis)]
+
+
+def profondeurs():
+    """Le rang de chaque nœud : le plus long chemin qui y mène.
+
+    C'est ce qui l'éloigne du centre dans l'éventail — les nœuds sans prérequis
+    au premier rang, leurs enfants au deuxième. Se recalcule tout seul quand on
+    ajoute un nœud.
+    """
+    rangs = {}
+
+    def rang(cle):
+        if cle not in rangs:
+            parents = ARBRE[cle].parents
+            rangs[cle] = 1 + max((rang(parent) for parent in parents),
+                                 default=-1)
+        return rangs[cle]
+
+    return {cle: rang(cle) for cle in ARBRE}
