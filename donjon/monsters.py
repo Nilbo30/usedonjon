@@ -1,7 +1,8 @@
 """Bestiaire : de la donnée pure. Une entrée = une créature.
 
 `depth` (min, max) définit à quels étages l'espèce peut apparaître,
-`behaviour` choisit l'IA (voir ai.py).
+`behaviour` choisit l'IA (voir ai.py), `color` et `shape` ("rond", "carre",
+"pointu") ne servent qu'à l'affichage graphique et ont des valeurs par défaut.
 """
 
 SPECIES = [
@@ -9,31 +10,37 @@ SPECIES = [
         "key": "mamel", "name": "Mamel", "glyph": "m",
         "hp": 8, "attack": 4, "defense": 1, "exp": 3,
         "depth": (1, 4), "weight": 20, "behaviour": "chasseur",
+        "color": "#7fd06b", "shape": "rond",
     },
     {
         "key": "rat", "name": "Rat des cavernes", "glyph": "r",
         "hp": 10, "attack": 5, "defense": 1, "exp": 4,
         "depth": (1, 5), "weight": 18, "behaviour": "chasseur",
+        "color": "#b07a52", "shape": "rond",
     },
     {
         "key": "chauve_souris", "name": "Chauve-souris", "glyph": "b",
         "hp": 9, "attack": 4, "defense": 0, "exp": 5, "speed": 150,
         "depth": (2, 7), "weight": 14, "behaviour": "erratique",
+        "color": "#9b6fd0", "shape": "pointu",
     },
     {
         "key": "gobelin", "name": "Gobelin", "glyph": "g",
         "hp": 16, "attack": 8, "defense": 3, "exp": 9,
         "depth": (3, 8), "weight": 16, "behaviour": "chasseur",
+        "color": "#4fae86", "shape": "rond",
     },
     {
         "key": "golem", "name": "Golem de pierre", "glyph": "G",
         "hp": 30, "attack": 12, "defense": 7, "exp": 22, "speed": 60,
         "depth": (5, 99), "weight": 10, "behaviour": "chasseur",
+        "color": "#8a8fa8", "shape": "carre",
     },
     {
         "key": "sorcier", "name": "Sorcier bleu", "glyph": "s",
         "hp": 14, "attack": 9, "defense": 2, "exp": 15,
         "depth": (6, 99), "weight": 12, "behaviour": "peureux",
+        "color": "#5b8ad0", "shape": "rond",
     },
 ]
 

@@ -1,6 +1,7 @@
 """Point d'entrée en ligne de commande.
 
-    python -m donjon                          # jouer (interface terminal)
+    python -m donjon                          # jouer (fenêtre graphique)
+    python -m donjon --tui                    # jouer dans le terminal (curses)
     python -m donjon --seed 42                # partie reproductible
     python -m donjon --script "lllj,>" -f     # rejouer une partition, mode texte
     python -m donjon --auto 500 --reveal      # bot de test, carte dévoilée
@@ -15,6 +16,10 @@ from .script import ScriptError, autoplay, run_script
 
 def build_parser():
     parser = argparse.ArgumentParser(prog="donjon", description="Petit donjon mystère")
+    parser.add_argument("--tui", action="store_true",
+                        help="jouer dans le terminal au lieu de la fenêtre")
+    parser.add_argument("--tile", type=int, default=20,
+                        help="taille des cases en pixels (fenêtre graphique)")
     parser.add_argument("--seed", type=int, default=None,
                         help="graine aléatoire (partie reproductible)")
     parser.add_argument("--depth", type=int, default=5,
@@ -35,8 +40,19 @@ def main(argv=None):
     headless = args.script is not None or args.auto is not None
 
     if not headless:
-        from . import ui
-        ui.run(seed=args.seed, max_depth=args.depth)
+        if args.tui:
+            from . import ui
+            ui.run(seed=args.seed, max_depth=args.depth)
+            return 0
+        try:
+            from . import gui
+        except ImportError:
+            print("tkinter est absent de cette installation de Python.\n"
+                  "Relance avec --tui pour jouer dans le terminal, ou installe "
+                  "tkinter (Linux : « sudo apt install python3-tk »).",
+                  file=sys.stderr)
+            return 3
+        gui.run(seed=args.seed, max_depth=args.depth, tile=args.tile)
         return 0
 
     game = Game(seed=args.seed, max_depth=args.depth)
