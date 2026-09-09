@@ -89,7 +89,8 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 9 | L'arbre des talents : le jeu entier se déverrouille | ✅ fait |
 | 10 | Familles et classes de créatures ; ce qu'on apprend, le donjon l'apprend | ✅ fait |
 | 11 | L'archer : le tir, et ce qu'il change au déplacement | ✅ fait |
-| 12 | L'esquive, puis le butin des créatures | à faire |
+| 12 | L'esquive : encaisser ou se dérober, deux runs différents | ✅ fait |
+| 13 | Le butin des créatures | à faire |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -484,9 +485,50 @@ soit un archer croisé régulièrement sans qu'il occupe le donjon. Aucune de ce
 paires n'est significative prise seule — c'est la **monotonie de la série** qui
 tranche, pas un écart isolé.
 
-**Reste à faire** : l'esquive, la compétence qui va avec — elle monterait en se
-déplaçant sous le feu, et réduirait la chance d'être touché à distance. C'est le
-seul morceau qui coûtera une extension au moteur (un effet lu à un endroit).
+### Étape 12 — l'esquive, et deux façons de traverser un run
+
+La compétence qui accompagne l'archer, mais elle vaut de près comme de loin :
+elle annule un coup entièrement, quelle qu'en soit la provenance.
+
+**Elle est le pendant exact de « épée / pugilat », côté défense.** Le jeu avait
+déjà la moitié du mécanisme : ce qu'on porte décide de ce qu'on apprend. Le
+bras nu ouvre donc `shield_skill = "esquive"` comme la main vide ouvre
+`weapon_skill = "pugilat"` — aucun nouveau rouage, une ligne dans `entities.py`
+et deux règles symétriques :
+
+```python
+Regle(events.COUP_RECU, "bouclier", si=lambda e: e["bouclier"] is not None),
+Regle(events.COUP_RECU, "esquive",  si=lambda e: e["bouclier"] is None),
+```
+
+**Comment elle monte** : en encaissant sans bouclier — et surtout **en se
+déplaçant sous la menace**, un monstre à portée ou un archer qui te tient dans
+sa ligne. La première source seule ne suffisait pas : on n'apprend pas à se
+dérober en encaissant, puisque encaisser est ce qui tue. La seconde récompense
+le déplacement plutôt que l'endurance, ce qui est exactement le geste qu'on veut
+apprendre au joueur.
+
+**Le pari a fallu le construire, pas le déclarer.** Premier réglage : 16,1
+XP/vie au bras nu contre 27,3 avec bouclier. Le pari n'existait pas — je
+comparais « bouclier + compétence » à « compétence seule », alors qu'une esquive
+doit remplacer *l'objet* : un bouclier en fer donne +6 de défense dès qu'on le
+ramasse, quand la compétence plafonnait au niveau 1,2.
+
+| réglage | bras nu | niveau atteint |
+|---|---|---|
+| 0,03/niveau, plafond 40 % | 16,1 ± 1,1 | 1,2 |
+| 0,05, et l'XP en bougeant | 21,8 ± 1,4 | 3,8 |
+| 0,07, plafond 50 % | 22,1 ± 1,3 | 3,9 |
+| **0,09, plafond 55 %** | **24,4 ± 1,7** | 4,0 |
+
+Contre 27,3 ± 1,5 pour le bouclier : **89 %**. Pas la parité — le bouclier
+trouvé reste meilleur, et c'est juste — mais une vraie autre façon de jouer.
+
+**Une fuite attrapée au passage** : la règle « bouger sous la menace » ne
+regardait pas le bras. Le run avec bouclier entraînait donc l'esquive sans
+jamais s'en servir, et comme le méta compte la somme des niveaux, il gagnait de
+l'XP pour une compétence morte — 27,3 → 32,8. Une compétence qui monte sans
+servir est de l'inflation, pas de la progression.
 
 ## Règles fixées en cours de route
 

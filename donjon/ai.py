@@ -99,7 +99,7 @@ def _archer(game, monster):
     autre créature est donc un abri réel.
     """
     joueur = game.player
-    direction = _direction_de_tir(game, monster.pos, joueur)
+    direction = direction_de_tir(game, monster.pos, joueur)
     if direction:
         game.tirer(monster, direction)
         return
@@ -111,7 +111,7 @@ def _archer(game, monster):
     _chasseur(game, monster)
 
 
-def _direction_de_tir(game, depuis, cible):
+def direction_de_tir(game, depuis, cible):
     """La direction où tirer pour toucher la cible depuis cette case, ou None."""
     from .game import PORTEE_TIR
 
@@ -128,7 +128,7 @@ def _se_placer(game, monster):
         case = add(monster.pos, direction)
         if not game.level.walkable(case) or game.actor_at(case):
             continue
-        if _direction_de_tir(game, case, game.player):
+        if direction_de_tir(game, case, game.player):
             return game.try_move(monster, direction)
     return False
 

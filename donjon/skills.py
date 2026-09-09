@@ -35,6 +35,7 @@ EFFETS = {
     "degats_jet": "dégâts en plus des objets lancés",
     "duree_effet": "tours en plus sur les effets de parchemins",
     "regeneration": "tours en moins entre deux points de vie regagnés",
+    "esquive": "chance d'éviter un coup entièrement (0.03 = 3 %)",
 }
 
 
@@ -49,6 +50,7 @@ LIBELLES = {
     "degats_jet": "dégâts de jet",
     "duree_effet": "tour d'effet",
     "regeneration": "tour de repos en moins",
+    "esquive": "d'esquive",
 }
 
 
@@ -81,6 +83,8 @@ class Skill:
         for effet, valeur in self.effects.items():
             if effet == "endurance":
                 morceaux.append(f"{valeur * 100:g} % {LIBELLES[effet]}")
+            elif effet == "esquive":
+                morceaux.append(f"+{valeur * 100:g} % {LIBELLES[effet]}")
             else:
                 morceaux.append(f"+{valeur:g} {LIBELLES[effet]}")
         return " · ".join(morceaux)
@@ -113,6 +117,15 @@ _enregistrer(
     Skill("bouclier", "Bouclier", base=6, scope=EQUIPEMENT,
           effects={"defense": 1},
           note="S'apprend en encaissant, bouclier au bras."),
+    # Elle monte vite et rapporte gros, à dessein : elle ne remplace pas la
+    # compétence du bouclier mais le bouclier lui-même — un +6 de défense
+    # gagné d'un coup en le ramassant. Sans ça, le bras nu est un handicap et
+    # non une autre façon de jouer : 16,1 XP/vie au premier réglage contre
+    # 27,3 pour le bouclier, 24,4 une fois calée.
+    Skill("esquive", "Esquive", base=3, growth=1.4, scope=EQUIPEMENT,
+          effects={"esquive": 0.09},
+          note="S'apprend en encaissant sans bouclier : le corps apprend à "
+               "se dérober."),
     Skill("herboristerie", "Herboristerie", base=2, growth=1.6,
           effects={"soin": 2},
           note="Les herbes rendent davantage."),
@@ -168,7 +181,14 @@ REGLES = (
     Regle(events.COUP, "@arme", defaut="pugilat", si=lambda e: e["touche"]),
     Regle(events.COUP, "combat", si=lambda e: e["touche"]),
     Regle(events.MONSTRE_VAINCU, "combat", xp=3),
+    # Deux écoles pour la même leçon, selon ce qu'on a au bras — le pendant
+    # exact de « épée / pugilat » du côté de la défense.
     Regle(events.COUP_RECU, "bouclier", si=lambda e: e["bouclier"] is not None),
+    Regle(events.COUP_RECU, "esquive", si=lambda e: e["bouclier"] is None),
+    # Et surtout : bouger pendant que quelque chose peut te toucher. Encaisser
+    # seul ne suffit pas à la faire monter — encaisser est ce qui tue.
+    Regle(events.PAS, "esquive",
+          si=lambda e: e.get("menace") and e.get("bouclier") is None),
     Regle(events.REPOS, "recuperation"),
     Regle(events.USAGE_OBJET, "@objet"),
     Regle(events.JET, "jet"),

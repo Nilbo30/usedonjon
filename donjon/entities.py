@@ -124,12 +124,21 @@ class Player(Actor):
         """Famille de l'arme portée — « pugilat » à mains nues."""
         return self.weapon.type.skill if self.weapon else "pugilat"
 
+    @property
+    def shield_skill(self):
+        """Famille de défense active — « esquive » quand le bras est nu.
+
+        Symétrique de `weapon_skill` : sans bouclier on n'apprend pas à parer,
+        on apprend à se dérober. C'est ce qui fait exister deux façons de
+        traverser un run, selon ce qu'on a trouvé.
+        """
+        if self.shield and self.shield.type.skill:
+            return self.shield.type.skill
+        return "esquive"
+
     def families(self):
         """Familles d'équipement actives, pour les bonus de compétence."""
-        familles = [self.weapon_skill]
-        if self.shield and self.shield.type.skill:
-            familles.append(self.shield.type.skill)
-        return familles
+        return [self.weapon_skill, self.shield_skill]
 
     def bonus(self, effet):
         return self.skills.bonus(effet, self.families())

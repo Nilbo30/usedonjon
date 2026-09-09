@@ -32,6 +32,10 @@ TERMINES = (DEAD, WON, RETOUR, VERS_DONJON)
 #: tirer est plus sûr que frapper, donc doit faire moins mal.
 PORTEE_TIR = 7
 DEGATS_A_DISTANCE = 0.75
+#: Plafond de l'esquive : au-delà, un run sans bouclier deviendrait
+#: invulnérable au lieu d'être une autre façon de jouer. Élevé parce qu'elle
+#: remplace à elle seule un bouclier ET la compétence qui va avec.
+ESQUIVE_MAX = 0.55
 
 
 class Game:
@@ -395,9 +399,42 @@ class Game:
         registre.identifier(item.type.key)
         self.say(f"Tu reconnais {item.type.name} au premier coup d'œil.")
 
+    def sous_la_menace(self):
+        """Quelque chose peut-il frapper le héros là où il est ?
+
+        Adjacent, ou un archer qui le tient dans sa ligne. Sert à savoir si un
+        pas se fait sous le feu — c'est ainsi qu'on apprend à se dérober :
+        en bougeant quand ça compte, pas en encaissant tranquillement.
+        """
+        for monstre in self.monsters():
+            if chebyshev(monstre.pos, self.player.pos) <= 2:
+                return True
+            if monstre.behaviour == "archer" and ai.direction_de_tir(
+                    self, monstre.pos, self.player):
+                return True
+        return False
+
+    def esquive(self, defenseur, attaquant):
+        """Le héros se dérobe-t-il entièrement ? Coup porté ou trait décoché.
+
+        Seul endroit du moteur qui lit la compétence d'esquive. Le coup esquivé
+        n'entraîne rien : on apprend à se dérober en encaissant, pas en
+        réussissant — ce qui freine tout seul la montée d'un run qui esquive
+        déjà bien.
+        """
+        if not defenseur.is_player:
+            return False
+        chance = min(ESQUIVE_MAX, defenseur.bonus("esquive"))
+        if chance <= 0 or not self.rng.chance(chance):
+            return False
+        self.say(f"Tu te dérobes au coup de {attaquant.name}.")
+        return True
+
     def attack(self, attacker, defender):
         self.spend(attacker)
         arme = attacker.weapon if attacker.is_player else None
+        if self.esquive(defender, attacker):
+            return
         if self.rng.chance(self.config.miss_chance):
             self.say(f"{self.who(attacker)} rate {defender.name}.")
             if attacker.is_player:
@@ -468,7 +505,9 @@ class Game:
         depart = player.pos
         if self.try_move(player, delta):
             self.notify(events.PAS, depart=depart, arrivee=player.pos,
-                        diagonale=is_diagonal(delta))
+                        diagonale=is_diagonal(delta),
+                        menace=self.sous_la_menace(),
+                        bouclier=player.shield)
             return self._finish(True)
         self.say("Impossible d'aller par là.")
         return False
@@ -631,6 +670,8 @@ class Game:
         _pos, cible = self.ligne_de_tir(tireur.pos, direction, portee)
         if cible is None:
             self.say(f"{tireur.name} tire et manque.")
+            return False
+        if self.esquive(cible, tireur):
             return False
         brut = max(1.0, tireur.attack * DEGATS_A_DISTANCE - cible.defense * 0.7)
         degats = max(1, int(round(self.rng.variance(brut))))

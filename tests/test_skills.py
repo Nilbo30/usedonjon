@@ -233,3 +233,66 @@ class TestRunSeulement(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestEsquive(unittest.TestCase):
+    """Deux écoles de défense : le bouclier au bras, ou rien du tout.
+
+    C'est le pendant exact de « épée / pugilat » : ce qu'on porte décide de ce
+    qu'on apprend, et deux runs peuvent donc se jouer différemment selon ce
+    qu'on a trouvé.
+    """
+
+    def setUp(self):
+        from tests.helpers import place_monster, sandbox
+
+        self.game = sandbox(seed=6)
+        self.joueur = self.game.player
+        self.monstre = place_monster(
+            self.game, (self.joueur.pos[0] + 1, self.joueur.pos[1]))
+
+    def test_encaisser_sans_bouclier_entraine_l_esquive(self):
+        self.joueur.shield = None
+        for _ in range(30):
+            self.joueur.hp = self.joueur.max_hp
+            self.game.attack(self.monstre, self.joueur)
+        self.assertGreater(self.joueur.skills.level("esquive"), 0)
+        self.assertEqual(self.joueur.skills.level("bouclier"), 0)
+
+    def test_encaisser_avec_bouclier_entraine_le_bouclier(self):
+        from donjon import items
+
+        self.joueur.shield = items.make("bouclier_bois")
+        for _ in range(30):
+            self.joueur.hp = self.joueur.max_hp
+            self.game.attack(self.monstre, self.joueur)
+        self.assertGreater(self.joueur.skills.level("bouclier"), 0)
+        self.assertEqual(self.joueur.skills.level("esquive"), 0)
+
+    def test_l_esquive_ne_sert_qu_au_bras_nu(self):
+        from donjon import items
+
+        self.joueur.skills.levels["esquive"] = 5
+        self.joueur.shield = None
+        self.assertGreater(self.joueur.bonus("esquive"), 0)
+        self.joueur.shield = items.make("bouclier_bois")
+        self.assertEqual(self.joueur.bonus("esquive"), 0)
+
+    def test_un_coup_esquive_ne_fait_aucun_degat(self):
+        from donjon.game import ESQUIVE_MAX
+
+        self.joueur.shield = None
+        self.joueur.skills.levels["esquive"] = 100      # esquive plafonnée
+        self.assertEqual(min(ESQUIVE_MAX, self.joueur.bonus("esquive")),
+                         ESQUIVE_MAX)
+        esquives = 0
+        for _ in range(200):
+            self.joueur.hp = self.joueur.max_hp
+            self.game.attack(self.monstre, self.joueur)
+            esquives += self.joueur.hp == self.joueur.max_hp
+        self.assertGreater(esquives, 40)               # ~40 % attendus
+        self.assertLess(esquives, 160)                 # mais jamais l'immunité
+
+    def test_les_creatures_n_esquivent_pas(self):
+        """L'esquive est une compétence : les monstres n'en ont pas."""
+        self.assertFalse(self.game.esquive(self.monstre, self.joueur))
