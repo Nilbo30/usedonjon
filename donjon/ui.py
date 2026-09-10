@@ -100,11 +100,11 @@ def _coffre(stdscr, session, game):
     """Le coffre du refuge, au clavier : une lettre pour déposer ou reprendre."""
     garde = session.entrepot()
     lignes = ["TON SAC (lettre pour déposer)"]
-    lignes += [f"  {chr(ord('a') + i)}) {o.name}"
+    lignes += [f"  {chr(ord('a') + i)}) {o.etiquette}"
                for i, o in enumerate(game.player.inventory)]
     lignes += ["", f"LE COFFRE (chiffre pour reprendre) "
                    f"{len(garde)}/{session.capacite_entrepot()}"]
-    lignes += [f"  {i + 1}) {o.name}" for i, o in enumerate(garde)] or ["  (vide)"]
+    lignes += [f"  {i + 1}) {o.etiquette}" for i, o in enumerate(garde)] or ["  (vide)"]
     _overlay(stdscr, "Coffre du refuge", lignes, wait=False)
     touche = stdscr.getch()
     char = chr(touche) if 0 <= touche < 256 else ""
@@ -186,7 +186,7 @@ def _inventory_flow(stdscr, game):
         if item is player.shield:
             marks.append("équipé")
         suffix = f"  <{', '.join(marks)}>" if marks else ""
-        lines.append(f"{chr(ord('a') + index)}) {item.name}{suffix}")
+        lines.append(f"{chr(ord('a') + index)}) {item.etiquette}{suffix}")
     _overlay(stdscr, "Sac — choisis une lettre (échap pour fermer)", lines, wait=False)
     key = stdscr.getch()
     if key in (27, -1):
@@ -195,7 +195,8 @@ def _inventory_flow(stdscr, game):
     if not 0 <= slot < len(player.inventory):
         return "Pas d'objet à cette lettre."
     item = player.inventory[slot]
-    fiche = [item.description] if item.description else []
+    texte = item.description(game.player)
+    fiche = [texte] if texte else []
     _overlay(stdscr, item.name,
              fiche + ["", "u) utiliser / lire / manger", "e) équiper ou ranger",
                       "t) lancer (puis une direction)", "d) poser",

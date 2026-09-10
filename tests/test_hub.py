@@ -144,7 +144,7 @@ class TestCoffre(unittest.TestCase):
 
     def test_le_coffre_a_une_capacite(self):
         for _ in range(self.session.capacite_entrepot() + 3):
-            objet = items.make("fleche")
+            objet = items.make("onigiri")
             self.heros.add_item(objet)
             self.session.deposer(objet)
         self.assertEqual(len(self.session.meta.entrepot),
@@ -152,11 +152,11 @@ class TestCoffre(unittest.TestCase):
         self.assertTrue(self.session.entrepot_plein())
 
     def test_on_ne_depose_pas_ce_qu_on_n_a_pas(self):
-        self.assertFalse(self.session.deposer(items.make("fleche")))
+        self.assertFalse(self.session.deposer(items.make("onigiri")))
 
     def test_reprendre_dans_un_sac_plein_echoue(self):
         self.session.deposer(self.heros.inventory[0])
-        while self.heros.add_item(items.make("fleche")):
+        while self.heros.add_item(items.make("onigiri")):
             pass
         self.assertFalse(self.session.retirer(0))
         self.assertEqual(len(self.session.entrepot()), 1)
@@ -244,3 +244,18 @@ class TestAccueil(unittest.TestCase):
         for cle in ("nourriture", "coffre"):
             session.meta.acheter(cle)
         self.assertIn("coffre", " ".join(session.lignes_d_accueil()).lower())
+
+
+class TestCoffreEtPiles(unittest.TestCase):
+    def test_une_pile_deposee_revient_entiere(self):
+        session = Session(sauvegarde=False, seed=7)
+        session.meta.xp = 1000
+        for cle in ("nourriture", "coffre"):
+            session.meta.acheter(cle)
+        session.demarrer()
+        pile = items.make("pierre", quantite=7)
+        session.player.add_item(pile)
+        self.assertTrue(session.deposer(pile))
+        self.assertEqual(session.entrepot()[0].quantite, 7)
+        self.assertTrue(session.retirer(0))
+        self.assertEqual(session.player.inventory[-1].quantite, 7)

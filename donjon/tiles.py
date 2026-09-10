@@ -8,6 +8,7 @@ FLOOR = "floor"
 CORRIDOR = "corridor"
 STAIRS = "stairs"
 CHEST = "chest"
+STELE = "stele"
 
 PROPERTIES = {
     #            glyphe, traversable, bloque la vue
@@ -16,6 +17,7 @@ PROPERTIES = {
     CORRIDOR: {"glyph": ".", "walkable": True,  "opaque": False},
     STAIRS:   {"glyph": ">", "walkable": True,  "opaque": False},
     CHEST:    {"glyph": "=", "walkable": True,  "opaque": False},
+    STELE:    {"glyph": "Ψ", "walkable": True,  "opaque": False},
 }
 
 

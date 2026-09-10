@@ -154,10 +154,36 @@ class Player(Actor):
         return int(self.base_defense + equipement + self.bonus("defense"))
 
     def add_item(self, item):
+        """Range un objet — ou l'ajoute à la pile de ses semblables.
+
+        Une pile ne prend qu'une place : sans ça, dix pierres remplissaient un
+        sac de douze.
+        """
+        if item.type.empilable:
+            for present in self.inventory:
+                if (present.type is item.type and present.plus == item.plus
+                        and present.quantite + item.quantite
+                        <= items_mod.MAX_PILE):
+                    present.quantite += item.quantite
+                    return True
         if len(self.inventory) >= self.max_items:
             return False
         self.inventory.append(item)
         return True
+
+    def consommer(self, item, nombre=1):
+        """Retire des exemplaires ; l'entrée disparaît quand la pile est vide."""
+        item.quantite -= nombre
+        if item.quantite <= 0:
+            self.remove_item(item)
+
+    def detacher_un(self, item):
+        """Sort un exemplaire de la pile, le reste demeure dans le sac."""
+        if item.quantite <= 1:
+            self.remove_item(item)
+            return item
+        item.quantite -= 1
+        return item.copie()
 
     def remove_item(self, item):
         if item in self.inventory:

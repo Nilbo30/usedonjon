@@ -92,6 +92,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 12 | L'esquive : encaisser ou se dérober, deux runs différents | ✅ fait |
 | 13 | Le butin des créatures, et la compétence « Chance » | ✅ fait |
 | 14 | Retours de partie : sept bugs, pierres, nœuds répétables, exploration | ✅ fait |
+| 15 | Le lot interface : fiches justes, bulle, action unique, stèle, piles | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -599,6 +600,39 @@ frontière. Elle explore maintenant 78 → 207 cases en une trentaine de pas.
 **Reste ouvert** : l'XP par vie tourne toujours autour de 35 quoi qu'on fasse —
 le gain ne raconte pas la descente. Le joueur continue de jouer pour cerner ce
 qui devrait être récompensé.
+
+### Étape 15 — le lot interface
+
+Six retours de jouabilité, tous venus de la même partie.
+
+**La fiche mentait.** Un onigiri annonçait « rend 50 points de ventre » alors
+que le moteur en rendait 55 avec Cuisine au niveau 2 : la note était un texte
+figé. Elle porte désormais un trou (`{n}`) et l'objet sait calculer sa valeur
+dans *ces* mains (`puissance_pour`). Un test vérifie l'essentiel : le chiffre
+annoncé est celui que l'effet applique.
+
+**Le panneau du sac sautait sous le curseur** parce que sa hauteur dépendait de
+la longueur de la fiche. La fiche devient une bulle posée à côté de la ligne
+survolée ; le panneau ne dépend plus que du nombre d'objets.
+
+**Un bouton d'action au lieu de quatre.** Ramasser / Descendre / Coffre /
+Attendre étaient quatre boutons dont trois éteints en permanence. Un seul
+demeure, dont le libellé dit ce qu'il fera ici — et il partage sa logique avec
+le clic sur le héros, qui faisait déjà ce travail.
+
+De même dans le sac : « Utiliser » et « Équiper » fusionnent en une action
+évidente (un onigiri se mange, une épée s'équipe), accessible au **double-clic**.
+
+**Une stèle des talents dans le refuge.** L'arbre n'était accessible que par un
+bouton ; il a maintenant un objet dans la pièce, comme le coffre — et il est là
+dès la première vie, parce qu'un joueur qui ne voit pas la stèle ne sait pas
+que l'arbre existe.
+
+**Les munitions s'empilent** (« une pierre ×7 »), plafonnées à 99 pour que le
+sac ne devienne pas infini. Lancer n'en détache qu'une, le coffre garde la pile
+entière. Le bug de conception s'est révélé dans un test qui bouclait sans fin :
+`while add_item(...)` ne terminait plus, puisqu'une pile accepte toujours un
+exemplaire de plus. C'est exactement ce que le plafond corrige.
 
 ## Règles fixées en cours de route
 

@@ -133,7 +133,8 @@ class Session:
     def entrepot(self):
         """Le contenu du coffre, en objets utilisables."""
         registre = self.player.registre if self.player else None
-        return [items_mod.make(ligne["cle"], ligne.get("plus", 0), registre)
+        return [items_mod.make(ligne["cle"], ligne.get("plus", 0), registre,
+                               ligne.get("nombre", 1))
                 for ligne in self.meta.entrepot]
 
     def capacite_entrepot(self):
@@ -147,7 +148,8 @@ class Session:
         if self.entrepot_plein() or item not in self.player.inventory:
             return False
         self.player.remove_item(item)
-        self.meta.entrepot.append({"cle": item.type.key, "plus": item.plus})
+        self.meta.entrepot.append({"cle": item.type.key, "plus": item.plus,
+                                   "nombre": item.quantite})
         self._sauver()
         return True
 
@@ -157,7 +159,8 @@ class Session:
             return False
         ligne = self.meta.entrepot[index]
         objet = items_mod.make(ligne["cle"], ligne.get("plus", 0),
-                               self.player.registre if self.player else None)
+                               self.player.registre if self.player else None,
+                               ligne.get("nombre", 1))
         if not self.player.add_item(objet):
             return False
         del self.meta.entrepot[index]

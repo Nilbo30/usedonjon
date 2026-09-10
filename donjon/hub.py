@@ -22,7 +22,11 @@ def config(base=None):
 
 
 def generer(avec_coffre=True):
-    """Une salle unique : l'escalier du donjon, et le coffre s'il est acquis."""
+    """Une salle unique : l'escalier, la stèle des talents, et le coffre acquis.
+
+    La stèle est là dès la première vie : c'est par elle qu'on dépense l'XP, et
+    un joueur qui ne la voit pas ne sait pas que l'arbre existe.
+    """
     level = Level(LARGEUR, HAUTEUR)
     salle = Room(2, 2, LARGEUR - 4, HAUTEUR - 4)
     level.rooms.append(salle)
@@ -33,6 +37,9 @@ def generer(avec_coffre=True):
     if avec_coffre:
         level.chest = (salle.x + 2, salle.y + salle.h // 2)
         level.set_tile(level.chest, tiles.CHEST)
+
+    level.stele = (salle.x + salle.w // 2, salle.y + 1)
+    level.set_tile(level.stele, tiles.STELE)
 
     level.stairs = (salle.x + salle.w - 3, salle.y + salle.h // 2)
     level.set_tile(level.stairs, tiles.STAIRS)

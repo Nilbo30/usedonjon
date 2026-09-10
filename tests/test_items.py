@@ -9,17 +9,17 @@ class TestFiches(unittest.TestCase):
 
     def test_tous_les_objets_ont_une_fiche(self):
         for cle in items.ITEM_TYPES:
-            self.assertTrue(items.make(cle).description, cle)
+            self.assertTrue(items.make(cle).description(), cle)
 
     def test_l_equipement_annonce_son_bonus_reel(self):
-        self.assertIn("+8", items.make("epee_fer", plus=2).description)
-        self.assertIn("+1", items.make("bouclier_bois", plus=-2).description)
+        self.assertIn("+8", items.make("epee_fer", plus=2).description())
+        self.assertIn("+1", items.make("bouclier_bois", plus=-2).description())
 
     def test_les_chiffres_des_fiches_suivent_les_donnees(self):
         """Garde-fou : une fiche qui ment après un changement de puissance."""
         for cle in ("herbe_soin", "herbe_vie", "onigiri", "fleche"):
             objet = items.make(cle)
-            self.assertIn(str(objet.power), objet.description, cle)
+            self.assertIn(str(objet.power), objet.description(), cle)
 
     def test_chaque_objet_entraine_une_competence_connue(self):
         from donjon import skills
@@ -109,7 +109,7 @@ class TestIdentification(unittest.TestCase):
         self.assertFalse(self.parchemin.identifie)
         self.assertNotEqual(self.parchemin.name, "parchemin de lumière")
         self.assertIn("parchemin", self.parchemin.name)
-        self.assertIn("inconnu", self.parchemin.description)
+        self.assertIn("inconnu", self.parchemin.description())
 
     def test_l_utiliser_l_identifie(self):
         self.game.player.inventory = [self.parchemin]
@@ -242,6 +242,43 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class TestFicheEtCompetences(unittest.TestCase):
+    """La fiche doit dire ce que l'objet fera dans *ces* mains."""
+
+    def setUp(self):
+        from tests.helpers import sandbox
+
+        self.game = sandbox(seed=2)
+        self.joueur = self.game.player
+
+    def test_l_onigiri_annonce_le_ventre_reellement_rendu(self):
+        onigiri = items.make("onigiri")
+        self.assertIn("50", onigiri.description(self.joueur))
+        self.joueur.skills.levels["nourriture"] = 2
+        rendu = onigiri.puissance_pour(self.joueur)
+        self.assertGreater(rendu, onigiri.power)
+        self.assertIn(str(rendu), onigiri.description(self.joueur))
+
+    def test_la_fiche_suit_ce_que_l_effet_fait_vraiment(self):
+        """Le contrat : le chiffre annoncé est celui que le moteur applique."""
+        self.joueur.skills.levels["nourriture"] = 3
+        onigiri = items.make("onigiri")
+        self.joueur.fullness = 0
+        onigiri.use(self.game, self.joueur)
+        self.assertEqual(self.joueur.fullness,
+                         onigiri.puissance_pour(self.joueur))
+
+    def test_l_herbe_de_soin_suit_l_herboristerie(self):
+        herbe = items.make("herbe_soin")
+        self.joueur.skills.levels["herboristerie"] = 3
+        self.assertIn(str(herbe.puissance_pour(self.joueur)),
+                      herbe.description(self.joueur))
+
+    def test_sans_porteur_la_fiche_reste_celle_de_l_objet_nu(self):
+        self.joueur.skills.levels["nourriture"] = 5
+        self.assertIn("50", items.make("onigiri").description())
+
+
 class TestButin(unittest.TestCase):
     """Ce qu'une créature laisse en tombant, et la chance qui s'y entretient."""
 
@@ -298,3 +335,49 @@ class TestButin(unittest.TestCase):
         self.assertGreater(CHANCE_BUTIN_MAX, CHANCE_BUTIN)
         laisses = self._tuer(fois=100)
         self.assertLess(len(laisses), 90)
+
+
+class TestPiles(unittest.TestCase):
+    """Les munitions s'empilent : dix pierres ne remplissent pas un sac."""
+
+    def setUp(self):
+        from tests.helpers import sandbox
+
+        self.game = sandbox(seed=2)
+        self.joueur = self.game.player
+        self.joueur.inventory = []
+
+    def test_les_pierres_se_rangent_ensemble(self):
+        for _ in range(6):
+            self.joueur.add_item(items.make("pierre"))
+        self.assertEqual(len(self.joueur.inventory), 1)
+        self.assertEqual(self.joueur.inventory[0].quantite, 6)
+        self.assertIn("×6", self.joueur.inventory[0].etiquette)
+
+    def test_ce_qui_n_est_pas_munition_ne_s_empile_pas(self):
+        for _ in range(3):
+            self.joueur.add_item(items.make("onigiri"))
+        self.assertEqual(len(self.joueur.inventory), 3)
+
+    def test_lancer_n_en_consomme_qu_une(self):
+        self.joueur.add_item(items.make("pierre", quantite=4))
+        self.game.cmd_throw(0, (1, 0))
+        self.assertEqual(self.joueur.inventory[0].quantite, 3)
+
+    def test_la_derniere_pierre_vide_la_ligne(self):
+        self.joueur.add_item(items.make("pierre"))
+        self.game.cmd_throw(0, (1, 0))
+        self.assertEqual(self.joueur.inventory, [])
+
+    def test_une_pile_ne_depasse_pas_le_plafond(self):
+        """Sinon le sac deviendrait infini pour tout ce qui s'empile."""
+        self.joueur.add_item(items.make("pierre", quantite=items.MAX_PILE))
+        self.joueur.add_item(items.make("pierre", quantite=3))
+        self.assertEqual(len(self.joueur.inventory), 2)
+
+    def test_une_pile_ramassee_rejoint_la_pile_du_sac(self):
+        self.joueur.add_item(items.make("pierre", quantite=2))
+        self.game.level.items[self.joueur.pos] = items.make("pierre", quantite=3)
+        self.game.cmd_pickup()
+        self.assertEqual(len(self.joueur.inventory), 1)
+        self.assertEqual(self.joueur.inventory[0].quantite, 5)

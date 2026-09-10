@@ -90,7 +90,7 @@ def effect(name):
 class ItemType:
     def __init__(self, key, name, glyph, category, power=0, weight=10,
                  on_use=None, on_hit=None, note="", skill=None, depth_min=1,
-                 unlock=None):
+                 unlock=None, bonus=None):
         self.key = key
         self.name = name
         self.glyph = glyph
@@ -103,10 +103,18 @@ class ItemType:
         self.note = note
         self.depth_min = depth_min  # étage à partir duquel l'objet apparaît
         self.unlock = unlock        # talent requis pour qu'il apparaisse
+        # Effet de compétence qui grossit sa puissance : la fiche doit annoncer
+        # ce que l'objet fera vraiment dans *ces* mains, pas dans le vide.
+        self.bonus = bonus
 
     @property
     def equippable(self):
         return self.category in (WEAPON, SHIELD)
+
+    @property
+    def empilable(self):
+        """Les munitions se rangent en pile : on en porte par poignées."""
+        return self.category == AMMO
 
     @property
     def usable(self):
@@ -121,10 +129,11 @@ class Item:
     reste donc toujours identifié.
     """
 
-    def __init__(self, item_type, plus=0, registre=None):
+    def __init__(self, item_type, plus=0, registre=None, quantite=1):
         self.type = item_type
         self.plus = plus
         self.registre = registre
+        self.quantite = quantite
 
     @property
     def identifie(self):
@@ -154,16 +163,35 @@ class Item:
         return self.type.power + self.plus
 
     @property
-    def description(self):
-        """Une ligne expliquant l'effet. Les chiffres d'équipement sont calculés
-        pour tenir compte du bonus (+1, +2...) de l'exemplaire."""
+    def etiquette(self):
+        """Le nom tel qu'on l'affiche : « une pierre ×4 » pour une pile."""
+        return self.name if self.quantite <= 1 else f"{self.name} ×{self.quantite}"
+
+    def copie(self, quantite=1):
+        """Un exemplaire détaché de la pile, identique par ailleurs."""
+        return Item(self.type, self.plus, self.registre, quantite)
+
+    def puissance_pour(self, joueur=None):
+        """La puissance réelle entre ces mains : l'objet plus la compétence."""
+        valeur = self.power
+        if joueur is not None and self.type.bonus:
+            valeur += joueur.bonus(self.type.bonus)
+        return int(valeur)
+
+    def description(self, joueur=None):
+        """Une ligne expliquant l'effet, chiffres compris.
+
+        Ils tiennent compte du bonus de l'exemplaire (+1, +2...) et, si un
+        porteur est donné, de ses compétences : un onigiri rend 55 de ventre
+        et non 50 quand la cuisine est au niveau 2.
+        """
         if not self.identifie:
             return "Effet inconnu — il faudra l'essayer pour le savoir."
         if self.category == WEAPON:
             return f"Arme : +{self.power} en attaque."
         if self.category == SHIELD:
             return f"Bouclier : +{self.power} en défense."
-        return self.type.note
+        return self.type.note.format(n=self.puissance_pour(joueur))
 
     def use(self, game, user):
         fn = EFFECTS.get(self.type.on_use)
@@ -311,10 +339,11 @@ def _register(*types):
 _register(
     ItemType("herbe_soin", "herbe de soin", "*", HERB, power=15, weight=20,
              on_use="soigner", on_hit="jet_soin",
-             note="Rend 15 PV. Lancée, elle soigne la cible.", unlock="herbes"),
+             note="Rend {n} PV. Lancée, elle soigne la cible.", unlock="herbes",
+             bonus="soin"),
     ItemType("herbe_vie", "herbe de vie", "*", HERB, power=4, weight=4,
              on_use="herbe_de_vie", on_hit="jet_soin",
-             note="Augmente définitivement les PV maximum de 4.", unlock="herbes"),
+             note="Augmente définitivement les PV maximum de {n}.", unlock="herbes"),
     ItemType("herbe_confusion", "herbe de confusion", "*", HERB, weight=8,
              on_use="confusion_soi", on_hit="jet_confusion",
              note="À lancer : désoriente la cible 12 tours. Mangée, "
@@ -324,7 +353,8 @@ _register(
              note="À lancer : endort la cible 10 tours, sans défense. "
                   "Mangée, elle t'endort 8 tours.", unlock="herbes"),
     ItemType("onigiri", "un onigiri", "%", FOOD, power=50, weight=14,
-             on_use="manger", note="Rend 50 points de ventre.", unlock="vivres"),
+             on_use="manger", note="Rend {n} points de ventre.", unlock="vivres",
+             bonus="satiete"),
     ItemType("parchemin_lumiere", "parchemin de lumière", "?", SCROLL, weight=8,
              on_use="lire_lumiere", note="Révèle tout l'étage, escalier compris.", unlock="grimoires"),
     ItemType("parchemin_panique", "parchemin de panique", "?", SCROLL, weight=7,
@@ -341,12 +371,12 @@ _register(
     # arc, ne se ramasse que sur un archer — d'où son poids nul, qui l'exclut
     # du tirage au sol sans l'exclure du butin.
     ItemType("pierre", "une pierre", "*", AMMO, power=5, weight=12,
-             on_hit="jet_degats", note="À lancer : 5 dégâts à distance.",
-             unlock="projectiles"),
+             on_hit="jet_degats", note="À lancer : {n} dégâts à distance.",
+             unlock="projectiles", bonus="degats_jet"),
     ItemType("fleche", "une flèche", "(", AMMO, power=8, weight=0,
              on_hit="jet_degats",
-             note="À lancer : 8 dégâts. Faite pour un arc, faute de mieux.",
-             unlock="projectiles"),
+             note="À lancer : {n} dégâts. Faite pour un arc, faute de mieux.",
+             unlock="projectiles", bonus="degats_jet"),
     ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8, unlock="armurerie"),
     ItemType("epee_fer", "épée en fer", ")", WEAPON, power=6, weight=5, unlock="armurerie"),
     ItemType("bouclier_bois", "bouclier en bois", "[", SHIELD, power=3, weight=8, unlock="armurerie"),
@@ -354,9 +384,12 @@ _register(
 )
 
 
-def make(key, plus=0, registre=None):
-    return Item(ITEM_TYPES[key], plus, registre)
+def make(key, plus=0, registre=None, quantite=1):
+    return Item(ITEM_TYPES[key], plus, registre, quantite)
 
+
+#: Une pile ne monte pas indéfiniment : au-delà, le sac deviendrait infini.
+MAX_PILE = 99
 
 #: Part minimale du tirage revenant à la nourriture, quel que soit le nombre de
 #: familles d'objets débloquées par ailleurs. C'est un plancher : quand peu de

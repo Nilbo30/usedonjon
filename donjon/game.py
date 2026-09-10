@@ -649,7 +649,7 @@ class Game:
         item.use(self, self.player)
         if mystere and self.identification.identifier(item.type.key):
             self.say(f"Identifié : {item.type.name}.")
-        self.player.remove_item(item)
+        self.player.consommer(item)
         self.pass_turn(self.player)
         self.notify(events.USAGE_OBJET, objet=item, categorie=item.category)
         return self._finish(True)
@@ -783,7 +783,7 @@ class Game:
         item = self._item_at_slot(slot)
         if not item:
             return False
-        self.player.remove_item(item)
+        item = self.player.detacher_un(item)   # on ne lance qu'un exemplaire
         pos, target = self.ligne_de_tir(self.player.pos, delta, max_range)
         if target:
             self.say(f"Tu lances {item.name} sur {target.name}.")

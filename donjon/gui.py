@@ -203,11 +203,12 @@ def couper_en_deux(nom):
     return [" ".join(mots[:coupe]), " ".join(mots[coupe:])]
 
 
-def fiche_objet(objet):
+def fiche_objet(objet, joueur=None):
     """Effet de l'objet et compétence qu'il entraîne, en une ou deux lignes."""
     lignes = []
-    if objet.description:
-        lignes.append(objet.description)
+    texte = objet.description(joueur)
+    if texte:
+        lignes.append(texte)
     competence = skills_mod.CATALOGUE.get(objet.type.skill)
     if competence:
         lignes.append(f"S'en servir entraîne : {competence.name}")
@@ -252,6 +253,7 @@ class Fenetre:
         self._polices = {}         # mesures de texte, pour ne rien faire déborder
         self.root.bind("<Key>", self.on_key)
         self.canvas.bind("<Button-1>", self.on_click)
+        self.canvas.bind("<Double-Button-1>", self.on_double_clic)
         self.canvas.bind("<Button-3>", self.on_click_droit)
         self.canvas.bind("<Motion>", self.on_motion)
         self.canvas.bind("<Leave>", self.on_leave)
@@ -334,6 +336,8 @@ class Fenetre:
         elif self.session.au_refuge and self.mode == "jeu":
             if self.game.player.pos == getattr(self.game.level, "chest", None):
                 self.mode = "coffre"
+            elif self.game.player.pos == getattr(self.game.level, "stele", None):
+                self.mode = "talents"
 
     def continuer(self):
         """Passe à la partie suivante : donjon, ou retour au refuge."""
@@ -433,6 +437,22 @@ class Fenetre:
         self._verifier_fin()
         self.dessiner()
 
+    def on_double_clic(self, event):
+        """Deux clics sur un objet du sac : son action évidente, sans détour.
+
+        Le premier clic a déjà ouvert le menu de l'objet ; celui-ci exécute.
+        """
+        if self.mode != "action" or self.slot is None:
+            return
+        inventaire = self.game.player.inventory
+        if not 0 <= self.slot < len(inventaire):
+            return
+        _texte, action = self.action_principale(inventaire[self.slot])
+        action()
+        self._verifier_fin()
+        if not self.ferme:
+            self.dessiner()
+
     def on_click_droit(self, event):
         """Clic droit : tout annuler (déplacement en cours, panneau ouvert)."""
         self.arreter_trajet()
@@ -491,14 +511,35 @@ class Fenetre:
         self.demarrer_trajet(case)
 
     def action_sur_place(self):
-        """Clic sur le héros : ramasser, descendre, ou attendre."""
-        game = self.game
-        if game.player.pos in game.level.items:
+        """Ce que fait un clic sur le héros — et le bouton d'action.
+
+        Une seule commande contextuelle : ramasser, descendre, ouvrir le
+        coffre, lire la stèle, ou attendre faute de mieux.
+        """
+        game, level = self.game, self.game.level
+        if game.player.pos in level.items:
             game.cmd_pickup()
-        elif game.player.pos == game.level.stairs:
+        elif game.player.pos == level.stairs:
             game.cmd_descend()
+        elif game.player.pos == getattr(level, "chest", None):
+            self.mode = "coffre"
+        elif game.player.pos == getattr(level, "stele", None):
+            self.mode = "talents"
         else:
             game.cmd_wait()
+
+    def libelle_action(self):
+        """Ce que le bouton d'action fera ici, dit en clair."""
+        game, level = self.game, self.game.level
+        if game.player.pos in level.items:
+            return "Ramasser"
+        if game.player.pos == level.stairs:
+            return "Entrer dans le donjon" if game.config.is_hub else "Descendre"
+        if game.player.pos == getattr(level, "chest", None):
+            return "Ouvrir le coffre"
+        if game.player.pos == getattr(level, "stele", None):
+            return "Lire la stèle"
+        return "Attendre"
 
     def monstres_en_vue(self):
         return self.game.monsters_visible()
@@ -705,6 +746,8 @@ class Fenetre:
                                      fill=fond, outline=fond)
         if tuile == "chest":
             self._coffre(px, py, vue)
+        elif tuile == "stele":
+            self._stele(px, py, vue)
         elif tuile == "stairs":
             self._escalier(px, py, vue)
         elif tuile == "floor":
@@ -722,6 +765,20 @@ class Fenetre:
             self.canvas.create_rectangle(gauche, haut, px + t - 3,
                                          haut + max(2, (t - 6) // 3 - 1),
                                          fill=couleur, outline="")
+
+    def _stele(self, px, py, vue):
+        """La stèle des talents : une pierre dressée, marquée d'une étoile."""
+        t = self.tile
+        pierre = "#6f6893" if vue else sombre("#6f6893")
+        marque = SURVOL if vue else sombre(SURVOL)
+        self.canvas.create_polygon(px + t * 0.3, py + t - 2,
+                                   px + t * 0.32, py + t * 0.25,
+                                   px + t * 0.5, py + t * 0.1,
+                                   px + t * 0.68, py + t * 0.25,
+                                   px + t * 0.7, py + t - 2,
+                                   fill=pierre, outline=pierre)
+        self.canvas.create_text(px + t / 2, py + t * 0.55, text="✦",
+                                fill=marque, font=("TkDefaultFont", 9, "bold"))
 
     def _coffre(self, px, py, vue):
         t = self.tile
@@ -844,7 +901,8 @@ class Fenetre:
         objet = level.items.get(case)
         if case == game.player.pos:
             if objet:
-                return [f"Toi — clic pour ramasser {objet.name}"] + fiche_objet(objet)
+                return ([f"Toi — clic pour ramasser {objet.etiquette}"]
+                        + fiche_objet(objet, self.game.player))
             if case == level.stairs:
                 return ["Toi — clic pour descendre l'escalier"]
             lignes = ["Toi — clic pour attendre un tour"]
@@ -862,7 +920,7 @@ class Fenetre:
                     lignes.append(statuts)
                 return lignes
         if objet:
-            return [objet.name] + fiche_objet(objet)
+            return [objet.etiquette] + fiche_objet(objet, self.game.player)
         piege = level.traps.get(case)
         if piege and piege.revealed:
             return [piege.name, "Marcher dessus le déclenche."]
@@ -927,18 +985,15 @@ class Fenetre:
         """Tout ce qui se fait au clavier se fait aussi d'un clic."""
         joueur, level = self.game.player, self.game.level
         au_refuge = self.game.config.is_hub
+        # Un seul bouton d'action, dont le libellé dit ce qu'il fera ici :
+        # quatre boutons dont trois éteints, c'était une barre de brouillard.
         boutons = [
-            ("Ramasser", self.game.cmd_pickup, joueur.pos in level.items),
-            ("Entrer dans le donjon" if au_refuge else "Descendre",
-             self.game.cmd_descend, joueur.pos == level.stairs),
-            ("Attendre", self.game.cmd_wait, True),
+            (self.libelle_action(), self.action_sur_place, True),
             ("Explorer", self.explorer,
              not au_refuge and "exploration" in self.game.config.unlocks),
             ("Se reposer", self.game.cmd_rest,
              joueur.hp < joueur.max_hp and not self.game.monsters_visible()
              and not au_refuge),
-            ("Coffre", lambda: setattr(self, "mode", "coffre"),
-             au_refuge and joueur.pos == getattr(level, "chest", None)),
             ("Talents", lambda: setattr(self, "mode", "talents"), au_refuge),
             ("Sac", lambda: setattr(self, "mode", "sac"), True),
             ("Compétences", lambda: setattr(self, "mode", "competences"), True),
@@ -1009,16 +1064,12 @@ class Fenetre:
             "action": "Que faire de cet objet ?",
             "direction": "Clique la cible du jet (ou une direction au clavier)",
         }
-        objet_decrit = self._objet_decrit()
-        fiche = []
-        for ligne in fiche_objet(objet_decrit) if objet_decrit else []:
-            fiche += textwrap.wrap(ligne, 64) or [""]
-        if not fiche:
-            fiche = ["Survole un objet pour savoir ce qu'il fait."]
-
+        # La fiche est une bulle posée à côté, plus une zone sous la liste :
+        # sa hauteur variait avec le texte, donc le panneau se redimensionnait
+        # et sautait sous le curseur à chaque objet survolé.
         lignes = len(joueur.inventory)
         largeur = 520
-        hauteur = 74 + lignes * 24 + 14 + len(fiche) * 16 + 44
+        hauteur = 74 + lignes * 24 + 44
         gauche = (self.largeur - largeur) / 2
         haut = (HUD_HEIGHT + self.hauteur_carte - hauteur) / 2
         self.canvas.create_rectangle(gauche, haut, gauche + largeur, haut + hauteur,
@@ -1030,31 +1081,67 @@ class Fenetre:
             choisi = index == self.slot and self.mode != "sac"
             self._ligne_objet(gauche + 12, y, largeur - 24, index, objet, choisi)
 
-        # Fiche de l'objet : à quoi il sert, et ce que son usage entraîne.
-        y_fiche = haut + 50 + lignes * 24
-        self.canvas.create_line(gauche + 12, y_fiche, gauche + largeur - 12, y_fiche,
-                                fill=BORDURE)
-        for index, ligne in enumerate(fiche):
-            self._texte(gauche + 16, y_fiche + 8 + index * 16, ligne,
-                        pale=objet_decrit is None or index > 0)
-
-        y_actions = y_fiche + 14 + len(fiche) * 16
-        if self.mode == "action":
-            actions = [("Utiliser", lambda: self.utiliser(self.game.cmd_use)),
-                       ("Équiper", lambda: self.utiliser(self.game.cmd_equip)),
+        y_actions = haut + 56 + lignes * 24
+        objet_decrit = self._objet_decrit()
+        if self.mode == "action" and objet_decrit is not None:
+            texte, action = self.action_principale(objet_decrit)
+            actions = [(texte, action),
                        ("Lancer", lambda: setattr(self, "mode", "direction")),
                        ("Poser", lambda: self.utiliser(self.game.cmd_drop))]
             x = gauche + 12
             for texte, action in actions:
-                self._bouton(x, y_actions, 92, 26, texte, action)
-                x += 96
+                self._bouton(x, y_actions, 108, 26, texte, action)
+                x += 112
         else:
             aide = ("Clique une case pour viser."
                     if self.mode == "direction" else
-                    "u utiliser · e équiper · t lancer · d poser")
+                    "Double-clic : l'action évidente · t lancer · d poser")
             self._texte(gauche + 16, y_actions + 6, aide, pale=True)
+        if objet_decrit is not None:
+            self._bulle_objet(objet_decrit, gauche, largeur,
+                              haut + 44 + self._rang_decrit() * 24)
         self._bouton(gauche + largeur - 92, haut + hauteur - 36, 80, 26,
                      "Fermer", lambda: setattr(self, "mode", "jeu"))
+
+    def action_principale(self, objet):
+        """L'action évidente pour cet objet : (libellé, quoi faire).
+
+        Un seul bouton au lieu de deux : un onigiri se mange, une épée
+        s'équipe, et personne n'a jamais voulu « utiliser » un bouclier.
+        """
+        joueur = self.game.player
+        if objet.category in (items_mod.WEAPON, items_mod.SHIELD):
+            porte = objet in (joueur.weapon, joueur.shield)
+            return ("Ranger" if porte else "Équiper",
+                    lambda: self.utiliser(self.game.cmd_equip))
+        return "Utiliser", lambda: self.utiliser(self.game.cmd_use)
+
+    def _rang_decrit(self):
+        """Rang, dans le sac, de l'objet dont on montre la fiche."""
+        inventaire = self.game.player.inventory
+        objet = self._objet_decrit()
+        return inventaire.index(objet) if objet in inventaire else 0
+
+    def _bulle_objet(self, objet, gauche_panneau, largeur_panneau, y):
+        """La fiche, posée à côté de la ligne survolée plutôt que sous la liste."""
+        lignes = []
+        for ligne in fiche_objet(objet, self.game.player):
+            lignes += textwrap.wrap(ligne, 34) or [""]
+        if not lignes:
+            return
+        largeur = max(self.largeur_texte(ligne, taille=9)
+                      for ligne in lignes) + 24
+        hauteur = 14 + len(lignes) * 16
+        x = gauche_panneau + largeur_panneau + 10
+        if x + largeur > self.largeur - 8:
+            x = gauche_panneau - largeur - 10
+        y = min(max(y - 6, HUD_HEIGHT + 6),
+                HUD_HEIGHT + self.hauteur_carte - hauteur - 6)
+        self.canvas.create_rectangle(x, y, x + largeur, y + hauteur,
+                                     fill=BOUTON, outline=SURVOL)
+        for index, ligne in enumerate(lignes):
+            self._texte(x + 12, y + 7 + index * 16, ligne, taille=9,
+                        pale=index > 0)
 
     def _ligne_objet(self, x, y, largeur, index, objet, choisi):
         equipe = objet is self.game.player.weapon or objet is self.game.player.shield
@@ -1066,7 +1153,7 @@ class Fenetre:
         couleur = COULEUR_OBJET.get(objet.category, "#cccccc")
         self.canvas.create_oval(x + 8, y + 7, x + 16, y + 15,
                                 fill=couleur, outline="")
-        self._texte(x + 26, y + 4, f"{chr(ord('a') + index)})  {objet.name}")
+        self._texte(x + 26, y + 4, f"{chr(ord('a') + index)})  {objet.etiquette}")
         if equipe:
             self._texte(x + largeur - 10, y + 4, "équipé", ancre="ne", pale=True)
         self.zones.append((*zone, lambda i=index: self.choisir_objet(i),
@@ -1407,7 +1494,7 @@ class Fenetre:
         couleur = COULEUR_OBJET.get(objet.category, "#cccccc")
         self.canvas.create_oval(x + 6, y + 7, x + 14, y + 15,
                                 fill=couleur, outline="")
-        self._texte(x + 24, y + 4, objet.name)
+        self._texte(x + 24, y + 4, objet.etiquette)
         self.zones.append((*zone, action, etiquette))
 
     def _deposer(self, objet):
