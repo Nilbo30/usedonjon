@@ -16,9 +16,9 @@ from . import monsters
 
 #: Une config construite à la main (tests, bot, CLI) a tout le contenu.
 TOUT_DEBLOQUE = frozenset({"butin", "vivres", "projectiles", "herbes",
-                           "exploration",
+                           "exploration", "auto_repas",
                            "grimoires",
-                           "intuition", "armurerie", "coffre", "orbe"})
+                           "intuition", "epees", "boucliers", "coffre", "orbe"})
 
 #: De même pour le bestiaire : toutes les classes de créatures.
 TOUTES_CLASSES = frozenset(monsters.CLASSES)
@@ -44,6 +44,7 @@ class RunConfig:
         miss_chance=0.08,
         xp_depth_bonus=0.15,
         monster_scaling=0.06,
+        hunger_scaling=0.05,
         max_fullness=100,
         start_hp=20,
         start_attack=6,
@@ -70,6 +71,9 @@ class RunConfig:
         # rond en sécurité au premier étage.
         self.xp_depth_bonus = xp_depth_bonus
         self.monster_scaling = monster_scaling
+        # La faim se creuse avec la profondeur : sans cela, un donjon qu'on
+        # n'a rien débloqué pour peupler se traverse à pied jusqu'au bout.
+        self.hunger_scaling = hunger_scaling
         self.max_fullness = max_fullness
         self.start_hp = start_hp
         self.start_attack = start_attack

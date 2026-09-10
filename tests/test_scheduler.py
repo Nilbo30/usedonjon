@@ -34,7 +34,8 @@ class TestTours(unittest.TestCase):
 
     def test_la_faim_diminue_puis_blesse(self):
         game = sandbox()
-        game.player.fullness = 1
+        game.player.inventory = []      # sans réserve, le repas automatique
+        game.player.fullness = 1        # ne peut pas sauver le ventre
         game.cmd_wait()
         self.assertEqual(game.player.fullness, 0)
         hp = game.player.hp

@@ -38,6 +38,8 @@ DEGATS_A_DISTANCE = 0.75
 ESQUIVE_MAX = 0.55
 #: Chance qu'une créature vaincue laisse quelque chose, et son plafond une fois
 #: la chance du héros ajoutée.
+#: Part du ventre en dessous de laquelle le repas automatique se déclenche.
+SEUIL_REPAS_AUTO = 0.10
 CHANCE_BUTIN = 0.22
 CHANCE_BUTIN_MAX = 0.60
 
@@ -105,8 +107,9 @@ class Game:
             return
         if self.depth >= self.config.max_depth:
             self.end_run(WON,
-                         f"Tu atteins le fond du donjon (étage {self.depth}). "
-                         f"Victoire !")
+                         f"L'escalier ne descend pas plus bas (étage "
+                         f"{self.depth}). Tu as vu tout ce donjon — pour "
+                         f"l'instant.")
             return
         self.depth += 1
         self.deepest = max(self.deepest, self.depth)
@@ -265,12 +268,14 @@ class Game:
         if player.fullness > 0:
             # « Marche » réduit le coût d'un tour ; on accumule la fraction
             # restante pour que le rythme reste régulier.
-            self._hunger_acc += max(0.25, 1.0 - player.bonus("endurance"))
+            creuse = 1.0 + self.config.hunger_scaling * (self.depth - 1)
+            self._hunger_acc += max(0.25, creuse - player.bonus("endurance"))
             while self._hunger_acc >= 1.0 and player.fullness > 0:
                 self._hunger_acc -= 1.0
                 player.fullness -= 1
             if player.fullness == 20:
                 self.say("Ton ventre gargouille. Tu as faim.")
+            self._repas_automatique()
             if player.fullness == 0:
                 self.say("Tu meurs de faim !")
             # Régénération : lente en agissant, rapide à l'arrêt. On accumule
@@ -394,6 +399,26 @@ class Game:
         trap = self.level.traps.get(actor.pos)
         if trap and self.rng.chance(0.85):
             trap.trigger(self, actor)
+
+    def _repas_automatique(self):
+        """Le ventre presque vide, le héros mange sa réserve sans qu'on le dise.
+
+        Le repas ne coûte pas de tour : ce qu'on achète ici, c'est de ne plus
+        avoir à y penser, pas un raccourci. Il crédite la cuisine comme un
+        repas ordinaire — l'automatisation ne doit pas coûter de progression.
+        """
+        player = self.player
+        if "auto_repas" not in self.config.unlocks:
+            return
+        if player.fullness > player.max_fullness * SEUIL_REPAS_AUTO:
+            return
+        vivre = next((objet for objet in player.inventory
+                      if objet.category == items.FOOD), None)
+        if vivre is None:
+            return
+        vivre.use(self, player)
+        player.consommer(vivre)
+        self.notify(events.USAGE_OBJET, objet=vivre, categorie=vivre.category)
 
     def _gerer_objet_au_sol(self, item):
         """Ramasse les consommables au passage. Vrai si le cas est traité.

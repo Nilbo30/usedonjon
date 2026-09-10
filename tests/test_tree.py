@@ -194,13 +194,11 @@ class TestRythme(unittest.TestCase):
         reussites = sum(1 for gain in gains if gain >= moins_cher)
         self.assertGreaterEqual(reussites, 10, f"gains : {gains}")
 
-    def test_le_jeu_s_ouvre_dans_l_ordre_attendu(self):
-        """Le danger d'abord, sa réponse ensuite.
+    def test_le_jeu_s_ouvre_par_la_nourriture(self):
+        """La première vie meurt de faim : sa réponse doit venir en premier.
 
-        Débloquer une épée avant d'avoir quoi que ce soit à frapper laisse le
-        joueur perplexe ; affronter les créatures à mains nues pose un problème
-        auquel « Barda » répond. Les deux vies à poings nus entraînent le
-        pugilat, qui n'est donc pas du temps perdu.
+        Et « L'épée » vient tôt, parce qu'elle fait naître le monde vivant —
+        les créatures et les armes pour s'en défendre, du même geste.
         """
         session = Session(sauvegarde=False, seed=3)
         ordre = []
@@ -216,9 +214,9 @@ class TestRythme(unittest.TestCase):
                     break
                 ordre.append(session.acheter(
                     min(abordables, key=lambda cle: prix[cle])).key)
+        self.assertIn("nourriture", ordre)
         self.assertIn("epee", ordre)
-        self.assertIn("creatures", ordre)
-        self.assertLess(ordre.index("creatures"), ordre.index("epee"))
+        self.assertLess(ordre.index("nourriture"), ordre.index("epee"))
 
 
 if __name__ == "__main__":

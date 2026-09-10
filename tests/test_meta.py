@@ -97,19 +97,21 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
     def test_les_objets_de_depart_s_accumulent(self):
         """Deux nœuds d'équipement remplissent le même sac, sans s'écraser."""
         meta = Meta(xp=1000)
-        for cle in ("creatures", "epee", "bouclier"):
+        for cle in ("nourriture",):
             meta.acheter(cle)
         self.assertEqual(meta.run_config().starting_kit,
-                         tree.ARBRE["epee"].objets + tree.ARBRE["bouclier"].objets)
+                         tree.ARBRE["nourriture"].objets)
 
     def test_les_classes_reveillees_arrivent_dans_la_config(self):
         """Ce que le héros apprend, le donjon l'apprend : pas plus, pas moins."""
         meta = Meta(xp=1000)
-        meta.acheter("creatures")
-        self.assertIn("rodeur", meta.run_config().classes)
-        self.assertNotIn("guerrier", meta.run_config().classes)
+        self.assertNotIn("rodeur", meta.run_config().classes)
         meta.acheter("epee")
+        self.assertIn("rodeur", meta.run_config().classes)
         self.assertIn("guerrier", meta.run_config().classes)
+        self.assertNotIn("blinde", meta.run_config().classes)
+        meta.acheter("bouclier")
+        self.assertIn("blinde", meta.run_config().classes)
 
     def test_sans_talent_aucune_classe_n_est_reveillee(self):
         self.assertEqual(Meta().run_config().classes & set(monsters.CLASSES),
@@ -126,12 +128,11 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
         session = Session(sauvegarde=False)
         session.meta = Meta(xp=1000)
         session.meta.acheter("estomac")
-        session.meta.acheter("creatures")
-        session.meta.acheter("epee")
-        session.meta.acheter("bouclier")
+        session.meta.acheter("nourriture")
         game = session.descendre()
         self.assertGreater(game.player.max_fullness, RunConfig().max_fullness)
-        self.assertEqual(len(game.player.inventory), 3)
+        self.assertEqual([objet.type.key for objet in game.player.inventory],
+                         ["onigiri"])
 
     def test_un_talent_inconnu_dans_la_sauvegarde_est_ignore(self):
         """Une sauvegarde d'une version future ne doit pas planter le jeu."""

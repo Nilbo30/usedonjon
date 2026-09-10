@@ -55,10 +55,11 @@ class TestNourritureAuSol(unittest.TestCase):
         from donjon.config import TOUT_DEBLOQUE
         from donjon.rng import Rng
 
-        for unlocks in ({"vivres"}, {"vivres", "herbes"}, TOUT_DEBLOQUE):
+        for unlocks in ({"vivres", "herbes"}, TOUT_DEBLOQUE):
             rng = Rng(5)
-            tires = [items.random_item(rng, 5, unlocks=unlocks)
-                     for _ in range(600)]
+            tires = [objet for objet in
+                     (items.random_item(rng, 5, unlocks=unlocks)
+                      for _ in range(600)) if objet is not None]
             part = sum(1 for objet in tires
                        if objet.category == items.FOOD) / len(tires)
             self.assertGreater(part, items.PART_NOURRITURE - 0.08, unlocks)
@@ -381,3 +382,80 @@ class TestPiles(unittest.TestCase):
         self.game.cmd_pickup()
         self.assertEqual(len(self.joueur.inventory), 1)
         self.assertEqual(self.joueur.inventory[0].quantite, 5)
+
+
+class TestPlafondDeNourriture(unittest.TestCase):
+    """Trop de vivres tue la faim, et la faim est ce qui pousse à descendre."""
+
+    def test_seule_debloquee_la_nourriture_ne_prend_pas_tout(self):
+        """Bloquant : la partie devenait infinie, on ne pouvait plus mourir."""
+        from donjon.rng import Rng
+
+        rng = Rng(5)
+        tires = [items.random_item(rng, 3, unlocks={"vivres"})
+                 for _ in range(600)]
+        part = sum(1 for objet in tires if objet is not None) / len(tires)
+        self.assertLess(part, items.PART_MAX_NOURRITURE + 0.06)
+        self.assertGreater(part, items.PART_MAX_NOURRITURE - 0.06)
+
+    def test_les_places_en_trop_restent_vides_au_sol(self):
+        from donjon.config import RunConfig
+        from donjon.game import Game
+
+        game = Game(seed=3, config=RunConfig(unlocks={"vivres"}))
+        attendus = game.config.items_per_floor
+        self.assertLessEqual(len(game.level.items), attendus[1])
+
+    def test_le_plancher_joue_toujours_quand_tout_est_ouvert(self):
+        from donjon.config import TOUT_DEBLOQUE
+        from donjon.rng import Rng
+
+        rng = Rng(5)
+        tires = [items.random_item(rng, 5, unlocks=TOUT_DEBLOQUE)
+                 for _ in range(600)]
+        vivres = sum(1 for objet in tires
+                     if objet is not None and objet.category == items.FOOD)
+        self.assertGreater(vivres / len(tires), items.PART_NOURRITURE - 0.08)
+
+
+class TestRepasAutomatique(unittest.TestCase):
+    """Ne plus avoir à y penser — mais seulement une fois le talent pris."""
+
+    def _partie(self, unlocks):
+        from donjon.config import RunConfig
+        from donjon.game import Game
+
+        game = Game(seed=4, config=RunConfig(unlocks=unlocks))
+        game.player.inventory = [items.make("onigiri")]
+        game.player.fullness = 5
+        return game
+
+    def test_le_ventre_vide_il_mange_seul(self):
+        game = self._partie({"vivres", "auto_repas"})
+        game.cmd_wait()
+        self.assertGreater(game.player.fullness, 5)
+        self.assertEqual(game.player.inventory, [])
+
+    def test_sans_le_talent_il_se_laisse_mourir(self):
+        game = self._partie({"vivres"})
+        game.cmd_wait()
+        self.assertLess(game.player.fullness, 6)
+        self.assertEqual(len(game.player.inventory), 1)
+
+    def test_le_ventre_plein_il_ne_touche_a_rien(self):
+        game = self._partie({"vivres", "auto_repas"})
+        game.player.fullness = game.player.max_fullness
+        game.cmd_wait()
+        self.assertEqual(len(game.player.inventory), 1)
+
+    def test_le_repas_automatique_entraine_la_cuisine(self):
+        """L'automatisation ne doit pas coûter de progression."""
+        game = self._partie({"vivres", "auto_repas"})
+        game.cmd_wait()
+        self.assertGreater(game.player.skills.xp.get("nourriture", 0), 0)
+
+    def test_sans_reserve_rien_ne_se_passe(self):
+        game = self._partie({"vivres", "auto_repas"})
+        game.player.inventory = []
+        game.cmd_wait()
+        self.assertLess(game.player.fullness, 6)

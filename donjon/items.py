@@ -377,10 +377,10 @@ _register(
              on_hit="jet_degats",
              note="À lancer : {n} dégâts. Faite pour un arc, faute de mieux.",
              unlock="projectiles", bonus="degats_jet"),
-    ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8, unlock="armurerie"),
-    ItemType("epee_fer", "épée en fer", ")", WEAPON, power=6, weight=5, unlock="armurerie"),
-    ItemType("bouclier_bois", "bouclier en bois", "[", SHIELD, power=3, weight=8, unlock="armurerie"),
-    ItemType("bouclier_fer", "bouclier en fer", "[", SHIELD, power=6, weight=5, unlock="armurerie"),
+    ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8, unlock="epees"),
+    ItemType("epee_fer", "épée en fer", ")", WEAPON, power=6, weight=5, unlock="epees"),
+    ItemType("bouclier_bois", "bouclier en bois", "[", SHIELD, power=3, weight=8, unlock="boucliers"),
+    ItemType("bouclier_fer", "bouclier en fer", "[", SHIELD, power=6, weight=5, unlock="boucliers"),
 )
 
 
@@ -391,29 +391,43 @@ def make(key, plus=0, registre=None, quantite=1):
 #: Une pile ne monte pas indéfiniment : au-delà, le sac deviendrait infini.
 MAX_PILE = 99
 
-#: Part minimale du tirage revenant à la nourriture, quel que soit le nombre de
-#: familles d'objets débloquées par ailleurs. C'est un plancher : quand peu de
-#: choses sont ouvertes, les vivres gardent la part plus large qui leur revient.
+#: Part du tirage revenant à la nourriture : un plancher **et** un plafond.
+#:
+#: Le plancher empêche les familles débloquées de noyer les vivres. Le plafond
+#: règle l'excès inverse : quand la nourriture est seule ouverte, elle occupait
+#: 100 % du tirage, soit trois onigiri par étage pour trente tours de ventre
+#: dépensés — la faim ne tuait plus personne. Au-delà du plafond, les places
+#: excédentaires ne donnent **rien** : un donjon où l'on n'a rien débloqué est
+#: un donjon pauvre, pas un garde-manger.
 PART_NOURRITURE = 0.30
+PART_MAX_NOURRITURE = 0.35
 
 
 def _part_reservee(candidats):
-    """Rend à la nourriture sa part du tirage, sans rien garantir par étage.
+    """Ramène la nourriture dans sa fourchette, en pesant le tirage.
 
-    Sans ce rééquilibrage, chaque famille débloquée noie les vivres : leur part
-    tombe de 100 % à 11,7 % une fois tout ouvert, et acheter du contenu revient
-    à s'affamer. Le corriger en posant un vivre d'office à chaque étage serait
-    plus simple, mais on le sentirait — un étage doit pouvoir être avare.
+    Sans plancher, chaque famille débloquée noie les vivres : leur part tombe
+    de 100 % à 11,7 % une fois tout ouvert, et acheter du contenu revient à
+    s'affamer. Sans plafond, l'inverse : seule ouverte, la nourriture prend
+    tout, et l'on ne meurt plus jamais de faim.
+
+    Le trop-plein devient une entrée vide — une place au sol qui ne donne rien.
     """
     vivres = [(t, w) for t, w in candidats if t.category == FOOD]
     autres = [(t, w) for t, w in candidats if t.category != FOOD]
-    if not vivres or not autres:
+    if not vivres:
         return candidats
-    facteur = (PART_NOURRITURE / (1 - PART_NOURRITURE)
-               * sum(w for _, w in autres) / sum(w for _, w in vivres))
-    if facteur <= 1:
-        return candidats                  # les vivres sont déjà bien servis
-    return [(t, w * facteur) for t, w in vivres] + autres
+    poids_vivres = sum(w for _, w in vivres)
+    poids_autres = sum(w for _, w in autres)
+    part = poids_vivres / (poids_vivres + poids_autres)
+    if part < PART_NOURRITURE and autres:
+        facteur = (PART_NOURRITURE / (1 - PART_NOURRITURE)
+                   * poids_autres / poids_vivres)
+        return [(t, w * facteur) for t, w in vivres] + autres
+    if part > PART_MAX_NOURRITURE:
+        vide = poids_vivres / PART_MAX_NOURRITURE - poids_vivres - poids_autres
+        return candidats + [(None, vide)]
+    return candidats
 
 
 def random_item(rng, depth=1, registre=None, unlocks=None):
@@ -425,6 +439,8 @@ def random_item(rng, depth=1, registre=None, unlocks=None):
         return None
     candidats = _part_reservee(candidats)
     item_type = rng.weighted(candidats)
+    if item_type is None:
+        return None            # une place au sol qui reste vide
     plus = 0
     if item_type.equippable:
         plus = max(0, rng.randint(-1, 1 + depth // 3))

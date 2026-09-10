@@ -685,6 +685,60 @@ l'on meurt de faim : sa réponse doit être à portée de la première mort. Le
 rythme s'en trouve transformé — Nourriture à la vie 2,8 au lieu de 10,7, et
 toute l'ouverture suit.
 
+### Le donjon qui payait le vide
+
+Trois retours, dont un qui a fait tomber un pan du dessin.
+
+**« Créatures » n'avait aucune raison d'être acheté.** C'était le seul nœud qui
+n'offrait rien : il ajoutait du danger et attendait qu'on le paie. Il disparaît,
+et **« L'épée »** prend sa place — mais elle ne donne plus d'épée : elle en fait
+**apparaître** dans le donjon, avec les créatures qui savent s'en servir. Le
+nœud arme le monde et le joueur du même geste, à lui d'aller la chercher.
+« Armurerie » disparaît du même coup : c'est l'épée qui ouvre les épées, le
+bouclier qui ouvre les boucliers.
+
+**La faim ne tuait plus.** Avec la seule nourriture débloquée, elle occupait
+100 % du tirage — trois onigiri par étage pour trente tours de ventre dépensés.
+Le plancher de nourriture reçoit donc un **plafond** (35 %) : au-delà, les
+places au sol restent vides. Un donjon où l'on n'a rien débloqué est un donjon
+pauvre, pas un garde-manger. La puissance de l'onigiri n'a pas bougé : c'était
+la quantité, pas la portion.
+
+**Mais le vrai défaut était dessous, et c'est ma baisse de prix qui l'a
+révélé.** « Nourriture » à 3 XP rendait le donjon vide *survivable* : le bot le
+traversait jusqu'à l'étage 26 sans rencontrer âme qui vive, et le multiplicateur
+de profondeur payait 44 XP par vie — contre 16 une fois les créatures
+réveillées. **Le jeu payait pour éviter son propre contenu.**
+
+Deux remèdes essayés :
+
+| remède | vide | avec l'épée |
+|---|---|---|
+| faim +25 % par étage | 11,6 | 13,1 |
+| **fond du donjon à 8 étages** | **9,9** | **14,7** |
+
+La faim aggravée marchait, mais elle rendait la profondeur invivable pour tout
+le monde, y compris pour qui joue bien. Le fond du donjon est la bonne poignée :
+**l'escalier ne descend qu'à l'étage 8 tant qu'on ne l'a pas ouvert**, et trois
+nœuds (« La descente », « Les abysses », « Le fond ») repoussent la limite. Ils
+paient par construction, puisque tout le multiplicateur de profondeur est
+derrière — mais pas tout de suite : le bot meurt vers l'étage 5, donc « La
+descente » ne rapporte encore rien. C'est un nœud qu'on achète quand on sait
+enfin atteindre le fond, et c'est très bien ainsi.
+
+Une faim qui se creuse de 5 % par étage reste, plus douce, pour que la
+profondeur demande des vivres sans les exiger.
+
+**Le repas automatique** rejoint l'automatisation : ventre presque vide, le
+héros mange sa réserve sans qu'on le lui dise. Il ne coûte pas de tour — ce
+qu'on achète, c'est de ne plus y penser — et il crédite la cuisine comme un
+repas ordinaire, l'automatisation ne devant pas coûter de progression.
+
+**Un croisement dans l'éventail est devenu inévitable** : l'arbre a plus de
+liens qui traversent qu'une permutation ne peut en démêler. Le test ne réclame
+donc plus zéro, il vérifie que l'ordre retenu **vaut le meilleur possible**, en
+essayant les 720 permutations — et il nomme l'ordre gagnant s'il en trouve un.
+
 ## Règles fixées en cours de route
 
 **Descendre paie.** L'XP par action est multipliée par

@@ -17,7 +17,7 @@ class TestRefuge(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
         self.session.meta.xp = 1000
-        for cle in ("nourriture", "coffre", "creatures", "epee"):
+        for cle in ("nourriture", "coffre", "epee"):
             self.session.meta.acheter(cle)
         self.game = self.session.demarrer()
 
@@ -114,7 +114,7 @@ class TestCoffre(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
         self.session.meta.xp = 1000
-        for cle in ("nourriture", "coffre", "creatures", "epee"):
+        for cle in ("nourriture", "coffre", "epee"):
             self.session.meta.acheter(cle)
         self.game = self.session.demarrer()
         self.heros = self.game.player
@@ -167,7 +167,7 @@ class TestPersistanceDuCoffre(unittest.TestCase):
         chemin = os.path.join(tempfile.mkdtemp(), "meta.json")
         session = Session(chemin=chemin)
         session.meta.xp = 1000
-        for cle in ("nourriture", "coffre", "creatures", "epee"):
+        for cle in ("nourriture", "coffre", "epee"):
             session.meta.acheter(cle)
         session.demarrer()
         session.deposer(session.player.inventory[0])
@@ -200,7 +200,7 @@ class TestTalentImmediat(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=3)
         self.session.meta.xp = 1000
-        for cle in ("creatures", "epee"):
+        for cle in ("epee",):
             self.session.meta.acheter(cle)
         self.session.demarrer()
 
@@ -219,18 +219,19 @@ class TestTalentImmediat(unittest.TestCase):
 
     def test_l_objet_du_talent_arrive_dans_le_sac(self):
         heros = self.session.player
-        self.session.acheter("bouclier")
-        self.assertTrue(any(objet.type.key == "bouclier_bois"
+        self.session.acheter("nourriture")
+        self.assertTrue(any(objet.type.key == "onigiri"
                             for objet in heros.inventory))
 
     def test_le_meme_objet_n_est_pas_donne_deux_fois(self):
         """Le kit de « L'épée » est déjà là : ne pas le redonner à chaque achat."""
         heros = self.session.player
-        epees = sum(1 for objet in heros.inventory
-                    if objet.type.key == "epee_bois")
+        self.session.acheter("nourriture")
+        vivres = sum(1 for objet in heros.inventory
+                     if objet.type.key == "onigiri")
         self.session.acheter("constitution")
         self.assertEqual(sum(1 for objet in heros.inventory
-                             if objet.type.key == "epee_bois"), epees)
+                             if objet.type.key == "onigiri"), vivres)
 
 
 class TestAccueil(unittest.TestCase):

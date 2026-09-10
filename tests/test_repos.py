@@ -48,6 +48,7 @@ class TestRepos(unittest.TestCase):
         self.assertLessEqual(self.joueur.hp, self.joueur.max_hp)
 
     def test_le_repos_s_arrete_le_ventre_vide(self):
+        self.joueur.inventory = []      # rien à manger : le ventre va au bout
         self.joueur.hp = 1
         self.joueur.fullness = 5
         self.game.cmd_rest()

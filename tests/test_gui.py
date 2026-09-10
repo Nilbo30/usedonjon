@@ -39,7 +39,7 @@ class Clic:
         self.y = y
 
 
-TALENTS_DE_TEST = ("estomac", "creatures", "epee", "nourriture", "herbes",
+TALENTS_DE_TEST = ("estomac", "epee", "nourriture", "herbes",
                    "grimoires", "coffre")
 
 
@@ -258,31 +258,54 @@ class TestRefuge(unittest.TestCase):
                                        2 * RAYON_TALENT + 6,
                                        f"{premier} / {second}")
 
-    def test_aucun_trait_ne_se_croise(self):
+    def test_l_ordre_des_branches_croise_le_moins_possible(self):
         """Deux traits qui se croisent donnent un prérequis faux à l'œil.
 
         La disposition l'interdit à l'intérieur d'une branche — un enfant reste
         dans la part de son parent. Entre branches, c'est l'ordre de
-        `tree.BRANCHES` qui décide : si ce test tombe après l'ajout d'un nœud,
-        c'est cet ordre-là qu'il faut revoir.
+        `tree.BRANCHES` qui décide, et il n'existe pas toujours d'ordre sans
+        aucun croisement. Plutôt qu'un seuil choisi au doigt mouillé, on
+        vérifie que l'ordre retenu vaut le meilleur possible : si ce test tombe
+        après l'ajout d'un nœud, c'est qu'un autre ordre ferait mieux, et il
+        est nommé dans le message.
         """
+        import itertools
+
+        from donjon import tree
         def cote(un, deux, point):
             valeur = ((deux[0] - un[0]) * (point[1] - un[1])
                       - (deux[1] - un[1]) * (point[0] - un[0]))
             return (valeur > 1e-9) - (valeur < -1e-9)
 
-        fenetre = self.fenetre
-        fenetre.mode = "talents"
-        fenetre.dessiner()
-        traits = fenetre.traits_de_talents(fenetre._disposition_talents())
-        for index, (un, deux, cle) in enumerate(traits):
-            for autre, (trois, quatre, cle_autre) in enumerate(traits):
-                if autre <= index or {un, deux} & {trois, quatre}:
-                    continue
-                self.assertFalse(
-                    cote(un, deux, trois) * cote(un, deux, quatre) < 0
-                    and cote(trois, quatre, un) * cote(trois, quatre, deux) < 0,
-                    f"{cle} croise {cle_autre}")
+        def croisements():
+            traits = self.fenetre.traits_de_talents(
+                self.fenetre._disposition_talents())
+            total = 0
+            for index, (un, deux, _cle) in enumerate(traits):
+                for autre, (trois, quatre, _autre) in enumerate(traits):
+                    if autre <= index or {un, deux} & {trois, quatre}:
+                        continue
+                    total += (cote(un, deux, trois) * cote(un, deux, quatre) < 0
+                              and cote(trois, quatre, un)
+                              * cote(trois, quatre, deux) < 0)
+            return total
+
+        self.fenetre.mode = "talents"
+        self.fenetre.dessiner()
+        origine = tree.BRANCHES
+        try:
+            actuel = croisements()
+            meilleur, ordre = actuel, origine
+            for essai in itertools.permutations(origine):
+                tree.BRANCHES = essai
+                compte = croisements()
+                if compte < meilleur:
+                    meilleur, ordre = compte, essai
+        finally:
+            tree.BRANCHES = origine
+        self.assertEqual(actuel, meilleur,
+                         f"{actuel} croisements ; « {' · '.join(ordre)} » "
+                         f"n'en laisserait que {meilleur}")
 
     def test_la_carte_du_refuge_est_centree(self):
         fenetre = self.fenetre

@@ -30,6 +30,11 @@ sur les objets concernés. Le moteur ne bouge pas.
 
 #: Ce qu'une partie vaut avant tout déblocage : un donjon nu.
 BASE_VERROUILLEE = {
+    # Le donjon s'arrête tôt tant qu'on ne l'a pas ouvert : sans cela, un
+    # étage vide se traverse jusqu'au fond, et le multiplicateur de profondeur
+    # paie une descente qui n'a couru aucun risque. Mesuré : 44 XP par vie en
+    # marchant dans le vide, contre 16 une fois les créatures réveillées.
+    "max_depth": 8,
     "monsters_per_floor": (0, 0),
     "items_per_floor": (0, 0),
     "traps_per_floor": (0, 0),
@@ -103,48 +108,54 @@ _enregistrer(
           effets={"reanimations": 1}),
 
     # --- Équipement : la réponse au problème posé par les créatures -------
+    # Ce nœud fait naître le monde vivant : on ne l'achète pas pour se voir
+    # offrir une épée — on l'achète pour qu'il y en ait, et il vient avec les
+    # créatures qui savent s'en servir. Un nœud qui n'apporterait que du danger
+    # ne serait jamais pris ; celui-ci arme le donjon et le joueur du même
+    # geste, à lui d'aller la chercher.
     Noeud("epee", "L'épée", 12,
-          "Tu pars avec une épée et un onigiri. Le donjon s'arme aussi : des "
-          "créatures viennent au contact, plus dures que les bêtes.",
-          branche="Équipement", parents=("creatures",),
-          objets=("epee_bois", "onigiri"), classes=("guerrier",)),
+          "Des épées traînent dans le donjon — et des créatures pour s'en "
+          "servir : le monde se peuple, et il se bat au contact.",
+          branche="Équipement", unlocks=("epees",),
+          classes=("rodeur", "erratique", "guerrier"),
+          reglages={"monsters_per_floor": (3, 6), "spawn_interval": 30}),
     Noeud("bouclier", "Le bouclier", 12,
-          "Tu pars avec un bouclier. Le donjon se protège aussi : des "
-          "créatures blindées apparaissent, difficiles à entamer.",
+          "Des boucliers apparaissent au sol. Le donjon se protège aussi : "
+          "des créatures blindées, difficiles à entamer.",
           branche="Équipement", parents=("epee",),
-          objets=("bouclier_bois",), classes=("blinde",)),
+          unlocks=("boucliers",), classes=("blinde",)),
     Noeud("affutage", "Affûtage", 35, "+1 en attaque.",
           branche="Équipement", parents=("epee",), effets={"start_attack": 1}),
     Noeud("cuirasse", "Cuirasse", 35, "+1 en défense.",
           branche="Équipement", parents=("bouclier",), effets={"start_defense": 1}),
 
     # --- Monde vivant : d'abord le danger, l'équipement viendra après -----
-    Noeud("creatures", "Créatures", 12,
-          "Le donjon se peuple : des bêtes rôdent, et des pièges. Tu n'as que "
-          "tes poings — cogner entraîne le pugilat.",
-          branche="Monde vivant", classes=("rodeur", "erratique"),
-          reglages={"monsters_per_floor": (3, 6), "spawn_interval": 30}),
     Noeud("pieges", "Pièges", 12,
           "Le sol devient traître. Les créatures marchent dessus aussi : "
           "un piège repéré est une arme.",
-          branche="Monde vivant", parents=("creatures",),
+          branche="Monde vivant", parents=("epee",),
           reglages={"traps_per_floor": (1, 3)}),
 
     Noeud("butin", "Butin", 35,
           "Les créatures vaincues laissent parfois quelque chose : leur arme, "
           "leur pitance. Ce qu'on ramasse ainsi aiguise l'œil.",
-          branche="Monde vivant", parents=("creatures",), unlocks=("butin",)),
+          branche="Monde vivant", parents=("epee",), unlocks=("butin",)),
 
     # --- Trouvailles : ce qui traîne par terre ----------------------------
     Noeud("nourriture", "Nourriture", 3,
           "Des vivres apparaissent au sol : de quoi tenir plus loin que ce "
-          "qu'on emporte.",
-          branche="Trouvailles", unlocks=("vivres",),
+          "qu'on emporte, et un pour la route.",
+          branche="Trouvailles", unlocks=("vivres",), objets=("onigiri",),
           reglages={"items_per_floor": (2, 4)}),
     Noeud("exploration", "Sens de l'orientation", 12,
           "Le héros sait explorer un étage tout seul : il s'arrête dès que "
           "quelque chose bouge, ou qu'il a fini.",
           branche="Trouvailles", unlocks=("exploration",)),
+    Noeud("auto_repas", "Repas automatique", 35,
+          "Le ventre presque vide, le héros mange sa réserve sans qu'on le "
+          "lui dise.",
+          branche="Trouvailles", parents=("exploration",),
+          unlocks=("auto_repas",)),
     Noeud("herbes", "Herbes", 35,
           "Herbes et graines rejoignent les trouvailles. Le donjon apprend "
           "aussi à souffler : des créatures frappent puis se retirent.",
@@ -169,10 +180,6 @@ _enregistrer(
     Noeud("intuition", "Intuition", 90,
           "Le premier parchemin ramassé de chaque vie est reconnu d'emblée.",
           branche="Trouvailles", parents=("grimoires",), unlocks=("intuition",)),
-    Noeud("armurerie", "Armurerie", 90,
-          "Armes et boucliers se trouvent aussi dans le donjon.",
-          branche="Trouvailles", parents=("nourriture",), unlocks=("armurerie",),
-          effets={"items_per_floor": (1, 1)}),
     Noeud("abondance", "Abondance", 220, "Deux trouvailles de plus par étage.",
           branche="Trouvailles", parents=("herbes",),
           effets={"items_per_floor": (2, 2)}),
@@ -185,6 +192,18 @@ _enregistrer(
           branche="Le refuge", parents=("coffre",), effets={"coffre_places": 4}),
 
     # --- Profond ----------------------------------------------------------
+    Noeud("descente", "La descente", 35,
+          "L'escalier s'enfonce plus loin : quinze étages au lieu de huit.",
+          branche="Profond", parents=("epee",),
+          reglages={"max_depth": 15}),
+    Noeud("abysses", "Les abysses", 90,
+          "Vingt-deux étages. Ce qui vit là n'a jamais vu le jour.",
+          branche="Profond", parents=("descente",),
+          reglages={"max_depth": 22}),
+    Noeud("le_fond", "Le fond", 220,
+          "Trente étages, et le bout du donjon.",
+          branche="Profond", parents=("abysses",),
+          reglages={"max_depth": 30}),
     Noeud("voie_du_retour", "La voie du retour", 220,
           "L'orbe de retour apparaît à partir du quatrième étage.",
           branche="Profond", parents=("grimoires", "coffre"),
@@ -198,8 +217,10 @@ EFFETS_META = {"coffre_places"}
 #: Il n'a aucun effet sur le jeu, mais il décide des croisements : un nœud dont
 #: le prérequis vit dans une autre branche tire un trait par-dessus tout ce qui
 #: les sépare. Cet ordre-ci n'en laisse aucun (un test le vérifie) ; les trois
-#: premières suivent l'ordre où le joueur les découvre.
-BRANCHES = ("Survie", "Monde vivant", "Équipement", "Le refuge", "Profond",
+#: premières suivent l'ordre où le joueur les découvre. Un croisement subsiste :
+#: aucun ordre n'en donne moins, l'arbre ayant désormais plus de liens qui
+#: traversent qu'une seule permutation ne peut en démêler.
+BRANCHES = ("Survie", "Monde vivant", "Équipement", "Profond", "Le refuge",
             "Trouvailles")
 
 
