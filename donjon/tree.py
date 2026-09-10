@@ -12,7 +12,10 @@ contenu :
 * `reglages` — des valeurs qui la remplacent (le kit de départ, les cadences) ;
 * `unlocks` — des drapeaux que la génération consulte (« grimoires ») ;
 * `objets` — ce qui s'ajoute au sac de départ ;
-* `classes` — les classes de créatures que le nœud réveille (voir monsters.py).
+* `classes` — les classes de créatures que le nœud réveille (voir monsters.py) ;
+* `repetitions` — combien de fois on peut le reprendre (1 par défaut). Les
+  effets d'un nœud repris s'additionnent d'eux-mêmes : le cumul lit la liste
+  des achats, pas un ensemble.
 
 Ce dernier point est une règle du jeu, pas un détail : **ce que le héros
 apprend, le donjon l'apprend aussi**. Le nœud qui te donne une épée fait venir
@@ -36,7 +39,8 @@ BASE_VERROUILLEE = {
 
 class Noeud:
     def __init__(self, key, name, cost, description, branche="", parents=(),
-                 effets=None, reglages=None, unlocks=(), objets=(), classes=()):
+                 effets=None, reglages=None, unlocks=(), objets=(), classes=(),
+                 repetitions=1):
         self.key = key
         self.name = name
         self.cost = cost
@@ -48,9 +52,14 @@ class Noeud:
         self.unlocks = tuple(unlocks)
         self.objets = tuple(objets)            # s'ajoutent au sac de départ
         self.classes = tuple(classes)          # créatures réveillées
+        self.repetitions = repetitions         # combien de fois on peut le reprendre
 
     def accessible(self, acquis):
         return all(parent in acquis for parent in self.parents)
+
+    def reste_a_prendre(self, acquis):
+        """Combien de fois ce nœud peut encore être acheté."""
+        return self.repetitions - list(acquis).count(self.key)
 
     def __repr__(self):
         return f"<Noeud {self.key} {self.cost} XP>"
@@ -118,14 +127,19 @@ _enregistrer(
           "qu'on emporte. Rien ne vient avec — c'est le seul répit de l'arbre.",
           branche="Trouvailles", unlocks=("vivres",),
           reglages={"items_per_floor": (2, 4)}),
+    Noeud("exploration", "Sens de l'orientation", 12,
+          "Le héros sait explorer un étage tout seul : il s'arrête dès que "
+          "quelque chose bouge, ou qu'il a fini.",
+          branche="Trouvailles", unlocks=("exploration",)),
     Noeud("herbes", "Herbes", 35,
           "Herbes et graines rejoignent les trouvailles. Le donjon apprend "
           "aussi à souffler : des créatures frappent puis se retirent.",
           branche="Trouvailles", parents=("nourriture",), unlocks=("herbes",),
           classes=("embusque",), effets={"items_per_floor": (1, 1)}),
     Noeud("projectiles", "Projectiles", 35,
-          "Des flèches apparaissent au sol : de quoi frapper sans s'approcher. "
-          "Le donjon apprend à viser aussi : on te tire dessus de loin.",
+          "Des pierres à lancer traînent au sol : de quoi frapper sans "
+          "s'approcher. Le donjon apprend à viser aussi : on te tire dessus "
+          "de loin — et un archer abattu laisse ses flèches.",
           branche="Trouvailles", parents=("nourriture",),
           unlocks=("projectiles",), classes=("archer",),
           effets={"items_per_floor": (1, 1)}),
@@ -133,6 +147,11 @@ _enregistrer(
           "Les parchemins rejoignent les trouvailles — non identifiés.",
           branche="Trouvailles", parents=("nourriture",), unlocks=("grimoires",),
           effets={"items_per_floor": (1, 1)}),
+    Noeud("rien_ne_se_perd", "Rien ne se perd", 35,
+          "Une chance sur dix de récupérer le projectile qui a touché. "
+          "Se reprend trois fois.",
+          branche="Trouvailles", parents=("projectiles",), repetitions=3,
+          effets={"recuperation_projectile": 0.10}),
     Noeud("intuition", "Intuition", 90,
           "Le premier parchemin ramassé de chaque vie est reconnu d'emblée.",
           branche="Trouvailles", parents=("grimoires",), unlocks=("intuition",)),
@@ -183,8 +202,8 @@ def par_branche():
 
 def disponibles(acquis):
     """Les nœuds qu'on pourrait acheter maintenant, prix mis à part."""
-    return [noeud for cle, noeud in ARBRE.items()
-            if cle not in acquis and noeud.accessible(acquis)]
+    return [noeud for noeud in ARBRE.values()
+            if noeud.reste_a_prendre(acquis) > 0 and noeud.accessible(acquis)]
 
 
 def profondeurs():

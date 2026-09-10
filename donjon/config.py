@@ -16,6 +16,7 @@ from . import monsters
 
 #: Une config construite à la main (tests, bot, CLI) a tout le contenu.
 TOUT_DEBLOQUE = frozenset({"butin", "vivres", "projectiles", "herbes",
+                           "exploration",
                            "grimoires",
                            "intuition", "armurerie", "coffre", "orbe"})
 
@@ -53,6 +54,7 @@ class RunConfig:
         is_hub=False,
         unlocks=(),
         classes=(),
+        recuperation_projectile=0.0,
     ):
         self.max_depth = max_depth
         self.spawn_interval = spawn_interval
@@ -83,6 +85,8 @@ class RunConfig:
         # Classes de créatures réveillées. Le héros et le donjon apprennent les
         # mêmes choses : c'est un talent qui ouvre chacune (voir tree.py).
         self.classes = frozenset(classes) if classes else TOUTES_CLASSES
+        # Chance qu'un projectile qui touche retombe au sol au lieu d'être perdu.
+        self.recuperation_projectile = recuperation_projectile
 
     def replace(self, **changements):
         """Copie modifiée : `config.replace(max_depth=10)`."""

@@ -126,6 +126,7 @@ AIDE = [
     "  Flèches, pavé numérique ou hjkl / yubn : se déplacer et attaquer.",
     "  « , » ramasser    « > » descendre    « . » attendre    « i » sac",
     "  « s » se reposer jusqu'à guérison (interrompu si un monstre paraît)",
+    "  « e » explorer l'étage tout seul (talent « Sens de l'orientation »)",
     "  « t » l'arbre des talents (au refuge)",
     "  « c » compétences    « ? » cette aide    « q » quitter",
     "  « R » rejouer après la partie",
@@ -237,7 +238,7 @@ class Fenetre:
         self.case_survolee = None
         self.destination = None    # cible du déplacement automatique
         self._trajet_prevu = None
-
+        self.exploration = False   # exploration automatique en cours
         self.root = tk.Tk()
         self.root.title("Donjon mystère")
         self.root.configure(bg=FOND)
@@ -356,6 +357,8 @@ class Fenetre:
             self.game.cmd_wait()
         elif char == "s":
             self.game.cmd_rest()
+        elif char == "e":
+            self.explorer()
         elif char == ",":
             self.game.cmd_pickup()
         elif char == ">":
@@ -513,12 +516,62 @@ class Fenetre:
 
     def arreter_trajet(self):
         self.destination = None
+        self.exploration = False
         if self._trajet_prevu is not None:
             try:
                 self.root.after_cancel(self._trajet_prevu)
             except tk.TclError:                       # pragma: no cover
                 pass
             self._trajet_prevu = None
+
+    def explorer(self):
+        """Explore l'étage tout seul, jusqu'à ce que quelque chose arrête.
+
+        Le moteur choisit où aller (`prochaine_exploration`) ; ici on ne fait
+        qu'animer, un pas toutes les `PAS_TRAJET_MS`, comme le déplacement au
+        clic. Tout ce qui mérite une décision interrompt : un monstre en vue,
+        un coup reçu, un statut, ou l'étage épuisé.
+        """
+        self.arreter_trajet()
+        if "exploration" not in self.game.config.unlocks:
+            return
+        self.exploration = True
+        self.pas_exploration()
+
+    def pas_exploration(self):
+        self._trajet_prevu = None
+        if not self.exploration or self.game.state != PLAYING:
+            self.arreter_trajet()
+            return
+        if self.monstres_en_vue():
+            self.note = "Quelque chose bouge : à toi de jouer."
+            self.arreter_trajet()
+            self.dessiner()
+            return
+        joueur = self.game.player
+        pv_avant = joueur.hp
+        if joueur.pos in self.game.level.items:
+            self.game.cmd_pickup()
+        else:
+            cible = self.game.prochaine_exploration()
+            direction = None if cible is None else path.step_along(
+                self.game.level, joueur.pos, cible,
+                {m.pos for m in self.game.monsters()},
+                allowed=self.game.level.explored | {cible})
+            if direction is None or not self.game.cmd_move(direction):
+                self.note = "Plus rien à explorer ici."
+                self.arreter_trajet()
+                self.dessiner()
+                return
+        self._verifier_fin()
+        if (self.ferme or joueur.hp < pv_avant or not joueur.can_act()
+                or self.game.state != PLAYING):
+            self.arreter_trajet()
+        else:
+            self._trajet_prevu = self.root.after(PAS_TRAJET_MS,
+                                                 self.pas_exploration)
+        if not self.ferme:
+            self.dessiner()
 
     def pas_trajet(self):
         """Un pas du trajet, puis on se replanifie tant que rien n'interrompt."""
@@ -879,6 +932,8 @@ class Fenetre:
             ("Entrer dans le donjon" if au_refuge else "Descendre",
              self.game.cmd_descend, joueur.pos == level.stairs),
             ("Attendre", self.game.cmd_wait, True),
+            ("Explorer", self.explorer,
+             not au_refuge and "exploration" in self.game.config.unlocks),
             ("Se reposer", self.game.cmd_rest,
              joueur.hp < joueur.max_hp and not self.game.monsters_visible()
              and not au_refuge),
@@ -1098,7 +1153,12 @@ class Fenetre:
             self._noeud_de_talent(tree_mod.ARBRE[cle], place)
         survole = self._talent_survole()
         if survole:
-            self._texte(16, bas - 26, f"{survole.name} — {survole.description}")
+            reprises = ""
+            if survole.repetitions > 1:
+                reprises = (f"   [pris {meta.fois(survole.key)} fois sur "
+                            f"{survole.repetitions}]")
+            self._texte(16, bas - 26,
+                        f"{survole.name} — {survole.description}{reprises}")
             self._texte(self.largeur - 16, bas - 26, f"{survole.cost} XP",
                         ancre="ne", gras=True)
         else:
@@ -1205,7 +1265,9 @@ class Fenetre:
     def _noeud_de_talent(self, noeud, place):
         x, y, theta, largeur = place
         meta = self.session.meta
-        acquis, achetable = meta.acquis(noeud.key), meta.achetable(noeud.key)
+        pris = meta.fois(noeud.key)
+        acquis = pris > 0 and noeud.reste_a_prendre(meta.noeuds) == 0
+        achetable = meta.achetable(noeud.key)
         accessible = noeud.accessible(meta.noeuds)
         teinte = COULEUR_BRANCHE.get(noeud.branche, TEXTE)
         zone = (x - RAYON_TALENT - 3, y - RAYON_TALENT - 3,
@@ -1213,6 +1275,9 @@ class Fenetre:
         survole = self.zone_survolee == zone
         if acquis:
             fond, bord, dedans, nom = teinte, teinte, FOND, TEXTE
+        elif pris:                       # nœud répétable, entamé
+            fond, bord = melange(teinte, FOND, 0.55), teinte
+            dedans = nom = TEXTE
         elif achetable:
             fond = BOUTON_SURVOL if survole else BOUTON
             bord, dedans, nom = teinte, TEXTE, TEXTE
@@ -1230,8 +1295,14 @@ class Fenetre:
                                 x + RAYON_TALENT, y + RAYON_TALENT,
                                 fill=fond, outline=bord,
                                 width=3 if achetable else 2)
-        self.canvas.create_text(x, y, text="✔" if acquis else str(noeud.cost),
-                                fill=dedans, font=("TkDefaultFont", 8, "bold"))
+        if acquis:
+            marque = "✔"
+        elif pris:
+            marque = f"{pris}/{noeud.repetitions}"
+        else:
+            marque = str(noeud.cost)
+        self.canvas.create_text(x, y, text=marque, fill=dedans,
+                                font=("TkDefaultFont", 8, "bold"))
         self._nom_de_talent(noeud, x, y, theta, largeur, nom, gras=achetable)
         # Tout nœud se survole — savoir ce qui attend derrière un rond éteint
         # est la moitié de l'intérêt d'un arbre — mais seul l'achetable s'achète.

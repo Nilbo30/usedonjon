@@ -337,8 +337,16 @@ _register(
              on_use="orbe_retour", skill="parchemins",
              note="Te ramène au refuge avec tes objets et tes compétences. "
                   "En échange, la profondeur atteinte est remise à zéro.", unlock="orbe"),
-    ItemType("fleche", "une flèche", "(", AMMO, power=7, weight=12,
-             on_hit="jet_degats", note="À lancer : 7 dégâts à distance.", unlock="projectiles"),
+    # La pierre est le projectile de la main nue ; la flèche, taillée pour un
+    # arc, ne se ramasse que sur un archer — d'où son poids nul, qui l'exclut
+    # du tirage au sol sans l'exclure du butin.
+    ItemType("pierre", "une pierre", "*", AMMO, power=5, weight=12,
+             on_hit="jet_degats", note="À lancer : 5 dégâts à distance.",
+             unlock="projectiles"),
+    ItemType("fleche", "une flèche", "(", AMMO, power=8, weight=0,
+             on_hit="jet_degats",
+             note="À lancer : 8 dégâts. Faite pour un arc, faute de mieux.",
+             unlock="projectiles"),
     ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8, unlock="armurerie"),
     ItemType("epee_fer", "épée en fer", ")", WEAPON, power=6, weight=5, unlock="armurerie"),
     ItemType("bouclier_bois", "bouclier en bois", "[", SHIELD, power=3, weight=8, unlock="armurerie"),

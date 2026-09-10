@@ -91,6 +91,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 11 | L'archer : le tir, et ce qu'il change au déplacement | ✅ fait |
 | 12 | L'esquive : encaisser ou se dérober, deux runs différents | ✅ fait |
 | 13 | Le butin des créatures, et la compétence « Chance » | ✅ fait |
+| 14 | Retours de partie : sept bugs, pierres, nœuds répétables, exploration | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -560,6 +561,44 @@ moyenne et 3 dans les bons runs.
 |---|---|
 | sans « Butin » | 27,3 ± 1,5 |
 | avec « Butin » | **32,7 ± 1,7** |
+
+### Étape 14 — ce qu'une vraie partie a révélé
+
+Vingt retours après une première session complète. Sept bugs corrigés d'un
+coup, dont un qui coûtait cher : **un talent acheté au refuge ne s'appliquait
+qu'à la vie suivante**. Le héros n'est créé qu'une fois par vie, et « Affûtage »
+ne touchait que le suivant — on payait pour la vie d'après. Les autres : un
+message d'accueil qui promettait un coffre non gagné, des créatures qui
+apparaissaient dans le champ de vision, un archer qui chargeait au corps à
+corps, une chauve-souris qui renonçait à mordre une fois sur trois, les pièges
+présents avant leur talent, et une console noire derrière la fenêtre sous
+Windows.
+
+**Les pierres remplacent les flèches** comme projectile de base : lancer une
+flèche à main nue n'a pas de sens. La flèche reste, avec un **poids de tirage
+nul** — elle n'apparaît donc jamais au sol, seulement dans le butin d'un
+archer. C'est le mécanisme le plus simple pour un objet qui ne se trouve que
+sur un cadavre, et il ne demande aucun code.
+
+**Les nœuds répétables.** `Noeud(repetitions=3)` : le cumul lit la liste des
+achats et non un ensemble, donc les effets s'additionnent d'eux-mêmes. « Rien ne
+se perd » (10 % de récupérer le projectile qui touche) se reprend trois fois, et
+l'éventail affiche « 1/3 » dans le rond au lieu d'une coche.
+
+**L'exploration automatique** devient un talent — l'automatisation est la
+signature du genre incrémental, autant qu'elle s'achète. Le moteur choisit la
+destination (`prochaine_exploration` : ce qui traîne d'abord, la frontière de
+l'inconnu ensuite, l'escalier en dernier), l'interface anime, exactement comme
+le déplacement au clic. Elle s'arrête à la première chose qui mérite une
+décision.
+
+Un bug pris dans mon propre code au passage : elle visait des objets **pas
+encore découverts**, donc injoignables, et abandonnait au lieu de passer à la
+frontière. Elle explore maintenant 78 → 207 cases en une trentaine de pas.
+
+**Reste ouvert** : l'XP par vie tourne toujours autour de 35 quoi qu'on fasse —
+le gain ne raconte pas la descente. Le joueur continue de jouer pour cerner ce
+qui devrait être récompensé.
 
 ## Règles fixées en cours de route
 

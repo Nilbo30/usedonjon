@@ -11,7 +11,7 @@ Deux idées portent l'extensibilité :
    appellent exactement les mêmes fonctions.
 """
 
-from . import ai, dungeon, events, hub, items, monsters, skills, tiles, traps
+from . import ai, dungeon, events, hub, items, monsters, path, skills, tiles, traps
 from .config import RunConfig
 from .entities import ACTION_COST, Monster, Player, equiper_kit
 from .events import Event
@@ -689,6 +689,57 @@ class Game:
         self.notify(events.POSE, objet=item)
         return self._finish(True)
 
+    def prochaine_exploration(self):
+        """Où aller pour découvrir la suite de l'étage, ou None si tout est vu.
+
+        Le moteur choisit la destination, l'interface se charge de l'animer :
+        c'est la même division que pour le déplacement au clic.
+
+        L'ordre dit la priorité du joueur : ce qui traîne par terre d'abord,
+        la frontière de l'inconnu ensuite, l'escalier en dernier.
+        """
+        if "exploration" not in self.config.unlocks:
+            return None
+        level, depuis = self.level, self.player.pos
+        bloques = {m.pos for m in self.monsters()}
+
+        def joignable(case):
+            return path.find_path(level, depuis, case, bloques,
+                                  allowed=level.explored | {case}) is not None
+
+        # Trois envies, dans cet ordre — et on passe à la suivante dès que la
+        # précédente n'offre rien d'atteignable. Les objets ne comptent que
+        # s'ils ont été vus : viser ce qu'on ignore encore, c'est viser à
+        # travers les murs.
+        groupes = [
+            [pos for pos in level.items
+             if pos != depuis and pos in level.explored],
+            [pos for pos in level.explored
+             if level.walkable(pos) and pos != depuis
+             and any(voisin not in level.explored and level.in_bounds(voisin)
+                     for voisin in (add(pos, d) for d in ALL_DIRS))],
+            [level.stairs] if level.stairs != depuis else [],
+        ]
+        for groupe in groupes:
+            groupe.sort(key=lambda case: chebyshev(depuis, case))
+            for case in groupe[:40]:
+                if joignable(case):
+                    return case
+        return None
+
+    def _recuperer_projectile(self, objet, pos):
+        """Un projectile qui touche retombe parfois aux pieds de sa cible.
+
+        Ne concerne que les munitions : une herbe lancée est consommée, pas
+        égarée.
+        """
+        if objet.category != items.AMMO or pos in self.level.items:
+            return
+        if not self.rng.chance(self.config.recuperation_projectile):
+            return
+        self.level.items[pos] = objet
+        self.say(f"{objet.name} retombe au sol.")
+
     def ligne_de_tir(self, depuis, direction, portee):
         """Où s'arrête un projectile : (dernière case, premier acteur touché).
 
@@ -742,6 +793,7 @@ class Game:
                 target.take_damage(dmg)
                 self.say(f"{item.name} inflige {dmg} dégâts.")
                 self.check_death(target, killer=self.player)
+            self._recuperer_projectile(item, target.pos)
             self.pass_turn(self.player)
             self.notify(events.JET, objet=item, cible=target, direction=delta)
             return self._finish(True)

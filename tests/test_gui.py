@@ -199,6 +199,29 @@ class TestRefuge(unittest.TestCase):
         self.assertNotIn("second_souffle", fenetre.session.meta.noeuds)
         self.assertEqual(fenetre.session.meta.xp, 10000)
 
+    def test_un_talent_repetable_reste_cliquable_entre_deux_reprises(self):
+        """Sinon il aurait l'air fini dès le premier achat."""
+        from donjon.gui import Fenetre
+
+        fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(fenetre.root.destroy)
+        fenetre.session.meta.xp = 10 ** 4
+        for cle in ("nourriture", "projectiles"):
+            fenetre.session.meta.acheter(cle)
+        fenetre.mode = "talents"
+        for reprise in range(3):
+            fenetre.dessiner()
+            etiquettes = [z[5] for z in fenetre.zones]
+            self.assertIn("talent rien_ne_se_perd", etiquettes, reprise)
+            self._cliquer_zone_de("rien_ne_se_perd", fenetre)
+        self.assertEqual(fenetre.session.meta.fois("rien_ne_se_perd"), 3)
+        fenetre.dessiner()
+        self.assertIsNone(fenetre.session.acheter("rien_ne_se_perd"))
+
+    def _cliquer_zone_de(self, cle, fenetre):
+        zone = next(z for z in fenetre.zones if z[5] == f"talent {cle}")
+        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
+
     def test_l_eventail_place_tous_les_noeuds_dans_le_cadre(self):
         """Un nœud d'une branche oubliée dans `BRANCHES` disparaîtrait sans bruit.
 
@@ -450,3 +473,58 @@ class TestSouris(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(_ecran_disponible(), "pas d'écran disponible")
+class TestExploration(unittest.TestCase):
+    """L'exploration automatique : elle avance seule, et s'arrête quand il faut."""
+
+    def setUp(self):
+        from donjon.gui import Fenetre
+
+        self.fenetre = Fenetre(seed=5, sauvegarde=False)
+        self.addCleanup(self.fenetre.root.destroy)
+        _debloquer(self.fenetre, *TALENTS_DE_TEST, "exploration")
+        self.fenetre.game = self.fenetre.session.descendre()
+        self.fenetre.mode = "jeu"
+        self.fenetre.dessiner()
+
+    def _explorer(self, pas=40):
+        """Déroule la boucle à la main : pas de minuterie dans un test."""
+        self.fenetre.explorer()
+        for _ in range(pas):
+            if not self.fenetre.exploration:
+                break
+            self.fenetre.pas_exploration()
+
+    def test_elle_decouvre_du_terrain(self):
+        game = self.fenetre.game
+        game.actors = [game.player]          # personne en vue : elle peut courir
+        connu = len(game.level.explored)
+        self._explorer()
+        self.assertGreater(len(self.fenetre.game.level.explored), connu)
+
+    def test_un_monstre_en_vue_l_arrete(self):
+        from tests.helpers import place_monster
+
+        joueur = self.fenetre.game.player
+        place_monster(self.fenetre.game, (joueur.pos[0] + 1, joueur.pos[1]))
+        self.fenetre.explorer()
+        self.fenetre.pas_exploration()
+        self.assertFalse(self.fenetre.exploration)
+
+    def test_sans_le_talent_elle_ne_demarre_pas(self):
+        from donjon.config import RunConfig
+
+        self.fenetre.game.config = RunConfig(unlocks={"vivres"})
+        self.fenetre.explorer()
+        self.assertFalse(self.fenetre.exploration)
+
+    def test_le_bouton_n_apparait_qu_avec_le_talent(self):
+        from donjon.config import RunConfig
+
+        self.fenetre.dessiner()
+        self.assertIn("Explorer", [zone[5] for zone in self.fenetre.zones])
+        self.fenetre.game.config = RunConfig(unlocks={"vivres"})
+        self.fenetre.dessiner()
+        self.assertNotIn("Explorer", [zone[5] for zone in self.fenetre.zones])

@@ -64,10 +64,14 @@ class Meta:
     def acquis(self, cle):
         return cle in self.noeuds
 
+    def fois(self, cle):
+        """Combien de fois ce talent a été pris (les nœuds répétables)."""
+        return self.noeuds.count(cle)
+
     def achetable(self, cle):
         """Le nœud existe, n'est pas acquis, ses parents le sont, et on peut payer."""
         noeud = tree.ARBRE.get(cle)
-        return bool(noeud and cle not in self.noeuds
+        return bool(noeud and noeud.reste_a_prendre(self.noeuds) > 0
                     and noeud.accessible(self.noeuds) and self.xp >= noeud.cost)
 
     def acheter(self, cle):

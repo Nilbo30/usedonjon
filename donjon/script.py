@@ -165,7 +165,9 @@ def _tir_possible(game, portee=6):
     """
     from .geom import ALL_DIRS, add
 
-    slot = _find(game, "fleche")
+    slot = _find(game, "pierre")
+    if slot is None:
+        slot = _find(game, "fleche")
     if slot is None:
         return None
     for direction in ALL_DIRS:

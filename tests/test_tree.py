@@ -73,15 +73,39 @@ class TestCoherence(unittest.TestCase):
     def test_tout_l_arbre_est_atteignable(self):
         """Aucun nœud ne doit être verrouillé pour toujours."""
         meta = Meta(xp=10 ** 6)
-        for _ in range(len(tree.ARBRE)):
+        for _ in range(len(tree.ARBRE) + 3):
             for noeud in tree.disponibles(meta.noeuds):
                 meta.acheter(noeud.key)
-        self.assertEqual(len(meta.noeuds), len(tree.ARBRE))
+        self.assertEqual(set(meta.noeuds), set(tree.ARBRE))
+        self.assertEqual(len(meta.noeuds),
+                         sum(n.repetitions for n in tree.ARBRE.values()))
 
     def test_les_prix_suivent_l_echelle(self):
         echelle = {3, 12, 35, 90, 220}
         for noeud in tree.ARBRE.values():
             self.assertIn(noeud.cost, echelle, noeud.key)
+
+    def test_un_noeud_repetable_se_reprend_le_bon_nombre_de_fois(self):
+        meta = Meta(xp=10 ** 4)
+        for cle in ("nourriture", "projectiles"):
+            meta.acheter(cle)
+        noeud = tree.ARBRE["rien_ne_se_perd"]
+        for attendu in range(noeud.repetitions):
+            self.assertEqual(meta.fois("rien_ne_se_perd"), attendu)
+            self.assertIsNotNone(meta.acheter("rien_ne_se_perd"))
+        self.assertIsNone(meta.acheter("rien_ne_se_perd"))
+        self.assertEqual(meta.fois("rien_ne_se_perd"), noeud.repetitions)
+
+    def test_ses_effets_s_additionnent_a_chaque_reprise(self):
+        meta = Meta(xp=10 ** 4)
+        for cle in ("nourriture", "projectiles"):
+            meta.acheter(cle)
+        precedent = meta.run_config().recuperation_projectile
+        for _ in range(tree.ARBRE["rien_ne_se_perd"].repetitions):
+            meta.acheter("rien_ne_se_perd")
+            actuel = meta.run_config().recuperation_projectile
+            self.assertGreater(actuel, precedent)
+            precedent = actuel
 
     def test_chaque_noeud_s_explique(self):
         for noeud in tree.ARBRE.values():
