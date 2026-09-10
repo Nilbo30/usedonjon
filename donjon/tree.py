@@ -114,11 +114,10 @@ _enregistrer(
     # ne serait jamais pris ; celui-ci arme le donjon et le joueur du même
     # geste, à lui d'aller la chercher.
     Noeud("epee", "L'épée", 12,
-          "Des épées traînent dans le donjon — et des créatures pour s'en "
-          "servir : le monde se peuple, et il se bat au contact.",
-          branche="Équipement", unlocks=("epees",),
-          classes=("rodeur", "erratique", "guerrier"),
-          reglages={"monsters_per_floor": (3, 6), "spawn_interval": 30}),
+          "Des épées traînent dans le donjon — et des créatures qui savent "
+          "s'en servir : ce qui rôdait se met à frapper pour de bon.",
+          branche="Équipement", parents=("nourriture",), unlocks=("epees",),
+          classes=("guerrier",)),
     Noeud("bouclier", "Le bouclier", 12,
           "Des boucliers apparaissent au sol. Le donjon se protège aussi : "
           "des créatures blindées, difficiles à entamer.",
@@ -133,20 +132,27 @@ _enregistrer(
     Noeud("pieges", "Pièges", 12,
           "Le sol devient traître. Les créatures marchent dessus aussi : "
           "un piège repéré est une arme.",
-          branche="Monde vivant", parents=("epee",),
+          branche="Monde vivant", parents=("nourriture",),
           reglages={"traps_per_floor": (1, 3)}),
 
     Noeud("butin", "Butin", 35,
           "Les créatures vaincues laissent parfois quelque chose : leur arme, "
           "leur pitance. Ce qu'on ramasse ainsi aiguise l'œil.",
-          branche="Monde vivant", parents=("epee",), unlocks=("butin",)),
+          branche="Monde vivant", parents=("nourriture",), unlocks=("butin",)),
 
     # --- Trouvailles : ce qui traîne par terre ----------------------------
+    # Et voilà pourquoi le premier nœud du jeu peuple déjà le donjon : ce que
+    # tu apportes, le donjon le sent. Sans cela il existait un état — des
+    # vivres, aucun monstre — où l'on traversait le donjon à pied sans risque,
+    # et le multiplicateur de profondeur payait cette promenade mieux que le
+    # jeu réel : 44 XP par vie contre 16.
     Noeud("nourriture", "Nourriture", 3,
-          "Des vivres apparaissent au sol : de quoi tenir plus loin que ce "
-          "qu'on emporte, et un pour la route.",
+          "Des vivres apparaissent au sol, et un pour la route. Mais l'odeur "
+          "attire les bêtes : le donjon n'est plus désert.",
           branche="Trouvailles", unlocks=("vivres",), objets=("onigiri",),
-          reglages={"items_per_floor": (2, 4)}),
+          classes=("rodeur", "erratique"),
+          reglages={"items_per_floor": (2, 4),
+                    "monsters_per_floor": (3, 6), "spawn_interval": 30}),
     Noeud("exploration", "Sens de l'orientation", 12,
           "Le héros sait explorer un étage tout seul : il s'arrête dès que "
           "quelque chose bouge, ou qu'il a fini.",
@@ -220,7 +226,7 @@ EFFETS_META = {"coffre_places"}
 #: premières suivent l'ordre où le joueur les découvre. Un croisement subsiste :
 #: aucun ordre n'en donne moins, l'arbre ayant désormais plus de liens qui
 #: traversent qu'une seule permutation ne peut en démêler.
-BRANCHES = ("Survie", "Monde vivant", "Équipement", "Profond", "Le refuge",
+BRANCHES = ("Survie", "Équipement", "Profond", "Monde vivant", "Le refuge",
             "Trouvailles")
 
 

@@ -704,8 +704,20 @@ places au sol restent vides. Un donjon où l'on n'a rien débloqué est un donjo
 pauvre, pas un garde-manger. La puissance de l'onigiri n'a pas bougé : c'était
 la quantité, pas la portion.
 
-**Mais le vrai défaut était dessous, et c'est ma baisse de prix qui l'a
-révélé.** « Nourriture » à 3 XP rendait le donjon vide *survivable* : le bot le
+**Et l'idée qui a tout simplifié : la nourriture attire les bêtes.** Le premier
+nœud du jeu peuple donc déjà le donjon — l'odeur des vivres réveille ce qui
+rôde. Cela supprime l'**état** qui causait tout le reste : il n'existe plus de
+moment où l'on a de quoi manger et rien à craindre. « L'épée » n'apporte plus
+que sa classe de guerriers, et exige « Nourriture » : on ne peut pas armer des
+créatures avant qu'il y en ait.
+
+Sous cette forme, la série est monotone **avec ou sans** fond de donjon (13,8
+contre 14,0) : le remède de la profondeur n'est donc plus un correctif. Il est
+conservé comme dessin — l'escalier qui s'arrête à l'étage 8 donne un sommet à
+atteindre aux premières heures, et trois nœuds pour le repousser — mais c'est
+un choix, plus une nécessité.
+
+**Le défaut que tout cela corrigeait, pour mémoire.** « Nourriture » à 3 XP rendait le donjon vide *survivable* : le bot le
 traversait jusqu'à l'étage 26 sans rencontrer âme qui vive, et le multiplicateur
 de profondeur payait 44 XP par vie — contre 16 une fois les créatures
 réveillées. **Le jeu payait pour éviter son propre contenu.**

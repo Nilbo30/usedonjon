@@ -200,7 +200,7 @@ class TestTalentImmediat(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=3)
         self.session.meta.xp = 1000
-        for cle in ("epee",):
+        for cle in ("nourriture", "epee"):
             self.session.meta.acheter(cle)
         self.session.demarrer()
 

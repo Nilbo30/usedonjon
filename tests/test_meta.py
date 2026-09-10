@@ -106,8 +106,10 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
         """Ce que le héros apprend, le donjon l'apprend : pas plus, pas moins."""
         meta = Meta(xp=1000)
         self.assertNotIn("rodeur", meta.run_config().classes)
-        meta.acheter("epee")
+        meta.acheter("nourriture")           # l'odeur attire les bêtes
         self.assertIn("rodeur", meta.run_config().classes)
+        self.assertNotIn("guerrier", meta.run_config().classes)
+        meta.acheter("epee")
         self.assertIn("guerrier", meta.run_config().classes)
         self.assertNotIn("blinde", meta.run_config().classes)
         meta.acheter("bouclier")
