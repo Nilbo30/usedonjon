@@ -815,6 +815,46 @@ soit 1,9 σ) sur 120 parties chacun. Sous deux sigma, je ne rejoue pas les
 chiffres : c'est précisément l'erreur que la série des « trois reculs » m'avait
 apprise.
 
+### Dix retours de plus, et un bug de comptage
+
+**« Combat » montait sans combattre** : abattre une créature d'un caillou
+créditait la carrure de 3 XP, parce que la règle du monstre vaincu ne regardait
+pas la distance — que l'évènement portait pourtant déjà. Une ligne, mais elle
+faussait aussi mes campagnes.
+
+**Le coffre ne servait à rien sans l'orbe** : on n'y dépose que ce qu'on
+rapporte, et l'orbe coûtait 220 XP derrière deux prérequis dont un sans rapport
+(les grimoires). « La voie du retour » descend à 90, rejoint la branche du
+refuge et n'exige plus que le coffre : les deux nœuds se prennent ensemble et
+s'expliquent l'un l'autre. Ça règle du même coup le trait qui traversait
+l'éventail — le nœud était accroché à l'autre bout de l'arbre.
+
+**Les nœuds répétables affichent leur prix** et non plus le compte des
+reprises : ce qu'on veut savoir devant un rond, c'est ce qu'il coûte
+maintenant. Le compte reste en bas, dans la fiche.
+
+**Affûtage et Cuirasse** passent de 35 XP pour +1 à des reprises à 12, 36, 108 :
+un point d'attaque valait mal une marche entière de l'échelle.
+
+**La faim a enfin un levier** : « Endurance » (12 XP, trois reprises) enlève 8 %
+au coût de chaque pas. C'était la demande la plus concrète — « pas moyen de
+descendre sans s'affamer ».
+
+**Deux automatismes de plus** : la première arme et le premier bouclier trouvés
+s'équipent d'eux-mêmes (ramasser une épée en cognant du poing n'était le choix
+de personne), et le **soin automatique** rejoint le repas automatique, à 30 %
+de vie.
+
+**Deux corrections d'interface** : les étiquettes de la carte ne s'affichent
+plus sous un panneau ouvert, et l'exploration automatique **rend la main quand
+l'escalier paraît** — c'est une nouvelle, au joueur d'en décider. Elle ne
+s'arrête pas si l'escalier était déjà en vue au départ : c'est le passage de
+« pas vu » à « vu » qui compte.
+
+Effet cumulé sur le bot, arbre complet : étage **12,3** en moyenne au lieu de
+10,4, maximum **27** au lieu de 19, et la faim ne tue plus que 18 fois sur 40
+au lieu de 21.
+
 ## Règles fixées en cours de route
 
 **Descendre paie.** L'XP par action est multipliée par

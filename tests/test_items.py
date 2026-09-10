@@ -459,3 +459,62 @@ class TestRepasAutomatique(unittest.TestCase):
         game.player.inventory = []
         game.cmd_wait()
         self.assertLess(game.player.fullness, 6)
+
+
+class TestSoinAutomatique(unittest.TestCase):
+    def _partie(self, unlocks):
+        from donjon.config import RunConfig
+        from donjon.game import Game
+
+        game = Game(seed=4, config=RunConfig(unlocks=unlocks))
+        game.player.inventory = [items.make("herbe_soin")]
+        game.player.hp = 2
+        return game
+
+    def test_la_vie_basse_il_se_soigne_seul(self):
+        game = self._partie({"herbes", "auto_soin"})
+        game.cmd_wait()
+        self.assertGreater(game.player.hp, 2)
+        self.assertEqual(game.player.inventory, [])
+
+    def test_sans_le_talent_il_se_laisse_saigner(self):
+        game = self._partie({"herbes"})
+        game.cmd_wait()
+        self.assertEqual(len(game.player.inventory), 1)
+
+    def test_en_pleine_forme_il_garde_son_herbe(self):
+        game = self._partie({"herbes", "auto_soin"})
+        game.player.hp = game.player.max_hp
+        game.cmd_wait()
+        self.assertEqual(len(game.player.inventory), 1)
+
+
+class TestEquipementAutomatique(unittest.TestCase):
+    """La première arme trouvée s'équipe : personne ne veut cogner du poing
+    en portant une épée dans son sac."""
+
+    def _ramasser(self, cle):
+        from tests.helpers import sandbox
+
+        game = sandbox(seed=4)
+        game.player.inventory = []
+        game.player.weapon = game.player.shield = None
+        game.level.items[game.player.pos] = items.make(cle)
+        game.cmd_pickup()
+        return game.player
+
+    def test_la_premiere_epee_passe_en_main(self):
+        self.assertIsNotNone(self._ramasser("epee_bois").weapon)
+
+    def test_le_premier_bouclier_aussi(self):
+        self.assertIsNotNone(self._ramasser("bouclier_bois").shield)
+
+    def test_la_seconde_reste_dans_le_sac(self):
+        from tests.helpers import sandbox
+
+        game = sandbox(seed=4)
+        game.player.inventory = []
+        game.player.weapon = items.make("epee_fer")
+        game.level.items[game.player.pos] = items.make("epee_bois")
+        game.cmd_pickup()
+        self.assertEqual(game.player.weapon.type.key, "epee_fer")

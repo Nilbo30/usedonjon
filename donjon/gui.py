@@ -246,6 +246,7 @@ class Fenetre:
         self._trajet_prevu = None
         self.exploration = False   # exploration automatique en cours
         self._panneau_ouvert_a = None   # case dont le panneau s'est déjà ouvert
+        self._escalier_vu = False       # l'exploration rend la main en le voyant
         self._reset_arme = False   # l'effacement attend une confirmation
         self.root = tk.Tk()
         self.root.title("Donjon mystère")
@@ -491,7 +492,10 @@ class Fenetre:
         """
         zone = self._zone_sous(event.x, event.y)
         geometrie = zone[:4] if zone else None
-        case = None if zone else self.case_sous(event.x, event.y)
+        # Pas d'étiquette de carte sous un panneau ouvert : le « mur » qui
+        # s'affichait par-dessus les compétences venait de là.
+        case = (None if zone or self.mode != "jeu"
+                else self.case_sous(event.x, event.y))
         if geometrie != self.zone_survolee:
             self.zone_survolee = geometrie
             self.etiquette_survolee = zone[5] if zone else None
@@ -601,6 +605,9 @@ class Fenetre:
         if "exploration" not in self.game.config.unlocks:
             return
         self.exploration = True
+        # Voir l'escalier est une nouvelle : on rend la main pour que le joueur
+        # décide s'il descend ou s'il finit l'étage.
+        self._escalier_vu = self.game.level.stairs in self.game.visible_cells()
         self.pas_exploration()
 
     def pas_exploration(self):
@@ -629,7 +636,14 @@ class Fenetre:
                 self.dessiner()
                 return
         self._verifier_fin()
-        if (self.ferme or joueur.hp < pv_avant or not joueur.can_act()
+        if (not self._escalier_vu and self.game.state == PLAYING
+                and self.game.level.stairs in self.game.visible_cells()):
+            self._escalier_vu = True
+            # Dans le journal et non en note passagère : c'est un fait de jeu,
+            # il doit rester lisible après coup.
+            self.game.say("L'escalier est en vue.")
+            self.arreter_trajet()
+        elif (self.ferme or joueur.hp < pv_avant or not joueur.can_act()
                 or self.game.state != PLAYING):
             self.arreter_trajet()
         else:
@@ -724,7 +738,7 @@ class Fenetre:
             self._dessiner_options()
         if self.game.state != PLAYING:
             self._dessiner_fin()
-        if self.case_survolee:
+        if self.case_survolee and self.mode == "jeu":
             px, py = self._cellule(*self.case_survolee)
             self._rafraichir_survol(px + self.tile / 2, py + self.tile / 2)
 
@@ -1466,12 +1480,9 @@ class Fenetre:
                                 x + RAYON_TALENT, y + RAYON_TALENT,
                                 fill=fond, outline=bord,
                                 width=3 if achetable else 2)
-        if acquis:
-            marque = "✔"
-        elif pris:
-            marque = f"{pris}/{noeud.repetitions}"
-        else:
-            marque = str(noeud.prix(meta.noeuds))
+        # Le rond dit toujours ce que coûte le prochain achat : le compte des
+        # reprises est en bas, avec le reste de la fiche.
+        marque = "✔" if acquis else str(noeud.prix(meta.noeuds))
         self.canvas.create_text(x, y, text=marque, fill=dedans,
                                 font=("TkDefaultFont", 8, "bold"))
         self._nom_de_talent(noeud, x, y, theta, largeur, nom, gras=achetable)

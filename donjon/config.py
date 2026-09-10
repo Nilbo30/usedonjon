@@ -16,7 +16,7 @@ from . import monsters
 
 #: Une config construite à la main (tests, bot, CLI) a tout le contenu.
 TOUT_DEBLOQUE = frozenset({"butin", "vivres", "projectiles", "herbes",
-                           "exploration", "auto_repas",
+                           "exploration", "auto_repas", "auto_soin",
                            "grimoires",
                            "intuition", "epees", "boucliers", "coffre", "orbe"})
 
@@ -59,6 +59,7 @@ class RunConfig:
         classes=(),
         recuperation_projectile=0.0,
         reanimations=0,
+        endurance=0.0,
     ):
         self.max_depth = max_depth
         self.spawn_interval = spawn_interval
@@ -101,6 +102,9 @@ class RunConfig:
         self.recuperation_projectile = recuperation_projectile
         # Combien de fois le coup fatal ne l'est pas, dans une descente.
         self.reanimations = reanimations
+        # Part de la faim évitée à chaque tour, gagnée en talents (les
+        # compétences en ajoutent de leur côté).
+        self.endurance = endurance
 
     def replace(self, **changements):
         """Copie modifiée : `config.replace(max_depth=10)`."""

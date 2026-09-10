@@ -536,6 +536,23 @@ class TestExploration(unittest.TestCase):
         self.fenetre.pas_exploration()
         self.assertFalse(self.fenetre.exploration)
 
+    def test_voir_l_escalier_lui_fait_rendre_la_main(self):
+        """C'est une nouvelle : au joueur de décider s'il descend.
+
+        Une nouvelle, donc : l'escalier déjà en vue au départ n'arrête rien —
+        c'est le passage de « pas vu » à « vu » qui compte.
+        """
+        game = self.fenetre.game
+        game.actors = [game.player]
+        game.player.pos = game.level.stairs
+        game.update_explored()
+        self.fenetre.explorer()
+        self.assertTrue(self.fenetre.exploration)     # déjà vu : ce n'est pas
+        self.fenetre._escalier_vu = False             # une nouvelle. Là, si.
+        self.fenetre.pas_exploration()
+        self.assertFalse(self.fenetre.exploration)
+        self.assertIn("escalier", " ".join(game.log.texts()[-3:]).lower())
+
     def test_sans_le_talent_elle_ne_demarre_pas(self):
         from donjon.config import RunConfig
 

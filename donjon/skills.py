@@ -188,7 +188,10 @@ REGLES = (
     # c'est le cas type d'une action qui crédite deux compétences.
     Regle(events.COUP, "@arme", defaut="pugilat", si=lambda e: e["touche"]),
     Regle(events.COUP, "combat", si=lambda e: e["touche"]),
-    Regle(events.MONSTRE_VAINCU, "combat", xp=3),
+    # Au contact seulement : abattre une créature d'un caillou entretenait la
+    # carrure sans qu'on ait échangé un coup.
+    Regle(events.MONSTRE_VAINCU, "combat", xp=3,
+          si=lambda e: e["distance"] <= 1),
     # Deux écoles pour la même leçon, selon ce qu'on a au bras — le pendant
     # exact de « épée / pugilat » du côté de la défense.
     Regle(events.COUP_RECU, "bouclier", si=lambda e: e["bouclier"] is not None),

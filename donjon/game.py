@@ -38,10 +38,11 @@ DEGATS_A_DISTANCE = 0.75
 ESQUIVE_MAX = 0.55
 #: Chance qu'une créature vaincue laisse quelque chose, et son plafond une fois
 #: la chance du héros ajoutée.
-#: Part du ventre en dessous de laquelle le repas automatique se déclenche.
-SEUIL_REPAS_AUTO = 0.10
 CHANCE_BUTIN = 0.22
 CHANCE_BUTIN_MAX = 0.60
+#: Seuils des automatismes : le ventre puis la vie, en part de leur maximum.
+SEUIL_REPAS_AUTO = 0.10
+SEUIL_SOIN_AUTO = 0.30
 
 
 class Game:
@@ -272,7 +273,8 @@ class Game:
         if player.fullness > 0:
             # « Marche » réduit le coût d'un tour ; on accumule la fraction
             # restante pour que le rythme reste régulier.
-            creuse = 1.0 + self.config.hunger_scaling * (self.depth - 1)
+            creuse = (1.0 + self.config.hunger_scaling * (self.depth - 1)
+                      - self.config.endurance)
             self._hunger_acc += max(0.25, creuse - player.bonus("endurance"))
             while self._hunger_acc >= 1.0 and player.fullness > 0:
                 self._hunger_acc -= 1.0
@@ -280,6 +282,7 @@ class Game:
             if player.fullness == 20:
                 self.say("Ton ventre gargouille. Tu as faim.")
             self._repas_automatique()
+            self._soin_automatique()
             if player.fullness == 0:
                 self.say("Tu meurs de faim !")
             # Régénération : lente en agissant, rapide à l'arrêt. On accumule
@@ -403,6 +406,25 @@ class Game:
         trap = self.level.traps.get(actor.pos)
         if trap and self.rng.chance(0.85):
             trap.trigger(self, actor)
+
+    def _soin_automatique(self):
+        """La vie basse, le héros se soigne de lui-même s'il a de quoi.
+
+        Même marché que le repas : on n'achète pas un raccourci, on achète de
+        ne plus avoir à surveiller. La ressource, elle, se dépense pareil.
+        """
+        joueur = self.player
+        if "auto_soin" not in self.config.unlocks:
+            return
+        if joueur.hp > joueur.max_hp * SEUIL_SOIN_AUTO:
+            return
+        herbe = next((objet for objet in joueur.inventory
+                      if objet.type.key == "herbe_soin"), None)
+        if herbe is None:
+            return
+        herbe.use(self, joueur)
+        joueur.consommer(herbe)
+        self.notify(events.USAGE_OBJET, objet=herbe, categorie=herbe.category)
 
     def _repas_automatique(self):
         """Le ventre presque vide, le héros mange sa réserve sans qu'on le dise.
@@ -649,10 +671,29 @@ class Game:
             return False
         del self.level.items[self.player.pos]
         self.say(f"Tu ramasses {item.name}.")
+        self._equiper_si_les_mains_sont_vides(item)
         self._intuition(item)
         self.pass_turn(self.player)
         self.notify(events.RAMASSAGE, objet=item)
         return self._finish(True)
+
+    def _equiper_si_les_mains_sont_vides(self, item):
+        """La première arme, le premier bouclier s'équipent d'eux-mêmes.
+
+        Ramasser une épée en ayant les mains nues et continuer à cogner du
+        poing n'était le choix de personne. Dès qu'il y a quelque chose au
+        bras, en revanche, l'échange redevient une décision.
+        """
+        joueur = self.player
+        if item.category == items.WEAPON and joueur.weapon is None:
+            joueur.weapon = item
+        elif item.category == items.SHIELD and joueur.shield is None:
+            joueur.shield = item
+        else:
+            return
+        self.say(f"Tu prends {item.name} en main.")
+        self.notify(events.EQUIPEMENT, objet=item, categorie=item.category,
+                    equipe=True)
 
     def cmd_descend(self):
         if self.player.pos != self.level.stairs:

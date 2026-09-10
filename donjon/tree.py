@@ -98,6 +98,10 @@ _enregistrer(
           "+5 points de vie au départ. Se reprend, de plus en plus cher.",
           branche="Survie", repetitions=4, facteur_cout=3,
           effets={"start_hp": 5}),
+    Noeud("endurance", "Endurance", 12,
+          "La marche creuse 8 % de moins. Se reprend, de plus en plus cher.",
+          branche="Survie", parents=("estomac",), repetitions=3,
+          facteur_cout=3, effets={"endurance": 0.08}),
     Noeud("besace", "Besace", 12, "+2 places dans le sac.",
           branche="Survie", parents=("estomac",), effets={"inventory_size": 2}),
     Noeud("second_souffle", "Second souffle", 220,
@@ -122,10 +126,14 @@ _enregistrer(
           "des créatures blindées, difficiles à entamer.",
           branche="Équipement", parents=("epee",),
           unlocks=("boucliers",), classes=("blinde",)),
-    Noeud("affutage", "Affûtage", 35, "+1 en attaque.",
-          branche="Équipement", parents=("epee",), effets={"start_attack": 1}),
-    Noeud("cuirasse", "Cuirasse", 35, "+1 en défense.",
-          branche="Équipement", parents=("bouclier",), effets={"start_defense": 1}),
+    Noeud("affutage", "Affûtage", 12,
+          "+1 en attaque. Se reprend, de plus en plus cher.",
+          branche="Équipement", parents=("epee",), repetitions=3,
+          facteur_cout=3, effets={"start_attack": 1}),
+    Noeud("cuirasse", "Cuirasse", 12,
+          "+1 en défense. Se reprend, de plus en plus cher.",
+          branche="Équipement", parents=("bouclier",), repetitions=3,
+          facteur_cout=3, effets={"start_defense": 1}),
 
     # --- Monde vivant : d'abord le danger, l'équipement viendra après -----
     Noeud("pieges", "Pièges", 12,
@@ -161,6 +169,11 @@ _enregistrer(
           "lui dise.",
           branche="Trouvailles", parents=("exploration",),
           unlocks=("auto_repas",)),
+    Noeud("auto_soin", "Soin automatique", 90,
+          "La vie basse, le héros porte une herbe à sa bouche sans qu'on le "
+          "lui dise.",
+          branche="Trouvailles", parents=("auto_repas", "herbes"),
+          unlocks=("auto_soin",)),
     Noeud("herbes", "Herbes", 35,
           "Herbes et graines rejoignent les trouvailles. Le donjon apprend "
           "aussi à souffler : des créatures frappent puis se retirent.",
@@ -195,6 +208,10 @@ _enregistrer(
           branche="Le refuge", parents=("nourriture",), unlocks=("coffre",)),
     Noeud("grand_coffre", "Grand coffre", 90, "+4 places dans le coffre.",
           branche="Le refuge", parents=("coffre",), effets={"coffre_places": 4}),
+    Noeud("voie_du_retour", "La voie du retour", 90,
+          "L'orbe de retour apparaît à partir du quatrième étage : on remonte "
+          "avec son butin, et le coffre sert enfin à quelque chose.",
+          branche="Le refuge", parents=("coffre",), unlocks=("orbe",)),
 
     # --- Profond ----------------------------------------------------------
     Noeud("profondeurs", "Les profondeurs", 35,
@@ -206,10 +223,7 @@ _enregistrer(
           "Dix étages encore, et la même marche à franchir. Peu remontent.",
           branche="Profond", parents=("profondeurs",),
           reglages={"max_depth": 30}),
-    Noeud("voie_du_retour", "La voie du retour", 220,
-          "L'orbe de retour apparaît à partir du quatrième étage.",
-          branche="Profond", parents=("grimoires", "coffre"),
-          unlocks=("orbe",)),
+
 )
 
 #: Effets qui ne concernent pas la partie mais la progression elle-même.

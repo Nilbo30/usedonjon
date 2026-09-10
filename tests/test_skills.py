@@ -323,3 +323,26 @@ class TestRefugeSansEntrainement(unittest.TestCase):
             donjon.cmd_move(DIRECTIONS["e"])
             donjon.cmd_move(DIRECTIONS["w"])
         self.assertGreater(donjon.player.skills.xp.get("marche", 0), 0)
+
+
+class TestCombatAuContact(unittest.TestCase):
+    def test_abattre_a_distance_n_entraine_pas_le_combat(self):
+        """« Combat », c'est la carrure : elle ne se prend pas en lançant."""
+        from donjon import items
+        from tests.helpers import place_monster, sandbox
+
+        game = sandbox(seed=3)
+        game.player.inventory = [items.make("pierre", quantite=9)]
+        place_monster(game, (game.player.pos[0] + 3, game.player.pos[1]), hp=1)
+        game.cmd_throw(0, (1, 0))
+        self.assertEqual(game.player.skills.xp.get("combat", 0), 0)
+        self.assertGreater(game.player.skills.xp.get("jet", 0), 0)
+
+    def test_abattre_au_contact_l_entraine(self):
+        from tests.helpers import place_monster, sandbox
+
+        game = sandbox(seed=3)
+        cible = place_monster(game, (game.player.pos[0] + 1, game.player.pos[1]),
+                              hp=1)
+        game.attack(game.player, cible)
+        self.assertGreater(game.player.skills.xp.get("combat", 0), 0)
