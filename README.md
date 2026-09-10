@@ -275,6 +275,14 @@ Ajouter du contenu, c'est un nœud dans `tree.py` et un `unlock="..."` sur les
 objets concernés — le moteur ne bouge pas. La sauvegarde vit dans
 `~/.usedonjon/meta.json`.
 
+## Repartir de zéro
+
+Le bouton **Options** du bas de l'écran contient « Repartir de zéro » : il
+efface l'XP, les talents et le coffre, et le donjon redevient le couloir vide
+de la première vie. Deux clics sont nécessaires — c'est le seul geste
+destructeur du jeu. La sauvegarde vit dans `~/.usedonjon/meta.json` ; la
+supprimer à la main revient au même.
+
 ## Où va le projet
 
 Le jeu évolue vers un hybride roguelike / incrémental. Les compétences sont en

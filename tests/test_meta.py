@@ -229,3 +229,54 @@ class TestFrontiere(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestReinitialisation(unittest.TestCase):
+    """Le seul geste destructeur du jeu : il doit être complet et sûr."""
+
+    def setUp(self):
+        self.chemin = os.path.join(tempfile.mkdtemp(), "meta.json")
+        self.session = Session(chemin=self.chemin)
+        self.session.meta.xp = 500
+        for cle in ("nourriture", "coffre"):
+            self.session.acheter(cle)
+        self.session.demarrer()
+        self.session.deposer(self.session.player.inventory[0]
+                             if self.session.player.inventory
+                             else self._offrir())
+
+    def _offrir(self):
+        from donjon import items
+
+        objet = items.make("onigiri")
+        self.session.player.add_item(objet)
+        return objet
+
+    def test_tout_disparait(self):
+        self.session.reinitialiser()
+        self.assertEqual(self.session.meta.xp, 0)
+        self.assertEqual(self.session.meta.noeuds, [])
+        self.assertEqual(self.session.meta.entrepot, [])
+        self.assertEqual(self.session.meta.runs, 0)
+
+    def test_le_fichier_de_sauvegarde_est_supprime(self):
+        self.assertTrue(os.path.exists(self.chemin))
+        self.session.reinitialiser()
+        self.assertFalse(os.path.exists(self.chemin))
+
+    def test_on_repart_au_refuge_avec_un_heros_neuf(self):
+        ancien = self.session.player
+        game = self.session.reinitialiser()
+        self.assertTrue(game.config.is_hub)
+        self.assertIsNot(self.session.player, ancien)
+        self.assertEqual(self.session.player.skills.total_levels(), 0)
+
+    def test_le_donjon_redevient_le_couloir_vide_du_debut(self):
+        self.session.reinitialiser()
+        config = self.session.config_de_run()
+        self.assertEqual(config.monsters_per_floor, (0, 0))
+        self.assertEqual(config.items_per_floor, (0, 0))
+        self.assertEqual(config.starting_kit, ())
+
+    def test_effacer_un_fichier_absent_ne_leve_pas(self):
+        self.assertTrue(meta_mod.effacer(self.chemin + ".rien"))

@@ -579,3 +579,54 @@ class TestPanneauxDuRefuge(unittest.TestCase):
         zone = next(z for z in self.fenetre.zones if z[5] == etiquette)
         self.fenetre.on_click(Clic((zone[0] + zone[2]) / 2,
                                    (zone[1] + zone[3]) / 2))
+
+
+@unittest.skipUnless(_ecran_disponible(), "pas d'écran disponible")
+class TestOptions(unittest.TestCase):
+    """Le bouton qui efface tout : atteignable, mais jamais d'un seul clic."""
+
+    def setUp(self):
+        from donjon.gui import Fenetre
+
+        self.fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(self.fenetre.root.destroy)
+        _debloquer(self.fenetre, "nourriture", "coffre")
+        self.fenetre.game = self.fenetre.session.demarrer()
+        self.fenetre.mode = "jeu"
+        self.fenetre.dessiner()
+
+    def _cliquer(self, etiquette):
+        zone = next(z for z in self.fenetre.zones if z[5] == etiquette)
+        self.fenetre.on_click(Clic((zone[0] + zone[2]) / 2,
+                                   (zone[1] + zone[3]) / 2))
+
+    def test_un_seul_clic_n_efface_rien(self):
+        """Sans confirmation, un clic malheureux coûterait toute la partie."""
+        self._cliquer("Options")
+        self._cliquer("Repartir de zéro")
+        self.assertTrue(self.fenetre.session.meta.noeuds)
+
+    def test_deux_clics_effacent_tout(self):
+        self._cliquer("Options")
+        self._cliquer("Repartir de zéro")
+        self._cliquer("Oui, tout effacer")
+        self.assertEqual(self.fenetre.session.meta.noeuds, [])
+        self.assertEqual(self.fenetre.session.meta.xp, 0)
+        self.assertTrue(self.fenetre.game.config.is_hub)
+
+    def test_annuler_desamorce(self):
+        self._cliquer("Options")
+        self._cliquer("Repartir de zéro")
+        self._cliquer("Annuler")
+        self.assertNotIn("Oui, tout effacer",
+                         [z[5] for z in self.fenetre.zones])
+        self.assertTrue(self.fenetre.session.meta.noeuds)
+
+    def test_rouvrir_les_options_desamorce_aussi(self):
+        self._cliquer("Options")
+        self._cliquer("Repartir de zéro")
+        self.fenetre.mode = "jeu"
+        self.fenetre.dessiner()
+        self._cliquer("Options")
+        self.assertNotIn("Oui, tout effacer",
+                         [z[5] for z in self.fenetre.zones])

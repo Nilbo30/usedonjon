@@ -129,6 +129,7 @@ AIDE = [
     "  « e » explorer l'étage tout seul (talent « Sens de l'orientation »)",
     "  « t » l'arbre des talents (au refuge)",
     "  « c » compétences    « ? » cette aide    « q » quitter",
+    "  Bouton « Options » : repartir de zéro (efface toute la progression)",
     "  « R » rejouer après la partie",
     "",
     "  Dans le sac : la lettre de l'objet, puis u utiliser, e équiper,",
@@ -226,7 +227,7 @@ class Fenetre:
                                           config=base)
         self.game = self.session.demarrer()
         # jeu | sac | action | direction | aide | competences | accueil |
-        # coffre | talents
+        # coffre | talents | options
         self.mode = "accueil"
         self.slot = None
         self.note = None
@@ -241,6 +242,7 @@ class Fenetre:
         self._trajet_prevu = None
         self.exploration = False   # exploration automatique en cours
         self._panneau_ouvert_a = None   # case dont le panneau s'est déjà ouvert
+        self._reset_arme = False   # l'effacement attend une confirmation
         self.root = tk.Tk()
         self.root.title("Donjon mystère")
         self.root.configure(bg=FOND)
@@ -304,7 +306,7 @@ class Fenetre:
             self._fin_de_partie(char, touche)
             return
 
-        if self.mode in ("aide", "competences", "accueil"):
+        if self.mode in ("aide", "competences", "accueil", "options"):
             self.mode = "jeu"
         elif self.mode == "talents":
             if touche == "Escape" or char in ("t", "i", "c"):
@@ -441,7 +443,8 @@ class Fenetre:
                 return
         if self.game.state != PLAYING or self.mode in ("sac", "action", "aide",
                                                        "competences", "accueil",
-                                                       "coffre", "talents"):
+                                                       "coffre", "talents",
+                                                       "options"):
             return
         case = self.case_sous(event.x, event.y)
         if case is None:
@@ -713,6 +716,8 @@ class Fenetre:
             self._dessiner_coffre()
         elif self.mode == "talents":
             self._dessiner_talents()
+        elif self.mode == "options":
+            self._dessiner_options()
         if self.game.state != PLAYING:
             self._dessiner_fin()
         if self.case_survolee:
@@ -1015,6 +1020,7 @@ class Fenetre:
             ("Sac", lambda: setattr(self, "mode", "sac"), True),
             ("Compétences", lambda: setattr(self, "mode", "competences"), True),
             ("Aide", lambda: setattr(self, "mode", "aide"), True),
+            ("Options", self.ouvrir_options, True),
         ]
         # Chaque bouton est dimensionné par son texte : ajouter une commande
         # plus tard ne fera pas déborder la barre.
@@ -1236,6 +1242,56 @@ class Fenetre:
                      "Fermer", lambda: setattr(self, "mode", "jeu"))
 
     # --- l'arbre des talents ---------------------------------------------
+    def ouvrir_options(self):
+        self.mode = "options"
+        self._reset_arme = False
+
+    def _dessiner_options(self):
+        """Les réglages — pour l'instant, le seul geste destructeur du jeu."""
+        lignes = ["Progression permanente",
+                  f"  {self.session.meta.xp:.0f} XP à dépenser · "
+                  f"{len(self.session.meta.noeuds)} talents pris · "
+                  f"{self.session.meta.runs} vies jouées",
+                  ""]
+        if self._reset_arme:
+            lignes += ["Tout effacer ? L'XP, les talents et le coffre sont",
+                       "perdus, et le donjon redevient le couloir vide du début.",
+                       "C'est sans retour."]
+        else:
+            lignes += ["Repartir de zéro efface la progression permanente :",
+                       "de quoi éprouver l'ouverture du jeu comme un nouveau",
+                       "joueur la verra."]
+        largeur = min(self.largeur - 40, 640)
+        hauteur = 96 + len(lignes) * 19
+        gauche = (self.largeur - largeur) / 2
+        haut = (HUD_HEIGHT + self.hauteur_carte - hauteur) / 2
+        self.canvas.create_rectangle(gauche, haut, gauche + largeur,
+                                     haut + hauteur, fill=PANNEAU,
+                                     outline=BORDURE, width=2)
+        self._texte(gauche + 16, haut + 14, "Options", gras=True)
+        for index, ligne in enumerate(lignes):
+            self._texte(gauche + 16, haut + 40 + index * 19, ligne,
+                        pale=ligne.startswith("  ") or index > 2)
+        y = haut + hauteur - 38
+        if self._reset_arme:
+            self._bouton(gauche + 16, y, 200, 26, "Oui, tout effacer",
+                         self._reinitialiser)
+            self._bouton(gauche + 224, y, 100, 26, "Annuler",
+                         lambda: setattr(self, "_reset_arme", False))
+        else:
+            self._bouton(gauche + 16, y, 200, 26, "Repartir de zéro",
+                         lambda: setattr(self, "_reset_arme", True))
+        self._bouton(gauche + largeur - 92, y, 80, 26, "Fermer",
+                     lambda: setattr(self, "mode", "jeu"))
+
+    def _reinitialiser(self):
+        self.arreter_trajet()
+        self.game = self.session.reinitialiser()
+        self._panneau_ouvert_a = None
+        self._reset_arme = False
+        self.mode = "accueil"
+        self.note = "Progression effacée : tout est à refaire."
+
     def _dessiner_talents(self):
         """L'arbre en éventail : le centre, et les branches qui s'en ouvrent.
 

@@ -186,6 +186,18 @@ def load(chemin=None):
         return Meta()
 
 
+def effacer(chemin=None):
+    """Supprime la sauvegarde. Vrai si le fichier n'existe plus après coup."""
+    chemin = chemin or CHEMIN_DEFAUT
+    try:
+        os.remove(chemin)
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
 def save(meta, chemin=None):
     """Écrit la progression. Renvoie False si l'écriture a échoué."""
     chemin = chemin or CHEMIN_DEFAUT

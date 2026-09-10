@@ -202,6 +202,20 @@ class Session:
             if not any(objet.type.key == cle for objet in heros.inventory):
                 heros.add_item(items_mod.make(cle, registre=heros.registre))
 
+    def reinitialiser(self):
+        """Efface toute la progression et rouvre une première vie.
+
+        Sert à éprouver l'ouverture du jeu : c'est le seul geste qui détruit
+        des acquis, d'où la confirmation demandée par l'interface.
+        """
+        if self.sauvegarde:
+            meta_mod.effacer(self.chemin)
+        self.meta = meta_mod.Meta()
+        self.player = None
+        self.dernier_gain = None
+        self.dernier_bilan = None
+        return self.demarrer()
+
     def _sauver(self):
         if self.sauvegarde:
             meta_mod.save(self.meta, self.chemin)
