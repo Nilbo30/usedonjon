@@ -270,8 +270,8 @@ ferait des ronds pour monter la marche : on y dépense, on n'y gagne pas.
 
 Deux boucles s'y imbriquent :
 
-- **mourir** — on perd sac et compétences, mais le niveau global monte, et les
-  descentes suivantes partent mieux équipées ;
+- **mourir** — on perd sac et compétences, mais l'XP permanente tombe, et la
+  descente suivante part sur un donjon un peu plus ouvert ;
 - **l'orbe de retour**, trouvée à partir de l'étage 4 — on remonte au refuge
   avec tout, sac et compétences comprises, mais la descente ne rapporte
   **aucune** progression permanente et la profondeur repart de zéro. On est plus
