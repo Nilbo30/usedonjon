@@ -45,6 +45,8 @@ class RunConfig:
         xp_depth_bonus=0.15,
         monster_scaling=0.06,
         hunger_scaling=0.05,
+        palier=10,
+        palier_scaling=1.45,
         max_fullness=100,
         start_hp=20,
         start_attack=6,
@@ -74,6 +76,11 @@ class RunConfig:
         # La faim se creuse avec la profondeur : sans cela, un donjon qu'on
         # n'a rien débloqué pour peupler se traverse à pied jusqu'au bout.
         self.hunger_scaling = hunger_scaling
+        # Les étages s'achètent par tranches, et chaque tranche franchie fait
+        # marcher les créatures d'un cran — la profondeur n'est pas une pente
+        # régulière, c'est un escalier.
+        self.palier = palier
+        self.palier_scaling = palier_scaling
         self.max_fullness = max_fullness
         self.start_hp = start_hp
         self.start_attack = start_attack

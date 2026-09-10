@@ -172,12 +172,16 @@ class Game:
         return monster
 
     def _scale_to_depth(self, monster):
-        """Les créatures s'endurcissent avec l'étage.
+        """Les créatures s'endurcissent avec l'étage, par pente et par marche.
 
         Sans ça, un donjon de 30 étages n'aurait plus rien à offrir passé le
-        huitième : le bestiaire s'arrête là.
+        huitième : le bestiaire s'arrête là. La pente est régulière ; la marche
+        tombe à chaque tranche d'étages achetée, pour qu'ouvrir la suite du
+        donjon se sente au premier pas et pas au dixième.
         """
-        facteur = 1 + self.config.monster_scaling * (self.depth - 1)
+        franchis = (self.depth - 1) // max(1, self.config.palier)
+        facteur = ((1 + self.config.monster_scaling * (self.depth - 1))
+                   * self.config.palier_scaling ** franchis)
         monster.base_max_hp = max(1, int(round(monster.base_max_hp * facteur)))
         monster.base_attack = max(1, int(round(monster.base_attack * facteur)))
         monster.base_defense = int(round(monster.base_defense * facteur))

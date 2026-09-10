@@ -44,9 +44,18 @@ class TestProfondeurRecompensee(unittest.TestCase):
 
     def test_sans_mise_a_l_echelle_les_monstres_restent_identiques(self):
         game = sandbox(seed=5)
-        game.config = game.config.replace(monster_scaling=0)
+        game.config = game.config.replace(monster_scaling=0, palier_scaling=1)
         self.assertEqual(self._gobelin(game, 20).max_hp,
                          self._gobelin(game, 1).max_hp)
+
+    def test_chaque_tranche_d_etages_fait_une_marche(self):
+        """Ouvrir la suite du donjon doit se sentir au premier pas."""
+        game = sandbox(seed=5)
+        palier = game.config.palier
+        dernier_du_haut = self._gobelin(game, palier).max_hp
+        premier_du_bas = self._gobelin(game, palier + 1).max_hp
+        pente = self._gobelin(game, palier).max_hp - self._gobelin(game, palier - 1).max_hp
+        self.assertGreater(premier_du_bas - dernier_du_haut, pente * 3)
 
 
 class TestFinDeRun(unittest.TestCase):

@@ -712,10 +712,27 @@ que sa classe de guerriers, et exige « Nourriture » : on ne peut pas armer des
 créatures avant qu'il y en ait.
 
 Sous cette forme, la série est monotone **avec ou sans** fond de donjon (13,8
-contre 14,0) : le remède de la profondeur n'est donc plus un correctif. Il est
-conservé comme dessin — l'escalier qui s'arrête à l'étage 8 donne un sommet à
-atteindre aux premières heures, et trois nœuds pour le repousser — mais c'est
-un choix, plus une nécessité.
+contre 14,0) : le remède de la profondeur n'est donc plus un correctif. Il reste
+comme dessin, et il a pris sa forme définitive — **le donjon s'achète par
+tranches de dix étages** : dix au départ, « Les profondeurs » en ouvre dix de
+plus, « Les abysses » dix encore.
+
+Et chaque tranche franchie fait **une marche**, pas une pente : au-delà du
+dixième étage les créatures gagnent d'un coup 45 %, et autant au vingt-et-
+unième. Ouvrir la suite du donjon doit se sentir au premier pas, pas au dixième.
+
+| étage | créatures |
+|---|---|
+| 10 | ×1,54 |
+| **11** | **×2,32** |
+| 20 | ×3,10 |
+| **21** | **×4,63** |
+| 30 | ×5,76 |
+
+Ces deux nœuds sont hors de portée du bot, qui meurt vers l'étage 5 : aucune
+campagne ne peut donc dire s'ils sont bien prix. C'est un test unitaire qui
+tient la marche — le premier étage d'une tranche doit coûter plus cher que
+trois étages de pente.
 
 **Le défaut que tout cela corrigeait, pour mémoire.** « Nourriture » à 3 XP rendait le donjon vide *survivable* : le bot le
 traversait jusqu'à l'étage 26 sans rencontrer âme qui vive, et le multiplicateur

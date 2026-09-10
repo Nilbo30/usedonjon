@@ -30,11 +30,10 @@ sur les objets concernés. Le moteur ne bouge pas.
 
 #: Ce qu'une partie vaut avant tout déblocage : un donjon nu.
 BASE_VERROUILLEE = {
-    # Le donjon s'arrête tôt tant qu'on ne l'a pas ouvert : sans cela, un
-    # étage vide se traverse jusqu'au fond, et le multiplicateur de profondeur
-    # paie une descente qui n'a couru aucun risque. Mesuré : 44 XP par vie en
-    # marchant dans le vide, contre 16 une fois les créatures réveillées.
-    "max_depth": 8,
+    # Le donjon s'achète par tranches de dix étages, et chaque tranche
+    # franchie fait monter les créatures d'un cran (voir `palier_scaling`) :
+    # ouvrir la suite du donjon doit se sentir au premier pas.
+    "max_depth": 10,
     "monsters_per_floor": (0, 0),
     "items_per_floor": (0, 0),
     "traps_per_floor": (0, 0),
@@ -198,17 +197,14 @@ _enregistrer(
           branche="Le refuge", parents=("coffre",), effets={"coffre_places": 4}),
 
     # --- Profond ----------------------------------------------------------
-    Noeud("descente", "La descente", 35,
-          "L'escalier s'enfonce plus loin : quinze étages au lieu de huit.",
+    Noeud("profondeurs", "Les profondeurs", 35,
+          "Dix étages de plus. Ce qui les habite est d'un autre calibre : "
+          "passé le dixième, les créatures changent de classe.",
           branche="Profond", parents=("epee",),
-          reglages={"max_depth": 15}),
+          reglages={"max_depth": 20}),
     Noeud("abysses", "Les abysses", 90,
-          "Vingt-deux étages. Ce qui vit là n'a jamais vu le jour.",
-          branche="Profond", parents=("descente",),
-          reglages={"max_depth": 22}),
-    Noeud("le_fond", "Le fond", 220,
-          "Trente étages, et le bout du donjon.",
-          branche="Profond", parents=("abysses",),
+          "Dix étages encore, et la même marche à franchir. Peu remontent.",
+          branche="Profond", parents=("profondeurs",),
           reglages={"max_depth": 30}),
     Noeud("voie_du_retour", "La voie du retour", 220,
           "L'orbe de retour apparaît à partir du quatrième étage.",
