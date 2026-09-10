@@ -106,10 +106,13 @@ def run_script(game, source, on_step=None):
 
 
 def autoplay(game, steps=200, on_step=None):
-    """Bot bête mais fonctionnel : mange, se soigne, tape, et fonce à l'escalier.
+    """Bot d'essai : il mange, se soigne, frappe, fuit ce qui le dépasse, lit
+    un parchemin quand il n'a plus le choix, et fonce à l'escalier.
 
-    Sert de test de robustesse rapide : des centaines de tours joués sans
-    exception, avec une graine fixe donc reproductibles.
+    Il sert de test de robustesse — des centaines de tours sans exception, à
+    graine fixe donc reproductibles — et d'instrument de mesure. À ce titre
+    ses lacunes comptent : ce qu'il ne sait pas faire, aucune campagne ne peut
+    l'évaluer.
     """
     from . import path
     from .game import PLAYING
@@ -126,8 +129,17 @@ def autoplay(game, steps=200, on_step=None):
         bloques = [m for m in game.monsters()
                    if chebyshev(m.pos, player.pos) == 1
                    and not game.can_attack(player, m)]
-        if adjacent:
+        redoutables = [m for m in adjacent if _echange_perdant(game, m)]
+        if redoutables and _urgence(game):
+            # Mourir avec sa téléportation en poche est le travers du bot
+            # bête : quand l'échange est perdu et la vie basse, on lit.
+            acted = game.cmd_use(_parchemin_de_secours(game))
+        elif redoutables and not _acculé(game):
+            acted = _fuir(game, path)        # on ne s'arrête pas pour ce qu'on
+        elif adjacent:                        # ne peut pas battre : on descend
             acted = game.cmd_move(step_toward(player.pos, adjacent[0].pos))
+        elif _find(game, "herbe_vie") is not None:
+            acted = game.cmd_use(_find(game, "herbe_vie"))   # PV définitifs
         elif bloques:
             acted = _se_replacer(game, bloques[0])
         elif _tir_possible(game) is not None:
@@ -155,6 +167,64 @@ def autoplay(game, steps=200, on_step=None):
         if on_step:
             on_step(game, ("auto",), acted)
     return game
+
+
+def _echange_perdant(game, monstre):
+    """L'échange coup pour coup tourne-t-il à notre désavantage ?
+
+    Le bot frappait tout ce qui passait à sa portée, y compris un automate qui
+    le tue en cinq coups quand il lui en faut huit. Compter, c'est déjà jouer.
+    """
+    joueur = game.player
+    inflige = max(1.0, joueur.attack - monstre.defense * 0.7)
+    encaisse = max(1.0, monstre.attack - joueur.defense * 0.7)
+    return monstre.hp / inflige > joueur.hp / encaisse
+
+
+def _urgence(game):
+    """Vie basse et parchemin en poche : le moment de s'en servir."""
+    joueur = game.player
+    return (joueur.hp <= joueur.max_hp * 0.4
+            and _parchemin_de_secours(game) is not None)
+
+
+def _parchemin_de_secours(game):
+    """Le slot d'un parchemin qui sort d'un mauvais pas, ou None.
+
+    On préfère ce qu'on connaît ; à bout de souffle, on lit n'importe quoi —
+    c'est ce que fait un joueur, et c'est ainsi qu'on identifie un parchemin.
+    """
+    from . import items as items_mod
+
+    joueur = game.player
+    for cle in ("parchemin_teleport", "parchemin_panique"):
+        slot = _find(game, cle)
+        if slot is not None and joueur.inventory[slot].identifie:
+            return slot
+    if joueur.hp > joueur.max_hp * 0.25:
+        return None
+    for index, objet in enumerate(joueur.inventory):
+        if objet.category == items_mod.SCROLL and not objet.identifie:
+            return index
+    return None
+
+
+def _acculé(game):
+    """Aucune case libre où reculer : autant frapper."""
+    from .geom import ALL_DIRS, add
+
+    for direction in ALL_DIRS:
+        case = add(game.player.pos, direction)
+        if game.can_step(game.player, direction) and not game.actor_at(case):
+            return False
+    return True
+
+
+def _fuir(game, path):
+    """Continuer vers l'escalier sans s'arrêter pour ce qu'on ne peut pas battre."""
+    if game.player.pos == game.level.stairs:
+        return game.cmd_descend()
+    return _seek(game, path, game.level.stairs)
 
 
 def _tir_possible(game, portee=6):
@@ -215,10 +285,19 @@ def _objet_proche(game, path, portee=14):
 
     Sans ça le bot ne ramasse que ce qu'il piétine, et toute mesure sur
     l'économie des objets ne dit rien du jeu — seulement de sa trajectoire.
+
+    Le ventre creux, il ne se détourne plus que pour ce qui se mange : il
+    mourait de faim en allant chercher une troisième épée.
     """
-    if len(game.player.inventory) >= game.player.max_items:
+    from . import items as items_mod
+
+    joueur = game.player
+    if len(joueur.inventory) >= joueur.max_items:
         return None
     connus = [pos for pos in game.level.items if pos in game.level.explored]
+    if joueur.fullness < joueur.max_fullness * 0.4:
+        connus = [pos for pos in connus
+                  if game.level.items[pos].category == items_mod.FOOD]
     if not connus:
         return None
     bloques = {m.pos for m in game.monsters()}

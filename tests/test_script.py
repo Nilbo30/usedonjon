@@ -81,3 +81,81 @@ class TestRobustesse(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestJugementDuBot(unittest.TestCase):
+    """Le bot est l'instrument de mesure : ce qu'il ne sait pas faire, on ne
+    peut pas le mesurer. Ces quatre réflexes sont ceux qui lui manquaient."""
+
+    def setUp(self):
+        from tests.helpers import sandbox
+
+        self.game = sandbox(seed=6)
+        self.game.update_explored()     # `sandbox` déplace le héros après coup
+        self.joueur = self.game.player
+        self.joueur.inventory = []
+        self.case = (self.joueur.pos[0] + 1, self.joueur.pos[1])
+
+    def _monstre(self, **stats):
+        from tests.helpers import place_monster
+
+        return place_monster(self.game, self.case, **stats)
+
+    def test_il_frappe_ce_qu_il_peut_battre(self):
+        faible = self._monstre(hp=2, attack=1, defense=0)
+        autoplay(self.game, 1)
+        self.assertLess(faible.hp, 2)
+
+    def test_il_fuit_un_echange_perdant(self):
+        colosse = self._monstre(hp=999, attack=99, defense=99)
+        depart = self.joueur.pos
+        autoplay(self.game, 1)
+        self.assertEqual(colosse.hp, 999)          # il n'a pas frappé
+        self.assertNotEqual(self.joueur.pos, depart)
+
+    def test_accule_il_se_bat_quand_meme(self):
+        """Fuir sans issue ferait tourner le bot dans le vide."""
+        from donjon.geom import ALL_DIRS, add
+
+        colosse = self._monstre(hp=999, attack=99, defense=0)
+        for direction in ALL_DIRS:
+            case = add(self.joueur.pos, direction)
+            if case != self.case:
+                self.game.level.set_tile(case, "wall")
+        autoplay(self.game, 1)
+        self.assertLess(colosse.hp, 999)
+
+    def test_il_lit_un_parchemin_plutot_que_de_mourir(self):
+        from donjon import items
+
+        self._monstre(hp=999, attack=99, defense=99)
+        parchemin = items.make("parchemin_teleport")
+        self.game.identification.identifier("parchemin_teleport")
+        self.joueur.add_item(parchemin)
+        self.joueur.hp = 2
+        autoplay(self.game, 1)
+        self.assertEqual(self.joueur.inventory, [])
+
+    def test_il_mange_l_herbe_de_vie_au_lieu_de_la_garder(self):
+        from donjon import items
+
+        maximum = self.joueur.max_hp
+        self.joueur.add_item(items.make("herbe_vie"))
+        autoplay(self.game, 1)
+        self.assertGreater(self.joueur.max_hp, maximum)
+
+    def test_le_ventre_creux_il_ne_se_detourne_que_pour_manger(self):
+        from donjon import items, path
+        from donjon.script import _objet_proche
+
+        from donjon.geom import chebyshev
+
+        self.joueur.fullness = 5
+        proches = sorted((pos for pos in self.game.level.explored
+                          if self.game.level.walkable(pos)
+                          and pos != self.joueur.pos),
+                         key=lambda pos: chebyshev(pos, self.joueur.pos))
+        self.game.level.items[proches[0]] = items.make("epee_fer")
+        self.assertIsNone(_objet_proche(self.game, path))
+        self.game.level.items[proches[1]] = items.make("onigiri")
+        self.assertEqual(_objet_proche(self.game, path), proches[1])

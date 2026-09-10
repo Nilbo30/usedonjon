@@ -768,6 +768,53 @@ liens qui traversent qu'une permutation ne peut en démêler. Le test ne réclam
 donc plus zéro, il vérifie que l'ordre retenu **vaut le meilleur possible**, en
 essayant les 720 permutations — et il nomme l'ordre gagnant s'il en trouve un.
 
+### L'instrument avait des lacunes, pas le jeu
+
+Le bot mourait vers l'étage 9 avec l'arbre entier acheté, et l'on pouvait
+croire à un mur de difficulté. Le diagnostic dit autre chose. Son sac **au
+moment de mourir** :
+
+```
+parchemin_teleport · herbe_vie · onigiri · epee_bois · epee_fer
+onigiri · onigiri · parchemin_panique · bouclier_fer
+```
+
+Il mourait en tenant sa téléportation et son parchemin de panique, sans avoir
+lu un seul parchemin de sa vie, en portant une herbe de vie jamais mangée, et
+en frappant tout ce qui passait — y compris un automate qui le tue en 5 coups
+quand il lui en faut 8. **Ce n'était pas la puissance qui lui manquait, c'était
+le jugement**, et une lacune de l'instrument se lit exactement comme un défaut
+du jeu.
+
+Quatre réflexes appris :
+
+* **compter avant de frapper** — `hp/dégâts` des deux côtés, et l'on ne
+  s'arrête pas pour ce qu'on ne peut pas battre ;
+* **fuir vers l'escalier** plutôt que vers nulle part : fuir, c'est descendre ;
+* **lire un parchemin** quand l'échange est perdu et la vie basse — les connus
+  d'abord, n'importe lequel à bout de souffle, ce qui est aussi la façon dont
+  on identifie un parchemin ;
+* **manger l'herbe de vie**, et le ventre creux, ne plus se détourner que pour
+  ce qui se mange : il mourait de faim en allant chercher une troisième épée.
+
+| | avant | après |
+|---|---|---|
+| étage atteint (arbre complet) | 9,1 | **10,4** |
+| étage maximum | 13 | **19** |
+| palier de l'étage 11 franchi | jamais | **32 vies sur 60** |
+| parchemins lus par vie | 0 | 3,3 |
+
+Le premier palier est enfin franchi une fois sur deux : les nœuds de
+profondeur deviennent mesurables.
+
+**Mais changer l'instrument change toutes les mesures**, et il faut le dire :
+les chiffres d'ouverture des étapes précédentes ont bougé. La série monte
+toujours dans l'ensemble, avec deux nœuds qui penchent du mauvais côté sans
+franchir la barre — « L'épée » (−1,8, soit 1,6 σ) et « Projectiles » (−3,6,
+soit 1,9 σ) sur 120 parties chacun. Sous deux sigma, je ne rejoue pas les
+chiffres : c'est précisément l'erreur que la série des « trois reculs » m'avait
+apprise.
+
 ## Règles fixées en cours de route
 
 **Descendre paie.** L'XP par action est multipliée par
