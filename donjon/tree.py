@@ -15,7 +15,8 @@ contenu :
 * `classes` — les classes de créatures que le nœud réveille (voir monsters.py) ;
 * `repetitions` — combien de fois on peut le reprendre (1 par défaut). Les
   effets d'un nœud repris s'additionnent d'eux-mêmes : le cumul lit la liste
-  des achats, pas un ensemble.
+  des achats, pas un ensemble ;
+* `facteur_cout` — de combien son prix grimpe à chaque reprise.
 
 Ce dernier point est une règle du jeu, pas un détail : **ce que le héros
 apprend, le donjon l'apprend aussi**. Le nœud qui te donne une épée fait venir
@@ -40,7 +41,7 @@ BASE_VERROUILLEE = {
 class Noeud:
     def __init__(self, key, name, cost, description, branche="", parents=(),
                  effets=None, reglages=None, unlocks=(), objets=(), classes=(),
-                 repetitions=1):
+                 repetitions=1, facteur_cout=1):
         self.key = key
         self.name = name
         self.cost = cost
@@ -53,6 +54,7 @@ class Noeud:
         self.objets = tuple(objets)            # s'ajoutent au sac de départ
         self.classes = tuple(classes)          # créatures réveillées
         self.repetitions = repetitions         # combien de fois on peut le reprendre
+        self.facteur_cout = facteur_cout       # de combien le prix grimpe à chaque reprise
 
     def accessible(self, acquis):
         return all(parent in acquis for parent in self.parents)
@@ -60,6 +62,15 @@ class Noeud:
     def reste_a_prendre(self, acquis):
         """Combien de fois ce nœud peut encore être acheté."""
         return self.repetitions - list(acquis).count(self.key)
+
+    def prix(self, acquis=()):
+        """Ce que coûte la prochaine reprise : le prix grimpe à chaque fois.
+
+        Sans cela, un nœud répétable serait une aubaine : payer quatre fois
+        trois XP pour cent points de ventre ne vaudrait aucune hésitation.
+        """
+        return round(self.cost
+                     * self.facteur_cout ** list(acquis).count(self.key))
 
     def __repr__(self):
         return f"<Noeud {self.key} {self.cost} XP>"
@@ -75,18 +86,21 @@ def _enregistrer(*noeuds):
 
 _enregistrer(
     # --- Survie : ce qui existe dès le premier pas ------------------------
-    Noeud("estomac", "Estomac solide", 3, "+25 de ventre au départ.",
-          branche="Survie", effets={"max_fullness": 25}),
-    Noeud("constitution", "Constitution", 3, "+5 points de vie au départ.",
-          branche="Survie", effets={"start_hp": 5}),
+    Noeud("estomac", "Estomac solide", 3,
+          "+25 de ventre au départ. Se reprend, de plus en plus cher.",
+          branche="Survie", repetitions=4, facteur_cout=3,
+          effets={"max_fullness": 25}),
+    Noeud("constitution", "Constitution", 3,
+          "+5 points de vie au départ. Se reprend, de plus en plus cher.",
+          branche="Survie", repetitions=4, facteur_cout=3,
+          effets={"start_hp": 5}),
     Noeud("besace", "Besace", 12, "+2 places dans le sac.",
           branche="Survie", parents=("estomac",), effets={"inventory_size": 2}),
-    Noeud("ventre_ogre", "Ventre d'ogre", 35, "+40 de ventre.",
-          branche="Survie", parents=("estomac",), effets={"max_fullness": 40}),
-    Noeud("endurci", "Endurci", 35, "+10 points de vie.",
-          branche="Survie", parents=("constitution",), effets={"start_hp": 10}),
-    Noeud("second_souffle", "Second souffle", 220, "+20 points de vie.",
-          branche="Survie", parents=("endurci",), effets={"start_hp": 20}),
+    Noeud("second_souffle", "Second souffle", 220,
+          "Une fois par descente, le coup fatal ne l'est pas : tu te relèves "
+          "à mi-vie.",
+          branche="Survie", parents=("constitution",),
+          effets={"reanimations": 1}),
 
     # --- Équipement : la réponse au problème posé par les créatures -------
     Noeud("epee", "L'épée", 12,
@@ -122,9 +136,9 @@ _enregistrer(
           branche="Monde vivant", parents=("creatures",), unlocks=("butin",)),
 
     # --- Trouvailles : ce qui traîne par terre ----------------------------
-    Noeud("nourriture", "Nourriture", 12,
+    Noeud("nourriture", "Nourriture", 3,
           "Des vivres apparaissent au sol : de quoi tenir plus loin que ce "
-          "qu'on emporte. Rien ne vient avec — c'est le seul répit de l'arbre.",
+          "qu'on emporte.",
           branche="Trouvailles", unlocks=("vivres",),
           reglages={"items_per_floor": (2, 4)}),
     Noeud("exploration", "Sens de l'orientation", 12,

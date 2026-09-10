@@ -90,6 +90,44 @@ class Level:
                         self.explored.add(p)
 
 
+def _connexe(level):
+    """Toutes les cases praticables communiquent-elles encore ?"""
+    from collections import deque
+
+    cases = set(level.walkable_cells())
+    if not cases:
+        return True
+    depart = next(iter(cases))
+    vus, file = {depart}, deque([depart])
+    while file:
+        courant = file.popleft()
+        for delta in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            voisin = add(courant, delta)
+            if voisin in cases and voisin not in vus:
+                vus.add(voisin)
+                file.append(voisin)
+    return len(vus) == len(cases)
+
+
+def _degraisser_couloirs(level):
+    """Efface les pâtés 2×2 laissés par deux couloirs qui se croisent.
+
+    Deux tracés en L qui se recouvrent produisent une flaque de couloir large
+    de deux cases : ça ne casse rien, mais ça se voit et ça ne ressemble plus à
+    un couloir. On rend au mur la case dont personne n'a besoin — et on vérifie
+    à chaque fois que l'étage reste d'un seul tenant.
+    """
+    for pos in sorted(c for c in level.walkable_cells()
+                      if level.tile(c) == tiles.CORRIDOR):
+        bloc = [pos, add(pos, (1, 0)), add(pos, (0, 1)), add(pos, (1, 1))]
+        if not all(level.in_bounds(case) and level.tile(case) == tiles.CORRIDOR
+                   for case in bloc):
+            continue
+        level.set_tile(pos, tiles.WALL)
+        if not _connexe(level):
+            level.set_tile(pos, tiles.CORRIDOR)
+
+
 def generate(rng, width=60, height=22, cols=3, rows=2):
     """Construit un étage : une salle par secteur, puis relie les secteurs voisins."""
     level = Level(width, height)
@@ -118,6 +156,8 @@ def generate(rng, width=60, height=22, cols=3, rows=2):
             other = grid_rooms.get((cx + dx, cy + dy))
             if other:
                 _carve_corridor(level, room.center, other.center, rng)
+
+    _degraisser_couloirs(level)
 
     # Escalier dans une salle au hasard.
     stair_room = rng.choice(level.rooms)

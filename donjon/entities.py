@@ -118,6 +118,9 @@ class Player(Actor):
         self.weapon = None
         self.shield = None
         self.max_items = config.inventory_size
+        # Réserve de « second souffle » : elle voyage avec le héros, donc
+        # traverse le refuge et se perd avec lui.
+        self.reanimations = config.reanimations
 
     @property
     def weapon_skill(self):

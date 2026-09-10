@@ -66,9 +66,11 @@ class TestRobustesse(unittest.TestCase):
         game.level.set_tile((pos[0] + 1, pos[1]), "wall")
         game.level.set_tile((pos[0], pos[1] + 1), "wall")
         place_monster(game, (pos[0] + 1, pos[1] + 1), hp=9999)
-        avant = game.turn
-        autoplay(game, 50)
-        self.assertGreaterEqual(game.turn - avant, 50)
+        refusees = []
+        autoplay(game, 50, on_step=lambda _g, _cmd, agi: refusees.append(agi))
+        # C'est l'action refusée qu'on traque, pas l'horloge : le compteur de
+        # tours dépend de l'énergie des acteurs et retarde d'un cran.
+        self.assertEqual(refusees.count(False), 0)
 
     def test_les_monstres_restent_sur_des_cases_valides(self):
         game = Game(seed=5)

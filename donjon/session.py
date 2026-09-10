@@ -195,6 +195,7 @@ class Session:
         heros.base_defense = config.start_defense
         heros.max_fullness = config.max_fullness
         heros.max_items = config.inventory_size
+        heros.reanimations = max(heros.reanimations, config.reanimations)
         if gain_pv > 0:
             heros.hp += gain_pv
         # Et ce que le nœud ajoute au sac de départ, s'il n'y est pas déjà.
@@ -230,7 +231,7 @@ class Session:
         lignes = [f"+{self.dernier_gain:.0f} XP  "
                   f"(tu en as {self.meta.xp:.0f} à dépenser)"]
         abordables = [noeud for noeud in tree.disponibles(self.meta.noeuds)
-                      if noeud.cost <= self.meta.xp]
+                      if noeud.prix(self.meta.noeuds) <= self.meta.xp]
         if abordables:
             lignes.append(f"{len(abordables)} talent(s) à ta portée — "
                           f"touche « t » au refuge.")

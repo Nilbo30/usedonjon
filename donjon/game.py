@@ -483,6 +483,12 @@ class Game:
         if actor.alive:
             return False
         if actor.is_player:
+            if actor.reanimations > 0:
+                actor.reanimations -= 1
+                actor.alive = True
+                actor.hp = max(1, actor.max_hp // 2)
+                self.say("Second souffle : tu te relèves d'entre les morts !")
+                return False
             tueur = f" Tué par {killer.name}." if killer and not killer.is_player else ""
             self.end_run(DEAD, f"Tu t'effondres... Game over.{tueur}")
             return True

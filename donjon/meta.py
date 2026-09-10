@@ -72,14 +72,15 @@ class Meta:
         """Le nœud existe, n'est pas acquis, ses parents le sont, et on peut payer."""
         noeud = tree.ARBRE.get(cle)
         return bool(noeud and noeud.reste_a_prendre(self.noeuds) > 0
-                    and noeud.accessible(self.noeuds) and self.xp >= noeud.cost)
+                    and noeud.accessible(self.noeuds)
+                    and self.xp >= noeud.prix(self.noeuds))
 
     def acheter(self, cle):
         """Achète un talent. Renvoie le nœud, ou None si ce n'est pas possible."""
         if not self.achetable(cle):
             return None
         noeud = tree.ARBRE[cle]
-        self.xp -= noeud.cost
+        self.xp -= noeud.prix(self.noeuds)
         self.noeuds.append(cle)
         return noeud
 
@@ -154,11 +155,12 @@ class Meta:
             lignes.append(f"Record : étage {self.best_depth} · "
                           f"{self.best_levels} niveaux de compétences")
         abordables = [n for n in tree.disponibles(self.noeuds)
-                      if n.cost <= self.xp]
+                      if n.prix(self.noeuds) <= self.xp]
         if abordables:
             lignes.append("À portée : " + " · ".join(
-                f"{n.name} ({n.cost})" for n in sorted(abordables,
-                                                       key=lambda n: n.cost)[:3]))
+                f"{n.name} ({n.prix(self.noeuds)})"
+                for n in sorted(abordables,
+                                key=lambda n: n.prix(self.noeuds))[:3]))
         return lignes
 
     # --- persistance -----------------------------------------------------

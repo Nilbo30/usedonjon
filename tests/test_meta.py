@@ -86,10 +86,13 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
         base = RunConfig()
         meta = Meta(xp=1000)
         meta.acheter("estomac")
-        meta.acheter("ventre_ogre")
-        attendu = (base.max_fullness + tree.ARBRE["estomac"].effets["max_fullness"]
-                   + tree.ARBRE["ventre_ogre"].effets["max_fullness"])
+        meta.acheter("besace")
+        attendu = (base.max_fullness
+                   + tree.ARBRE["estomac"].effets["max_fullness"])
         self.assertEqual(meta.run_config(base).max_fullness, attendu)
+        self.assertEqual(meta.run_config(base).inventory_size,
+                         base.inventory_size
+                         + tree.ARBRE["besace"].effets["inventory_size"])
 
     def test_les_objets_de_depart_s_accumulent(self):
         """Deux nœuds d'équipement remplissent le même sac, sans s'écraser."""
@@ -145,15 +148,28 @@ class TestAchats(unittest.TestCase):
 
     def test_les_prerequis_sont_respectes(self):
         meta = Meta(xp=1000)
-        self.assertIsNone(meta.acheter("ventre_ogre"))   # exige « estomac »
+        self.assertIsNone(meta.acheter("besace"))        # exige « estomac »
         meta.acheter("estomac")
-        self.assertIsNotNone(meta.acheter("ventre_ogre"))
+        self.assertIsNotNone(meta.acheter("besace"))
 
     def test_on_n_achete_pas_deux_fois(self):
         meta = Meta(xp=1000)
+        meta.acheter("besace")                           # exige « estomac »
         meta.acheter("estomac")
-        self.assertIsNone(meta.acheter("estomac"))
-        self.assertEqual(meta.noeuds.count("estomac"), 1)
+        meta.acheter("besace")
+        self.assertIsNone(meta.acheter("besace"))
+        self.assertEqual(meta.noeuds.count("besace"), 1)
+
+    def test_un_noeud_repetable_coute_de_plus_en_plus_cher(self):
+        meta = Meta(xp=1000)
+        prix = []
+        for _ in range(tree.ARBRE["estomac"].repetitions):
+            prix.append(tree.ARBRE["estomac"].prix(meta.noeuds))
+            avant = meta.xp
+            meta.acheter("estomac")
+            self.assertEqual(avant - meta.xp, prix[-1])
+        self.assertEqual(prix, sorted(prix))
+        self.assertGreater(prix[-1], prix[0])
 
     def test_la_capacite_du_coffre_suit_l_arbre(self):
         meta = Meta(xp=1000)

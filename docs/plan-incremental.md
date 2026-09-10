@@ -649,6 +649,42 @@ faisant des ronds dans une pièce sans faim ni monstre — le farm exact que le
 multiplicateur de profondeur était censé rendre absurde. `xp_multiplier()`
 renvoie désormais **zéro** au refuge : on y dépense, on n'y gagne pas.
 
+### Retours de partie, deuxième salve
+
+**Le trajet à la souris s'arrêtait devant les portes** — et la cause était plus
+large qu'une porte. Le calcul de chemin exemptait la case d'arrivée de *toutes*
+les vérifications, occupation **et** géométrie, pour permettre de viser un
+monstre. Le dernier pas pouvait donc couper l'angle d'un mur, le moteur le
+refusait ensuite, et le héros restait planté sans explication : **10 962 cases
+concernées** sur 200 étages. La géométrie est désormais séparée du reste et ne
+souffre aucune exception.
+
+Deux tests ont chuté au passage, et tous deux parce que le correctif améliore le
+jeu : un monstre bloqué derrière un angle sait maintenant faire le tour (le test
+comptait sur son incapacité), et le compteur de tours du bot retarde d'un cran
+sur l'horloge d'énergie (le test traquait la mauvaise grandeur — c'est l'action
+refusée qui trahit un bot qui tourne à vide, pas l'horloge).
+
+**Les pâtés de couloir.** Deux tracés en L qui se recouvrent laissaient une
+flaque de couloir large de deux cases — 35 sur 200 étages. Un dégraissage rend
+au mur la case dont personne n'a besoin, en vérifiant à chaque fois que l'étage
+reste d'un seul tenant.
+
+**Les nœuds de statistiques deviennent répétables**, avec un prix qui grimpe :
+`facteur_cout=3` donne 3, 9, 27, 81 XP pour quatre reprises. « Ventre d'ogre »
+et « Endurci » disparaissent — ils n'étaient que la deuxième marche d'un
+escalier que le nœud sait maintenant monter seul. Sans cette montée du prix, un
+nœud répétable serait une aubaine sans hésitation.
+
+**« Second souffle » devient une vraie réanimation** : une fois par descente, le
+coup fatal ne l'est pas et l'on se relève à mi-vie. La réserve voyage avec le
+héros, donc traverse le refuge et se perd avec lui.
+
+**« Nourriture » passe de 12 à 3 XP.** La première vie est un couloir vide où
+l'on meurt de faim : sa réponse doit être à portée de la première mort. Le
+rythme s'en trouve transformé — Nourriture à la vie 2,8 au lieu de 10,7, et
+toute l'ouverture suit.
+
 ## Règles fixées en cours de route
 
 **Descendre paie.** L'XP par action est multipliée par

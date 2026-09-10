@@ -10,17 +10,31 @@ from collections import deque
 from .geom import ALL_DIRS, add, is_diagonal
 
 
-def _passable(level, src, delta, blocked, allowed=None):
+def _franchissable(level, src, delta):
+    """La géométrie autorise-t-elle ce pas : pas de mur, pas d'angle coupé ?
+
+    Séparée du reste parce qu'elle ne souffre **aucune** exception : la case
+    d'arrivée peut être occupée, elle ne peut pas être derrière le coin d'un
+    mur. Confondre les deux faisait planifier un dernier pas que le moteur
+    refusait ensuite, et le trajet s'arrêtait sans explication devant la porte.
+    """
     dest = add(src, delta)
-    if not level.walkable(dest) or dest in blocked:
-        return False
-    if allowed is not None and dest not in allowed:
+    if not level.walkable(dest):
         return False
     if is_diagonal(delta):
         if not (level.walkable(add(src, (delta[0], 0)))
                 and level.walkable(add(src, (0, delta[1])))):
             return False
     return True
+
+
+def _passable(level, src, delta, blocked, allowed=None):
+    dest = add(src, delta)
+    if dest in blocked:
+        return False
+    if allowed is not None and dest not in allowed:
+        return False
+    return _franchissable(level, src, delta)
 
 
 def find_path(level, start, goal, blocked=frozenset(), max_nodes=4000,
@@ -44,10 +58,11 @@ def find_path(level, start, goal, blocked=frozenset(), max_nodes=4000,
             nxt = add(current, delta)
             if nxt in came_from:
                 continue
-            # La case d'arrivée est autorisée même si occupée (c'est la cible).
-            if nxt != goal and not _passable(level, current, delta, blocked, allowed):
+            # La case d'arrivée est autorisée même si occupée (c'est la cible)
+            # — mais la géométrie, elle, ne se négocie jamais.
+            if not _franchissable(level, current, delta):
                 continue
-            if nxt == goal and not level.walkable(nxt):
+            if nxt != goal and not _passable(level, current, delta, blocked, allowed):
                 continue
             came_from[nxt] = current
             if nxt == goal:

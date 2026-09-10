@@ -84,6 +84,10 @@ COULEUR_BRANCHE = {
 }
 
 COULEUR_MONSTRE = "#c76b6b"
+#: Quelques objets méritent leur propre couleur, la catégorie ne suffisant pas :
+#: une pierre n'est pas une flèche.
+COULEUR_PAR_OBJET = {"pierre": "#9a9aa8"}
+
 COULEUR_OBJET = {
     items_mod.HERB: "#7ad07a",
     items_mod.SCROLL: "#ded1a8",
@@ -820,7 +824,8 @@ class Fenetre:
 
     def _objet(self, px, py, objet, vue):
         t = self.tile
-        base = COULEUR_OBJET.get(objet.category, "#cccccc")
+        base = COULEUR_PAR_OBJET.get(
+            objet.type.key, COULEUR_OBJET.get(objet.category, "#cccccc"))
         couleur = base if vue else sombre(base)
         cx, cy = px + t / 2, py + t / 2
         categorie = objet.category
@@ -846,6 +851,12 @@ class Fenetre:
             self.canvas.create_polygon(cx - 4, cy - 5, cx + 4, cy - 5,
                                        cx + 4, cy + 1, cx, cy + 5, cx - 4, cy + 1,
                                        fill=couleur, outline="")
+        elif objet.type.key == "pierre":        # un caillou, pas une flèche
+            self.canvas.create_polygon(cx - 4, cy + 2, cx - 2, cy - 4,
+                                       cx + 3, cy - 3, cx + 4, cy + 3,
+                                       cx, cy + 5,
+                                       fill=couleur,
+                                       outline=melange(couleur, FOND, 0.4))
         else:                                   # projectiles
             self.canvas.create_line(cx - 4, cy + 4, cx + 4, cy - 4,
                                     fill=couleur, width=2)
@@ -1011,8 +1022,8 @@ class Fenetre:
         # quatre boutons dont trois éteints, c'était une barre de brouillard.
         boutons = [
             (self.libelle_action(), self.action_sur_place, True),
-            ("Explorer", self.explorer,
-             not au_refuge and "exploration" in self.game.config.unlocks),
+            *([("Explorer", self.explorer, not au_refuge)]
+              if "exploration" in self.game.config.unlocks else []),
             ("Se reposer", self.game.cmd_rest,
              joueur.hp < joueur.max_hp and not self.game.monsters_visible()
              and not au_refuge),
@@ -1460,7 +1471,7 @@ class Fenetre:
         elif pris:
             marque = f"{pris}/{noeud.repetitions}"
         else:
-            marque = str(noeud.cost)
+            marque = str(noeud.prix(meta.noeuds))
         self.canvas.create_text(x, y, text=marque, fill=dedans,
                                 font=("TkDefaultFont", 8, "bold"))
         self._nom_de_talent(noeud, x, y, theta, largeur, nom, gras=achetable)

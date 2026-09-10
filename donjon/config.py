@@ -55,6 +55,7 @@ class RunConfig:
         unlocks=(),
         classes=(),
         recuperation_projectile=0.0,
+        reanimations=0,
     ):
         self.max_depth = max_depth
         self.spawn_interval = spawn_interval
@@ -87,6 +88,8 @@ class RunConfig:
         self.classes = frozenset(classes) if classes else TOUTES_CLASSES
         # Chance qu'un projectile qui touche retombe au sol au lieu d'être perdu.
         self.recuperation_projectile = recuperation_projectile
+        # Combien de fois le coup fatal ne l'est pas, dans une descente.
+        self.reanimations = reanimations
 
     def replace(self, **changements):
         """Copie modifiée : `config.replace(max_depth=10)`."""

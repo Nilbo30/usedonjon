@@ -78,11 +78,16 @@ class TestAngles(unittest.TestCase):
         self.assertTrue(self.game.can_attack(self.game.player, self.monstre))
 
     def test_le_monstre_ne_frappe_pas_a_travers_l_angle(self):
+        """Il ne frappe pas — mais il a le droit de faire le tour.
+
+        Le test attendait autrefois dix tours sans dégât : il comptait sur un
+        monstre incapable de contourner deux murs, ce qui était un défaut du
+        calcul de chemin et non une règle du jeu.
+        """
         self.murer_l_angle()
         self.assertFalse(self.game.can_attack(self.monstre, self.game.player))
         pv = self.game.player.hp
-        for _ in range(10):
-            self.game.cmd_wait()
+        self.game.cmd_wait()
         self.assertEqual(self.game.player.hp, pv)
 
     def test_le_heros_non_plus(self):
@@ -198,3 +203,50 @@ class TestApparitions(unittest.TestCase):
                 monstre = game.spawn_monster(away_from_player=True)
                 if monstre is not None:
                     self.assertNotIn(monstre.pos, vues, f"graine {graine}")
+
+
+class TestSecondSouffle(unittest.TestCase):
+    """Le coup fatal qui ne l'est pas — une fois par descente."""
+
+    def setUp(self):
+        from tests.helpers import place_monster, sandbox
+
+        self.game = sandbox(seed=8)
+        self.joueur = self.game.player
+        self.monstre = place_monster(
+            self.game, (self.joueur.pos[0] + 1, self.joueur.pos[1]),
+            hp=999, attack=999)
+
+    def test_sans_le_talent_le_coup_fatal_tue(self):
+        from donjon.game import DEAD
+
+        self.game.attack(self.monstre, self.joueur)
+        self.assertEqual(self.game.state, DEAD)
+
+    def test_avec_le_talent_on_se_releve_a_mi_vie(self):
+        from donjon.game import PLAYING
+
+        self.joueur.reanimations = 1
+        self.game.attack(self.monstre, self.joueur)
+        self.assertEqual(self.game.state, PLAYING)
+        self.assertTrue(self.joueur.alive)
+        self.assertEqual(self.joueur.hp, self.joueur.max_hp // 2)
+        self.assertEqual(self.joueur.reanimations, 0)
+
+    def test_elle_ne_sert_qu_une_fois(self):
+        from donjon.game import DEAD
+
+        self.joueur.reanimations = 1
+        self.game.attack(self.monstre, self.joueur)
+        self.game.attack(self.monstre, self.joueur)
+        self.assertEqual(self.game.state, DEAD)
+
+    def test_le_talent_la_donne_au_heros(self):
+        from donjon.session import Session
+
+        session = Session(sauvegarde=False, seed=8)
+        session.meta.xp = 10 ** 4
+        for _ in range(4):
+            session.meta.acheter("constitution")
+        session.meta.acheter("second_souffle")
+        self.assertEqual(session.descendre().player.reanimations, 1)

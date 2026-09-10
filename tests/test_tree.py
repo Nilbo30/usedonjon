@@ -208,12 +208,14 @@ class TestRythme(unittest.TestCase):
             autoplay(session.descendre(), 30000)
             session.avancer()
             while True:
-                candidats = [n for n in tree.disponibles(session.meta.noeuds)
-                             if n.cost <= session.meta.xp]
-                if not candidats:
+                prix = {n.key: n.prix(session.meta.noeuds)
+                        for n in tree.disponibles(session.meta.noeuds)}
+                abordables = [cle for cle, cout in prix.items()
+                              if cout <= session.meta.xp]
+                if not abordables:
                     break
                 ordre.append(session.acheter(
-                    min(candidats, key=lambda n: n.cost).key).key)
+                    min(abordables, key=lambda cle: prix[cle])).key)
         self.assertIn("epee", ordre)
         self.assertIn("creatures", ordre)
         self.assertLess(ordre.index("creatures"), ordre.index("epee"))
