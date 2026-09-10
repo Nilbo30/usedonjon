@@ -634,6 +634,21 @@ entière. Le bug de conception s'est révélé dans un test qui bouclait sans fi
 `while add_item(...)` ne terminait plus, puisqu'une pile accepte toujours un
 exemplaire de plus. C'est exactement ce que le plafond corrige.
 
+### Deux bugs de la stèle, et une fuite d'XP
+
+**Bloquant** : le panneau des talents se rouvrait dès qu'on le fermait. La règle
+disait « si le héros est sur la stèle, ouvrir » — vraie tant qu'on piétine la
+case, donc refermer relançait l'ouverture au tour suivant, sans issue. Elle dit
+maintenant « **en arrivant** sur la stèle » : la fenêtre retient la case dont
+elle a déjà ouvert le panneau et l'oublie quand on s'en éloigne. Le coffre avait
+le même défaut, dormant.
+
+**Le refuge entraînait.** Marcher au refuge montait la compétence de marche, et
+comme la monnaie du méta est la somme des niveaux, on pouvait acheter l'arbre en
+faisant des ronds dans une pièce sans faim ni monstre — le farm exact que le
+multiplicateur de profondeur était censé rendre absurde. `xp_multiplier()`
+renvoie désormais **zéro** au refuge : on y dépense, on n'y gagne pas.
+
 ## Règles fixées en cours de route
 
 **Descendre paie.** L'XP par action est multipliée par

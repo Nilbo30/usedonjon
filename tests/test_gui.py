@@ -528,3 +528,54 @@ class TestExploration(unittest.TestCase):
         self.fenetre.game.config = RunConfig(unlocks={"vivres"})
         self.fenetre.dessiner()
         self.assertNotIn("Explorer", [zone[5] for zone in self.fenetre.zones])
+
+
+@unittest.skipUnless(_ecran_disponible(), "pas d'écran disponible")
+class TestPanneauxDuRefuge(unittest.TestCase):
+    """Coffre et stèle : s'ouvrir en arrivant, et se laisser refermer."""
+
+    def setUp(self):
+        from donjon.gui import Fenetre
+
+        self.fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(self.fenetre.root.destroy)
+        _debloquer(self.fenetre, "nourriture", "coffre")
+        self.fenetre.game = self.fenetre.session.demarrer()
+        self.fenetre.mode = "jeu"
+
+    def _aller_sur(self, case):
+        self.fenetre.game.player.pos = case
+        self.fenetre._verifier_fin()
+
+    def test_la_stele_s_ouvre_en_arrivant(self):
+        self._aller_sur(self.fenetre.game.level.stele)
+        self.assertEqual(self.fenetre.mode, "talents")
+
+    def test_et_se_referme_pour_de_bon(self):
+        """Régression : le panneau se rouvrait tant qu'on piétinait la case."""
+        self._aller_sur(self.fenetre.game.level.stele)
+        self.fenetre.dessiner()
+        self._cliquer_zone_de_fenetre("Fermer")
+        self.assertEqual(self.fenetre.mode, "jeu")
+        self.fenetre._verifier_fin()
+        self.assertEqual(self.fenetre.mode, "jeu")
+
+    def test_elle_se_rouvre_si_on_revient(self):
+        self._aller_sur(self.fenetre.game.level.stele)
+        self.fenetre.mode = "jeu"
+        self._aller_sur((self.fenetre.game.level.stele[0] + 2,
+                         self.fenetre.game.level.stele[1] + 2))
+        self._aller_sur(self.fenetre.game.level.stele)
+        self.assertEqual(self.fenetre.mode, "talents")
+
+    def test_le_coffre_suit_la_meme_regle(self):
+        self._aller_sur(self.fenetre.game.level.chest)
+        self.assertEqual(self.fenetre.mode, "coffre")
+        self.fenetre.mode = "jeu"
+        self.fenetre._verifier_fin()
+        self.assertEqual(self.fenetre.mode, "jeu")
+
+    def _cliquer_zone_de_fenetre(self, etiquette):
+        zone = next(z for z in self.fenetre.zones if z[5] == etiquette)
+        self.fenetre.on_click(Clic((zone[0] + zone[2]) / 2,
+                                   (zone[1] + zone[3]) / 2))

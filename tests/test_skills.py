@@ -296,3 +296,30 @@ class TestEsquive(unittest.TestCase):
     def test_les_creatures_n_esquivent_pas(self):
         """L'esquive est une compétence : les monstres n'en ont pas."""
         self.assertFalse(self.game.esquive(self.monstre, self.joueur))
+
+
+class TestRefugeSansEntrainement(unittest.TestCase):
+    """Le refuge ne doit rien entraîner : sans faim ni danger, on y farmerait."""
+
+    def setUp(self):
+        from donjon.session import Session
+
+        self.session = Session(sauvegarde=False, seed=4)
+        self.game = self.session.demarrer()
+
+    def test_marcher_au_refuge_ne_donne_aucune_competence(self):
+        from donjon.geom import DIRECTIONS
+
+        for _ in range(200):
+            for direction in (DIRECTIONS["e"], DIRECTIONS["w"]):
+                self.game.cmd_move(direction)
+        self.assertEqual(self.game.player.skills.total_levels(), 0)
+
+    def test_mais_le_donjon_entraine_bien(self):
+        from donjon.geom import DIRECTIONS
+
+        donjon = self.session.descendre()
+        for _ in range(200):
+            donjon.cmd_move(DIRECTIONS["e"])
+            donjon.cmd_move(DIRECTIONS["w"])
+        self.assertGreater(donjon.player.skills.xp.get("marche", 0), 0)

@@ -240,6 +240,7 @@ class Fenetre:
         self.destination = None    # cible du déplacement automatique
         self._trajet_prevu = None
         self.exploration = False   # exploration automatique en cours
+        self._panneau_ouvert_a = None   # case dont le panneau s'est déjà ouvert
         self.root = tk.Tk()
         self.root.title("Donjon mystère")
         self.root.configure(bg=FOND)
@@ -334,10 +335,26 @@ class Fenetre:
         elif self.game.state != PLAYING:
             self.session.encaisser(self.game)
         elif self.session.au_refuge and self.mode == "jeu":
-            if self.game.player.pos == getattr(self.game.level, "chest", None):
-                self.mode = "coffre"
-            elif self.game.player.pos == getattr(self.game.level, "stele", None):
-                self.mode = "talents"
+            self._ouvrir_ce_qu_on_foule()
+
+    def _ouvrir_ce_qu_on_foule(self):
+        """Coffre et stèle s'ouvrent quand on arrive dessus — une seule fois.
+
+        Sans cette mémoire, refermer le panneau le rouvrait aussitôt : on
+        piétinait la case, donc la condition restait vraie, et il n'y avait
+        plus moyen de sortir autrement qu'en tuant la fenêtre.
+        """
+        pos = self.game.player.pos
+        if pos == self._panneau_ouvert_a:
+            return
+        panneaux = {getattr(self.game.level, "chest", None): "coffre",
+                    getattr(self.game.level, "stele", None): "talents"}
+        mode = panneaux.get(pos)
+        if mode is not None:
+            self.mode = mode
+            self._panneau_ouvert_a = pos
+        elif self._panneau_ouvert_a is not None:
+            self._panneau_ouvert_a = None      # on a quitté la case
 
     def continuer(self):
         """Passe à la partie suivante : donjon, ou retour au refuge."""

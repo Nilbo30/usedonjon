@@ -291,8 +291,13 @@ class Game:
         """Une même action rapporte davantage en profondeur.
 
         C'est ce qui empêche de farmer tranquillement le premier étage : la
-        progression est là où c'est dangereux.
+        progression est là où c'est dangereux. Le refuge, lui, ne rapporte
+        **rien** : sans faim ni monstre, on y ferait des ronds indéfiniment
+        pour monter la marche, et la monnaie du méta étant la somme des
+        niveaux, on achèterait l'arbre sans jamais descendre.
         """
+        if self.config.is_hub:
+            return 0.0
         return 1 + self.config.xp_depth_bonus * (self.depth - 1)
 
     def regen_interval(self):
