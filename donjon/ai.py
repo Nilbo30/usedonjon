@@ -63,12 +63,17 @@ def _chasseur(game, monster):
 
 @behaviour("erratique")
 def _erratique(game, monster):
-    """Vole n'importe comment : une fois sur deux, direction aléatoire."""
+    """Vole n'importe comment — mais frappe ce qui est à sa portée.
+
+    Elle hésitait aussi au contact : on la voyait renoncer à mordre pour
+    repartir de travers, ce qui ne se lisait pas comme un vol erratique mais
+    comme un bug.
+    """
     player = game.player
-    if game.can_attack(monster, player) and game.rng.chance(0.7):
+    if game.can_attack(monster, player):
         game.attack(monster, player)
         return
-    if game.rng.chance(0.5):
+    if game.rng.chance(0.4):
         _wander(game, monster)
         return
     _chasseur(game, monster)
@@ -103,12 +108,29 @@ def _archer(game, monster):
     if direction:
         game.tirer(monster, direction)
         return
+    if _sees_player(game, monster):
+        # Il ne cherche jamais le contact : trop près, il rompt pour retrouver
+        # sa portée. Une limace cracheuse qui vient te mordre n'est plus un
+        # archer.
+        if chebyshev(monster.pos, joueur.pos) <= 2 and _reculer(game, monster):
+            return
+        if _se_placer(game, monster):
+            return
     if game.can_attack(monster, joueur):
-        game.attack(monster, joueur)      # au contact il se défend, mal
-        return
-    if _sees_player(game, monster) and _se_placer(game, monster):
+        game.attack(monster, joueur)      # acculé, il se défend, mal
         return
     _chasseur(game, monster)
+
+
+def _reculer(game, monster):
+    """Un pas qui éloigne du héros, s'il en existe un."""
+    distance = chebyshev(monster.pos, game.player.pos)
+    for direction in ALL_DIRS:
+        case = add(monster.pos, direction)
+        if chebyshev(case, game.player.pos) > distance and game.try_move(
+                monster, direction):
+            return True
+    return False
 
 
 def direction_de_tir(game, depuis, cible):

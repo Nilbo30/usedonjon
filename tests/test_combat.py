@@ -184,3 +184,17 @@ class TestTirADistance(unittest.TestCase):
         from donjon.game import DEGATS_A_DISTANCE
 
         self.assertLess(DEGATS_A_DISTANCE, 1.0)
+
+
+class TestApparitions(unittest.TestCase):
+    def test_aucune_creature_n_apparait_sous_les_yeux_du_joueur(self):
+        """« Des ennemis apparaissent de nulle part » : plus jamais en vue."""
+        from donjon.game import Game
+
+        for graine in range(8):
+            game = Game(seed=graine)
+            vues = game.visible_cells()
+            for _ in range(40):
+                monstre = game.spawn_monster(away_from_player=True)
+                if monstre is not None:
+                    self.assertNotIn(monstre.pos, vues, f"graine {graine}")

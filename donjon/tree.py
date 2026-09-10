@@ -100,8 +100,12 @@ _enregistrer(
           "Le donjon se peuple : des bêtes rôdent, et des pièges. Tu n'as que "
           "tes poings — cogner entraîne le pugilat.",
           branche="Monde vivant", classes=("rodeur", "erratique"),
-          reglages={"monsters_per_floor": (3, 6), "traps_per_floor": (1, 3),
-                    "spawn_interval": 30}),
+          reglages={"monsters_per_floor": (3, 6), "spawn_interval": 30}),
+    Noeud("pieges", "Pièges", 12,
+          "Le sol devient traître. Les créatures marchent dessus aussi : "
+          "un piège repéré est une arme.",
+          branche="Monde vivant", parents=("creatures",),
+          reglages={"traps_per_floor": (1, 3)}),
 
     Noeud("butin", "Butin", 35,
           "Les créatures vaincues laissent parfois quelque chose : leur arme, "

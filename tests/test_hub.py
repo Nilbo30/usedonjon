@@ -192,3 +192,55 @@ class TestConfigDuRefuge(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTalentImmediat(unittest.TestCase):
+    """Un talent acheté au refuge doit servir tout de suite, pas à la vie d'après."""
+
+    def setUp(self):
+        self.session = Session(sauvegarde=False, seed=3)
+        self.session.meta.xp = 1000
+        for cle in ("creatures", "epee"):
+            self.session.meta.acheter(cle)
+        self.session.demarrer()
+
+    def test_un_bonus_de_stat_s_applique_au_heros_en_place(self):
+        heros = self.session.player
+        avant = heros.attack
+        self.session.acheter("affutage")
+        self.assertGreater(heros.attack, avant)
+
+    def test_les_points_de_vie_gagnes_sont_rendus(self):
+        heros = self.session.player
+        maximum, courant = heros.max_hp, heros.hp
+        self.session.acheter("constitution")
+        self.assertGreater(heros.max_hp, maximum)
+        self.assertGreater(heros.hp, courant)
+
+    def test_l_objet_du_talent_arrive_dans_le_sac(self):
+        heros = self.session.player
+        self.session.acheter("bouclier")
+        self.assertTrue(any(objet.type.key == "bouclier_bois"
+                            for objet in heros.inventory))
+
+    def test_le_meme_objet_n_est_pas_donne_deux_fois(self):
+        """Le kit de « L'épée » est déjà là : ne pas le redonner à chaque achat."""
+        heros = self.session.player
+        epees = sum(1 for objet in heros.inventory
+                    if objet.type.key == "epee_bois")
+        self.session.acheter("constitution")
+        self.assertEqual(sum(1 for objet in heros.inventory
+                             if objet.type.key == "epee_bois"), epees)
+
+
+class TestAccueil(unittest.TestCase):
+    def test_il_ne_parle_pas_d_un_coffre_qu_on_n_a_pas(self):
+        session = Session(sauvegarde=False, seed=3)
+        self.assertNotIn("coffre", " ".join(session.lignes_d_accueil()).lower())
+
+    def test_il_en_parle_une_fois_gagne(self):
+        session = Session(sauvegarde=False, seed=3)
+        session.meta.xp = 1000
+        for cle in ("nourriture", "coffre"):
+            session.meta.acheter(cle)
+        self.assertIn("coffre", " ".join(session.lignes_d_accueil()).lower())

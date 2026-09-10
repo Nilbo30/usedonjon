@@ -142,11 +142,26 @@ class Game:
             return None
         species = self.rng.weighted(table)
         exclude = set(occupied) | {a.pos for a in self.actors}
-        for _ in range(20):
-            pos = dungeon.random_floor(self.level, self.rng, exclude=exclude)
-            if away_from_player and chebyshev(pos, self.player.pos) < 6:
-                continue
-            break
+        # Une créature qui apparaît en cours de partie ne doit jamais le faire
+        # sous les yeux du joueur : sinon elle « sort de nulle part ».
+        vues = self.visible_cells() if away_from_player else set()
+        pos = None
+        # D'abord loin ET hors de vue ; à défaut, hors de vue suffit. Céder sur
+        # la distance ne se remarque pas, céder sur la vue si.
+        for ecart in (6, 0):
+            for _ in range(30):
+                candidat = dungeon.random_floor(self.level, self.rng,
+                                                exclude=exclude)
+                if away_from_player and (
+                        candidat in vues
+                        or chebyshev(candidat, self.player.pos) < ecart):
+                    continue
+                pos = candidat
+                break
+            if pos is not None:
+                break
+        if pos is None:
+            return None          # plutôt pas de monstre qu'un monstre surgi
         monster = Monster(species)
         self._scale_to_depth(monster)
         monster.pos = pos

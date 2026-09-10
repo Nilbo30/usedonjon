@@ -171,8 +171,33 @@ class Session:
         """Achète un talent au refuge. Renvoie le nœud acquis, ou None."""
         noeud = self.meta.acheter(cle)
         if noeud is not None:
+            self._appliquer_au_heros(noeud)
             self._sauver()
         return noeud
+
+    def _appliquer_au_heros(self, noeud):
+        """Le talent profite au héros en place, pas seulement au suivant.
+
+        Le héros est créé une fois par vie : sans ça, acheter « Affûtage » au
+        refuge n'ajoutait son point d'attaque qu'après la mort suivante — on
+        payait pour la vie d'après.
+        """
+        heros = self.player
+        if heros is None:
+            return
+        config = self.config_de_run()
+        gain_pv = config.start_hp - heros.base_max_hp
+        heros.base_max_hp = config.start_hp
+        heros.base_attack = config.start_attack
+        heros.base_defense = config.start_defense
+        heros.max_fullness = config.max_fullness
+        heros.max_items = config.inventory_size
+        if gain_pv > 0:
+            heros.hp += gain_pv
+        # Et ce que le nœud ajoute au sac de départ, s'il n'y est pas déjà.
+        for cle in noeud.objets:
+            if not any(objet.type.key == cle for objet in heros.inventory):
+                heros.add_item(items_mod.make(cle, registre=heros.registre))
 
     def _sauver(self):
         if self.sauvegarde:
@@ -197,8 +222,10 @@ class Session:
     def lignes_d_accueil(self):
         """Ce qu'on affiche en arrivant au refuge."""
         if self.dernier_bilan is None:
-            return ["Premier pas au refuge.",
-                    "L'escalier mène au donjon ; le coffre garde ce que tu y laisses."]
+            lignes = ["Premier pas au refuge.", "L'escalier mène au donjon."]
+            if "coffre" in self.config_de_run().unlocks:
+                lignes.append("Le coffre garde ce que tu y laisses.")
+            return lignes
         lignes = list(self.dernier_bilan.lines())
         if self.dernier_bilan.state == RETOUR:
             lignes.append("Tu es remonté entier : tes acquis restent, mais la "

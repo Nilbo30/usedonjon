@@ -20,6 +20,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
+rem pythonw lance la fenetre de jeu sans garder une console noire ouverte
+rem derriere. S'il manque, on retombe sur python : mieux vaut une console en
+rem trop qu'un jeu qui ne demarre pas.
+where %LANCEUR%w >nul 2>&1
+if not errorlevel 1 (
+    start "" %LANCEUR%w -m donjon %*
+    exit /b 0
+)
+
 %LANCEUR% -m donjon %*
 
 if errorlevel 1 (
