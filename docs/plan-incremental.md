@@ -93,6 +93,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 13 | Le butin des créatures, et la compétence « Chance » | ✅ fait |
 | 14 | Retours de partie : sept bugs, pierres, nœuds répétables, exploration | ✅ fait |
 | 15 | Le lot interface : fiches justes, bulle, action unique, stèle, piles | ✅ fait |
+| 16 | La monnaie du méta devient l'XP investie, et non la somme des niveaux | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -876,6 +877,179 @@ Le test qui vérifiait jusqu'ici que `BRANCHES` était le moins mauvais ordre
 possible en exige maintenant zéro, et nomme les deux traits fautifs quand il
 tombe : il y a désormais deux leviers à bouger, et aucun des deux ne touche au
 jeu.
+
+### Étape 16 — la monnaie du méta devient l'XP investie
+
+#### Le défaut
+
+`RunSummary` convertissait **la somme des niveaux de compétences** en XP méta.
+Les courbes étant géométriques (`growth` autour de 1,5), cette somme croît
+logarithmiquement avec ce qui est réellement pratiqué, quand le danger, lui,
+croît par marches (×2,32 au dixième étage, ×4,63 au vingtième). Trois symptômes
+du même défaut :
+
+1. **Le plateau** — le gain d'une vie tournait autour de 35 quoi qu'on fasse,
+   noté deux fois dans ce document.
+2. **Le papillonnage était optimal** — les premiers crans de chaque compétence
+   sont les moins chers ; en effleurer douze rapportait plus que d'en
+   approfondir trois.
+3. **Tous les crans pesaient pareil** — un cran de marche valait un cran
+   d'épée. C'est le défaut qu'Oblivion avait et que Skyrim a corrigé.
+
+#### Le correctif
+
+`SkillSet` tient un compteur de **toute l'XP versée** depuis le début de la
+vie, niveaux franchis ou non. C'est lui que `RunSummary` emporte, et c'est lui
+que `meta.valeur_du_run` multiplie par la profondeur. Trois lignes de moteur.
+
+Les niveaux restent affichés — sur la fiche, dans le bilan, dans les records.
+Ils se lisent ; ils ne s'achètent plus.
+
+#### Ce que ça a donné
+
+Trois configurations, 60 vies de bot chacune, avant et après :
+
+| ouvert | XP/vie avant | XP/vie après |
+|---|---|---|
+| donjon vide | 4,3 ± 0,1 | 221,5 ± 4,1 |
+| + Nourriture | 19,7 ± 1,2 | 433,7 ± 34,4 |
+| arbre complet | 54,5 ± 4,0 | 1 936,9 ± 180,6 |
+
+Et le gain suit enfin l'effort. Arbre complet, 60 vies rangées par étage
+atteint :
+
+| étage atteint | tours | XP avant | XP après |
+|---|---|---|---|
+| 1-4 | 256 | 19,6 | 416 |
+| 5-8 | 455 | 37,8 | 1 117 |
+| 9-12 | 650 | 59,1 | 2 017 |
+| 13-16 | 881 | 75,5 | 3 108 |
+| 17+ | 844 | 84,8 | 3 645 |
+
+Avant, descendre trois fois plus profond rapportait 4,3 fois plus. Après, 8,8
+fois. C'est la fin du plateau : le risque et la récompense montent ensemble.
+
+#### La correction que la mesure a imposée au raisonnement
+
+Le raisonnement de départ disait : « le coût de chaque cran **est** sa
+pondération, elle est donc tirée des courbes déjà écrites ». L'identité
+comptable est vraie — l'XP versée vaut exactement la somme des coûts des crans
+franchis — mais **les courbes n'y entrent pour rien**, et il faut le dire parce
+que ça décide de la suite :
+
+```
+base=25 growth=1,55  ->  niveau  6   XP versée 600
+base= 5 growth=1,50  ->  niveau 10   XP versée 600
+base= 1 growth=3,00  ->  niveau  6   XP versée 600
+```
+
+Six cents actions valent six cents XP quelle que soit la courbe. Ce que la
+monnaie compte, c'est le **nombre d'actions**, pondéré par la profondeur. La
+courbe ne décide plus que du nombre de crans que ces actions achètent.
+
+Conséquence mesurée, et c'est la vraie question ouverte de cette étape :
+
+| compétence | part des niveaux (avant) | part de l'XP versée (après) | et si on divisait par `base` |
+|---|---|---|---|
+| Marche | 17,5 % | **60,0 %** | 25,7 % |
+| Récupération | 12,8 % | 13,7 % | 14,7 % |
+| Combat | 13,7 % | 10,0 % | 13,5 % |
+| Esquive | 10,8 % | 3,7 % | 13,1 % |
+| Bouclier | 10,3 % | 5,6 % | 10,1 % |
+| Épée | 7,3 % | 2,6 % | 5,5 % |
+
+La marche passe de 17,5 % à 60 % de la monnaie. Ce n'est pas un accident : un
+run fait ~600 pas et ~30 coups. L'ancienne monnaie **normalisait** cette
+différence de fréquence par les courbes — `marche` coûte 25 XP le premier cran
+contre 5 pour `epee` précisément parce qu'« avec une XP fixe par action,
+marcher monte neuf fois plus vite qu'épée » (voir les mesures de référence
+plus haut). La nouvelle monnaie jette cette normalisation.
+
+Le garde-fou de fond tient toujours : le budget de marche d'une vie reste
+exactement la nourriture qu'elle trouve. Mais le sens a changé — l'XP méta dit
+maintenant « combien de temps tu as tenu, et jusqu'où », pas « ce que tu as
+fait ». **Décision en attente.** La correction, si on la veut, tient en une
+ligne et elle est chiffrée dans la dernière colonne : compter `XP versée /
+base` par compétence, c'est-à-dire l'effort en « premiers crans équivalents ».
+Elle rend la normalisation sans ajouter de table — `base` existe déjà — et
+garde tout le reste de l'étape intact : le gain reste linéaire en actions, le
+papillonnage reste neutre, les crans gardent leur poids. Seule la marche
+retombe de 60 % à 26 %.
+
+#### Le recalage des prix
+
+L'échelle n'a pas été simplement multipliée : elle a aussi été **aplatie**. La
+nouvelle monnaie fait moins grossir les gains d'une vie à l'autre — ouvrir la
+nourriture double le revenu là où elle le quintuplait — donc les marches hautes
+devaient se rapprocher.
+
+| | avant | après |
+|---|---|---|
+| échelle | 3 · 12 · 35 · 90 · 220 | 150 · 350 · 800 · 1600 · 3200 |
+| rapports | 1 : 4 : 12 : 30 : 73 | 1 : 2,3 : 5,3 : 11 : 21 |
+
+Rythme d'ouverture, 12 parties de 15 vies, avant → après : premier talent
+vie 1,0 → 1,0 · « Nourriture » vie 2,8 → 2,8 · « L'épée » vie 5,6 → 5,2 ·
+talents pris en 15 vies 20,8 → 18,8. Le milieu de l'arbre s'ouvre un cheveu
+plus lentement, et c'est attendu : le bot meurt vers l'étage 10, là où la
+nouvelle monnaie récompense surtout ceux qui descendent plus bas.
+
+Trois recalages d'échelle ont été essayés avant celui-ci (×50 tel quel, puis
+deux aplatissements intermédiaires) ; les mesures sont dans l'historique.
+
+#### Le critère du plan, revérifié
+
+« Après chaque achat, l'XP par vie doit monter. » Vingt achats dans l'ordre où
+le bot les prend, 40 vies chacun, écart-type de la moyenne à l'appui :
+
+```
+donjon vide                   220 ±     5
++ Nourriture                  438 ±    45     +218  (4,8 σ)
++ Estomac solide              435 ±    52       -3  (0,0 σ)
++ Endurance                   503 ±    53      +69  (0,9 σ)
++ Besace                      503 ±    53       +0  (0,0 σ)
++ Constitution                656 ±    58     +152  (1,9 σ)
++ L'épée                      630 ±    50      -26  (0,3 σ)
++ Le bouclier                 711 ±    61      +82  (1,0 σ)
++ Affûtage                    762 ±    56      +51  (0,6 σ)
++ Cuirasse                    696 ±    56      -66  (0,8 σ)
++ Pièges                      729 ±    61      +33  (0,4 σ)
++ Sens de l'orientation       729 ±    61       +0  (0,0 σ)
++ Butin                       958 ±    86     +229  (2,2 σ)
++ Repas automatique           988 ±    86      +30  (0,2 σ)
++ Herbes                     1048 ±    80      +60  (0,5 σ)
++ Projectiles                1119 ±   119      +70  (0,5 σ)
++ Grimoires                  1404 ±   128     +285  (1,6 σ)
++ Le coffre                  1404 ±   128       +0  (0,0 σ)
++ Les profondeurs            1572 ±   163     +168  (0,8 σ)
++ Soin automatique           1562 ±   158      -10  (0,0 σ)
++ La voie du retour          1460 ±   156     -101  (0,5 σ)
+```
+
+Aucun recul ne franchit la barre des deux sigma — le plus fort est à 0,8 σ.
+Le critère tient, et « L'épée » et « Projectiles », les deux nœuds qu'on
+surveillait depuis l'étape précédente, ne penchent plus (−0,3 σ et +0,5 σ).
+
+Trois nœuds bougent d'exactement **zéro** : « Besace », « Sens de
+l'orientation » et « Le coffre ». Ce n'est pas un prix faux, c'est
+l'instrument : le bot ne remplit jamais son sac, a sa propre exploration, et ne
+dépose rien au refuge. Ces trois-là ne sont pas mesurables par lui — à retenir
+avant d'en conclure quoi que ce soit sur leur prix.
+
+#### Effets de bord traités
+
+- **Le rond des talents** portait des prix à deux chiffres ; il en porte
+  quatre. Le rayon passe de 13 à 16 et la police du prix se choisit **à la
+  mesure**, pas au nombre de chiffres — un test vérifie que chaque prix de
+  l'arbre, reprises comprises, tient dans son rond.
+- **« On ne gagne rien au refuge »** tient toujours, et mieux qu'avant : le
+  multiplicateur vaut zéro, `SkillSet.gain` refuse une XP nulle, donc rien
+  n'est même versé. Un test le vérifie maintenant sur l'XP versée et plus
+  seulement sur les niveaux, parce qu'une XP dormant sous le seuil d'un niveau
+  rapporterait aujourd'hui elle aussi.
+- **Rupture de sauvegarde** assumée : une sauvegarde d'avant garde ses talents
+  et son solde, mais ce solde ne vaut plus grand-chose face aux nouveaux prix.
+  Rien ne plante.
 
 ## Règles fixées en cours de route
 

@@ -45,7 +45,7 @@ TALENTS_DE_TEST = ("estomac", "epee", "nourriture", "herbes",
 
 def _debloquer(fenetre, *cles):
     """Offre des talents et refait le héros : le jeu s'ouvre verrouillé."""
-    fenetre.session.meta.xp = 10 ** 4
+    fenetre.session.meta.xp = 10 ** 6
     for cle in (cles or TALENTS_DE_TEST):
         fenetre.session.meta.acheter(cle)
     fenetre.session.player = None
@@ -167,13 +167,13 @@ class TestRefuge(unittest.TestCase):
         from donjon.gui import Fenetre
         fenetre = Fenetre(seed=7, sauvegarde=False)
         self.addCleanup(fenetre.root.destroy)
-        fenetre.session.meta.xp = 50
+        fenetre.session.meta.xp = 200
         fenetre.mode = "talents"
         fenetre.dessiner()
         zone = next(z for z in fenetre.zones if z[5] == "talent estomac")
         fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
         self.assertIn("estomac", fenetre.session.meta.noeuds)
-        self.assertAlmostEqual(fenetre.session.meta.xp, 47)
+        self.assertAlmostEqual(fenetre.session.meta.xp, 50)
 
     def test_un_talent_trop_cher_ne_s_achete_pas(self):
         from donjon.gui import Fenetre
@@ -191,13 +191,13 @@ class TestRefuge(unittest.TestCase):
         from donjon.gui import Fenetre
         fenetre = Fenetre(seed=7, sauvegarde=False)
         self.addCleanup(fenetre.root.destroy)
-        fenetre.session.meta.xp = 10000
+        fenetre.session.meta.xp = 10 ** 6
         fenetre.mode = "talents"
         fenetre.dessiner()
         zone = next(z for z in fenetre.zones if z[5] == "talent second_souffle")
         fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
         self.assertNotIn("second_souffle", fenetre.session.meta.noeuds)
-        self.assertEqual(fenetre.session.meta.xp, 10000)
+        self.assertEqual(fenetre.session.meta.xp, 10 ** 6)
 
     def test_un_talent_repetable_reste_cliquable_entre_deux_reprises(self):
         """Sinon il aurait l'air fini dès le premier achat."""
@@ -205,7 +205,7 @@ class TestRefuge(unittest.TestCase):
 
         fenetre = Fenetre(seed=7, sauvegarde=False)
         self.addCleanup(fenetre.root.destroy)
-        fenetre.session.meta.xp = 10 ** 4
+        fenetre.session.meta.xp = 10 ** 6
         for cle in ("nourriture", "projectiles"):
             fenetre.session.meta.acheter(cle)
         fenetre.mode = "talents"
@@ -240,6 +240,28 @@ class TestRefuge(unittest.TestCase):
         for cle, (x, y, _angle, _place) in places.items():
             self.assertTrue(40 <= x <= fenetre.largeur - 40, f"{cle} en x={x}")
             self.assertTrue(HUD_HEIGHT + 60 <= y <= bas - 40, f"{cle} en y={y}")
+
+    def test_chaque_prix_tient_dans_son_rond(self):
+        """Un prix qui déborde vient heurter le nom du voisin.
+
+        Les prix ont quadruplé de longueur à l'étape 16 : « 3200 » là où il y
+        avait « 12 ». Le rond s'est élargi et la police s'adapte — ce test est
+        ce qui préviendra le jour où l'échelle bougera encore.
+        """
+        from donjon import tree
+        from donjon.gui import RAYON_TALENT
+
+        fenetre = self.fenetre
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        dedans = 2 * RAYON_TALENT - 4
+        for noeud in tree.ARBRE.values():
+            for reprise in range(noeud.repetitions):
+                marque = str(noeud.prix([noeud.key] * reprise))
+                taille = fenetre._marque_de_talent(marque)
+                self.assertLessEqual(
+                    fenetre.largeur_texte(marque, gras=True, taille=taille),
+                    dedans, f"{noeud.key} à {marque} XP")
 
     def test_les_ronds_de_l_eventail_ne_se_touchent_pas(self):
         """Deux talents collés seraient impossibles à distinguer et à cliquer."""

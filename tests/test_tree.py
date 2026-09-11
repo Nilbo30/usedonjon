@@ -81,12 +81,12 @@ class TestCoherence(unittest.TestCase):
                          sum(n.repetitions for n in tree.ARBRE.values()))
 
     def test_les_prix_suivent_l_echelle(self):
-        echelle = {3, 12, 35, 90, 220}
+        """Cinq marches et rien entre elles : c'est ce qui rend le rythme réglable."""
         for noeud in tree.ARBRE.values():
-            self.assertIn(noeud.cost, echelle, noeud.key)
+            self.assertIn(noeud.cost, tree.ECHELLE_DES_PRIX, noeud.key)
 
     def test_un_noeud_repetable_se_reprend_le_bon_nombre_de_fois(self):
-        meta = Meta(xp=10 ** 4)
+        meta = Meta(xp=10 ** 6)
         for cle in ("nourriture", "projectiles"):
             meta.acheter(cle)
         noeud = tree.ARBRE["rien_ne_se_perd"]
@@ -97,7 +97,7 @@ class TestCoherence(unittest.TestCase):
         self.assertEqual(meta.fois("rien_ne_se_perd"), noeud.repetitions)
 
     def test_ses_effets_s_additionnent_a_chaque_reprise(self):
-        meta = Meta(xp=10 ** 4)
+        meta = Meta(xp=10 ** 6)
         for cle in ("nourriture", "projectiles"):
             meta.acheter(cle)
         precedent = meta.run_config().recuperation_projectile
@@ -171,7 +171,7 @@ class TestVerrouillageDuContenu(unittest.TestCase):
     def test_le_talent_ouvre_la_famille(self):
         from donjon.rng import Rng
 
-        meta = Meta(xp=1000)
+        meta = Meta(xp=10 ** 6)
         meta.acheter("nourriture")
         meta.acheter("herbes")
         rng = Rng(2)

@@ -305,8 +305,10 @@ class Game:
         C'est ce qui empêche de farmer tranquillement le premier étage : la
         progression est là où c'est dangereux. Le refuge, lui, ne rapporte
         **rien** : sans faim ni monstre, on y ferait des ronds indéfiniment
-        pour monter la marche, et la monnaie du méta étant la somme des
-        niveaux, on achèterait l'arbre sans jamais descendre.
+        pour monter la marche, et la monnaie du méta étant l'XP de
+        compétences, on achèterait l'arbre sans jamais descendre. Renvoyer
+        zéro ne fait pas que supprimer les niveaux : `SkillSet.gain` refuse
+        une XP nulle, donc rien n'est versé du tout.
         """
         if self.config.is_hub:
             return 0.0
@@ -581,7 +583,8 @@ class Game:
         self.summary = RunSummary(
             state=state, depth=self.depth, deepest=self.deepest,
             turns=self.turn, skills=dict(self.player.skills.levels),
-            cause=message, seed=self.seed)
+            cause=message, seed=self.seed,
+            xp_investie=self.player.skills.total_xp())
         return self.summary
 
     def is_visible(self, pos):

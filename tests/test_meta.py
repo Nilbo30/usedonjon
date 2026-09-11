@@ -19,34 +19,50 @@ from donjon.run import RunSummary
 from donjon.session import Session
 
 
-def bilan(deepest=1, levels=10, state="mort"):
+def bilan(deepest=1, xp=10, levels=10, state="mort"):
+    """Un bilan de run. `xp` est la monnaie : l'XP versée aux compétences.
+
+    `levels` ne sert plus qu'aux records affichés — depuis l'étape 16, la somme
+    des niveaux ne s'achète plus.
+    """
     return RunSummary(state, deepest, deepest, 100,
-                      {"marche": levels}, "Test.")
+                      {"marche": levels}, "Test.", xp_investie=xp)
 
 
 class TestConversion(unittest.TestCase):
     def test_la_profondeur_multiplie_la_recompense(self):
-        peu_profond = meta_mod.valeur_du_run(bilan(deepest=1, levels=10))
-        profond = meta_mod.valeur_du_run(bilan(deepest=11, levels=10))
+        peu_profond = meta_mod.valeur_du_run(bilan(deepest=1, xp=10))
+        profond = meta_mod.valeur_du_run(bilan(deepest=11, xp=10))
         self.assertEqual(peu_profond, 10)
         self.assertAlmostEqual(profond, 20)
 
     def test_le_pari_de_l_orbe(self):
         """Mourir plus haut qu'avant doit rapporter moins, même mieux entraîné."""
-        sans_orbe = meta_mod.valeur_du_run(bilan(deepest=12, levels=20))
-        orbe_rate = meta_mod.valeur_du_run(bilan(deepest=8, levels=26))
-        orbe_reussi = meta_mod.valeur_du_run(bilan(deepest=16, levels=30))
+        sans_orbe = meta_mod.valeur_du_run(bilan(deepest=12, xp=20))
+        orbe_rate = meta_mod.valeur_du_run(bilan(deepest=8, xp=26))
+        orbe_reussi = meta_mod.valeur_du_run(bilan(deepest=16, xp=30))
         self.assertLess(orbe_rate, orbe_reussi)
         self.assertLess(abs(orbe_rate - sans_orbe), sans_orbe * 0.15)
 
+    def test_la_monnaie_est_l_xp_versee_et_non_les_niveaux(self):
+        """Deux vies aux mêmes niveaux, des efforts différents : des gains différents.
+
+        C'est tout le chantier de l'étape 16. La somme des niveaux ne distingue pas un
+        cran arraché d'un cran offert ; l'XP versée, si.
+        """
+        peu = meta_mod.valeur_du_run(bilan(deepest=1, xp=40, levels=12))
+        beaucoup = meta_mod.valeur_du_run(bilan(deepest=1, xp=400, levels=12))
+        self.assertEqual(peu, 40)
+        self.assertEqual(beaucoup, 400)
+
     def test_un_run_sans_competence_ne_rapporte_rien(self):
-        self.assertEqual(meta_mod.valeur_du_run(bilan(deepest=20, levels=0)), 0)
+        self.assertEqual(meta_mod.valeur_du_run(bilan(deepest=20, xp=0)), 0)
 
 
 class TestProgression(unittest.TestCase):
     def test_absorber_credite_le_solde(self):
         meta = Meta()
-        gagnee = meta.absorb(bilan(deepest=5, levels=30))
+        gagnee = meta.absorb(bilan(deepest=5, xp=30))
         self.assertGreater(gagnee, 0)
         self.assertEqual(meta.xp, gagnee)
         self.assertEqual(meta.xp_totale, gagnee)
@@ -54,7 +70,7 @@ class TestProgression(unittest.TestCase):
 
     def test_depenser_entame_le_solde_sans_toucher_au_total(self):
         meta = Meta()
-        meta.absorb(bilan(levels=100))
+        meta.absorb(bilan(xp=10 ** 4))
         total = meta.xp_totale
         noeud = meta.acheter("estomac")
         self.assertIsNotNone(noeud)
@@ -84,7 +100,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
 
     def test_les_effets_s_additionnent(self):
         base = RunConfig()
-        meta = Meta(xp=1000)
+        meta = Meta(xp=10 ** 6)
         meta.acheter("estomac")
         meta.acheter("besace")
         attendu = (base.max_fullness
@@ -96,7 +112,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
 
     def test_les_objets_de_depart_s_accumulent(self):
         """Deux nœuds d'équipement remplissent le même sac, sans s'écraser."""
-        meta = Meta(xp=1000)
+        meta = Meta(xp=10 ** 6)
         for cle in ("nourriture",):
             meta.acheter(cle)
         self.assertEqual(meta.run_config().starting_kit,
@@ -104,7 +120,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
 
     def test_les_classes_reveillees_arrivent_dans_la_config(self):
         """Ce que le héros apprend, le donjon l'apprend : pas plus, pas moins."""
-        meta = Meta(xp=1000)
+        meta = Meta(xp=10 ** 6)
         self.assertNotIn("rodeur", meta.run_config().classes)
         meta.acheter("nourriture")           # l'odeur attire les bêtes
         self.assertIn("rodeur", meta.run_config().classes)
@@ -120,7 +136,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
                          set())
 
     def test_les_drapeaux_arrivent_dans_la_config(self):
-        meta = Meta(xp=1000)
+        meta = Meta(xp=10 ** 6)
         meta.acheter("nourriture")
         meta.acheter("herbes")
         self.assertIn("herbes", meta.run_config().unlocks)
@@ -128,7 +144,7 @@ class TestInfluenceSurLesRuns(unittest.TestCase):
 
     def test_le_run_recoit_bien_les_talents(self):
         session = Session(sauvegarde=False)
-        session.meta = Meta(xp=1000)
+        session.meta = Meta(xp=10 ** 6)
         session.meta.acheter("estomac")
         session.meta.acheter("nourriture")
         game = session.descendre()
@@ -150,13 +166,13 @@ class TestAchats(unittest.TestCase):
         self.assertEqual(meta.noeuds, [])
 
     def test_les_prerequis_sont_respectes(self):
-        meta = Meta(xp=1000)
+        meta = Meta(xp=10 ** 6)
         self.assertIsNone(meta.acheter("besace"))        # exige « estomac »
         meta.acheter("estomac")
         self.assertIsNotNone(meta.acheter("besace"))
 
     def test_on_n_achete_pas_deux_fois(self):
-        meta = Meta(xp=1000)
+        meta = Meta(xp=10 ** 6)
         meta.acheter("besace")                           # exige « estomac »
         meta.acheter("estomac")
         meta.acheter("besace")
@@ -164,7 +180,7 @@ class TestAchats(unittest.TestCase):
         self.assertEqual(meta.noeuds.count("besace"), 1)
 
     def test_un_noeud_repetable_coute_de_plus_en_plus_cher(self):
-        meta = Meta(xp=1000)
+        meta = Meta(xp=10 ** 6)
         prix = []
         for _ in range(tree.ARBRE["estomac"].repetitions):
             prix.append(tree.ARBRE["estomac"].prix(meta.noeuds))
@@ -175,7 +191,7 @@ class TestAchats(unittest.TestCase):
         self.assertGreater(prix[-1], prix[0])
 
     def test_la_capacite_du_coffre_suit_l_arbre(self):
-        meta = Meta(xp=1000)
+        meta = Meta(xp=10 ** 6)
         avant = meta.capacite_entrepot()
         for cle in ("nourriture", "coffre", "grand_coffre"):
             meta.acheter(cle)
@@ -216,14 +232,14 @@ class TestPersistance(unittest.TestCase):
     def test_la_session_sauvegarde_a_la_fin_d_une_vie(self):
         session = Session(chemin=self.chemin)
         game = session.descendre()
-        game.player.skills.levels["marche"] = 30
+        game.player.skills.gain("marche", 500)
         game.end_run("mort", "Test.")
         session.encaisser(game)
         self.assertGreater(meta_mod.load(self.chemin).xp, 0)
 
     def test_un_achat_est_sauvegarde(self):
         session = Session(chemin=self.chemin)
-        session.meta.xp = 100
+        session.meta.xp = 10 ** 6
         session.acheter("estomac")
         self.assertIn("estomac", meta_mod.load(self.chemin).noeuds)
 

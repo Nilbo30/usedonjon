@@ -19,9 +19,19 @@ from .config import RunConfig
 #: Emplacement de la sauvegarde. Modifiable pour les tests.
 CHEMIN_DEFAUT = os.path.join(os.path.expanduser("~"), ".usedonjon", "meta.json")
 
-#: XP méta = niveaux de compétences × (1 + FACTEUR_PROFONDEUR × (étage − 1)).
+#: XP méta = XP de compétences versée pendant la vie
+#:           × (1 + FACTEUR_PROFONDEUR × (étage − 1)).
 #: L'étage retenu est le plus profond du passage en cours : l'orbe le remet à
 #: zéro, ce qui fait de son usage un pari et non un gain gratuit.
+#:
+#: La monnaie a été la **somme des niveaux** jusqu'à l'étape 16. C'était un
+#: défaut de fond : les courbes étant géométriques, cette somme croît
+#: logarithmiquement avec ce qu'on pratique vraiment, quand le danger, lui,
+#: croît par marches (×2,32 puis ×4,63). Un run profond coûtait beaucoup plus
+#: cher et rapportait à peine plus — d'où le plateau à ~35 XP par vie, noté
+#: deux fois dans le plan. Compter l'XP versée rend le gain linéaire en
+#: pratique, rend le papillonnage neutre (1 XP vaut 1 XP où qu'elle aille) et
+#: pondère chaque cran par son coût réel, sans aucune table à régler.
 FACTEUR_PROFONDEUR = 0.1
 
 #: Places dans le coffre avant tout agrandissement.
@@ -31,7 +41,7 @@ CAPACITE_ENTREPOT_BASE = 4
 def valeur_du_run(summary):
     """XP méta rapportée par un bilan de run."""
     facteur = 1 + FACTEUR_PROFONDEUR * (max(1, summary.deepest) - 1)
-    return summary.total_levels * facteur
+    return summary.xp_investie * facteur
 
 
 class Meta:

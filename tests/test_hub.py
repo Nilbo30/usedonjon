@@ -16,7 +16,7 @@ from donjon.session import Session
 class TestRefuge(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
-        self.session.meta.xp = 1000
+        self.session.meta.xp = 10 ** 6
         for cle in ("nourriture", "coffre", "epee"):
             self.session.meta.acheter(cle)
         self.game = self.session.demarrer()
@@ -58,7 +58,7 @@ class TestOrbe(unittest.TestCase):
 
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
-        self.session.meta.xp = 1000
+        self.session.meta.xp = 10 ** 6
         for cle in ("nourriture", "grimoires", "coffre", "voie_du_retour"):
             self.session.meta.acheter(cle)
         self.session.demarrer()
@@ -113,7 +113,7 @@ class TestOrbe(unittest.TestCase):
 class TestCoffre(unittest.TestCase):
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=7)
-        self.session.meta.xp = 1000
+        self.session.meta.xp = 10 ** 6
         for cle in ("nourriture", "coffre", "epee"):
             self.session.meta.acheter(cle)
         self.game = self.session.demarrer()
@@ -166,7 +166,7 @@ class TestPersistanceDuCoffre(unittest.TestCase):
     def test_le_coffre_est_sauvegarde(self):
         chemin = os.path.join(tempfile.mkdtemp(), "meta.json")
         session = Session(chemin=chemin)
-        session.meta.xp = 1000
+        session.meta.xp = 10 ** 6
         for cle in ("nourriture", "coffre", "epee"):
             session.meta.acheter(cle)
         session.demarrer()
@@ -199,7 +199,7 @@ class TestTalentImmediat(unittest.TestCase):
 
     def setUp(self):
         self.session = Session(sauvegarde=False, seed=3)
-        self.session.meta.xp = 1000
+        self.session.meta.xp = 10 ** 6
         for cle in ("nourriture", "epee"):
             self.session.meta.acheter(cle)
         self.session.demarrer()
@@ -241,7 +241,7 @@ class TestAccueil(unittest.TestCase):
 
     def test_il_en_parle_une_fois_gagne(self):
         session = Session(sauvegarde=False, seed=3)
-        session.meta.xp = 1000
+        session.meta.xp = 10 ** 6
         for cle in ("nourriture", "coffre"):
             session.meta.acheter(cle)
         self.assertIn("coffre", " ".join(session.lignes_d_accueil()).lower())
@@ -250,7 +250,7 @@ class TestAccueil(unittest.TestCase):
 class TestCoffreEtPiles(unittest.TestCase):
     def test_une_pile_deposee_revient_entiere(self):
         session = Session(sauvegarde=False, seed=7)
-        session.meta.xp = 1000
+        session.meta.xp = 10 ** 6
         for cle in ("nourriture", "coffre"):
             session.meta.acheter(cle)
         session.demarrer()

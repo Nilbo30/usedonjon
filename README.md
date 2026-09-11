@@ -281,9 +281,15 @@ Deux boucles s'y imbriquent :
 
 Le jeu **se déverrouille**. La première vie se joue dans un couloir vide où
 l'on meurt de faim : pas d'arme, pas de monstre, rien au sol. Mourir rapporte
-de l'XP permanente — les niveaux de compétences du run multipliés par la
-profondeur atteinte — et cette XP s'échange contre des talents, à la stèle du
-refuge.
+de l'XP permanente — **toute l'XP de compétences gagnée pendant la vie**,
+multipliée par la profondeur atteinte — et cette XP s'échange contre des
+talents, à la stèle du refuge.
+
+Ce que ça change : un cran arraché ne vaut pas un cran offert. Les courbes
+étant géométriques, monter « épée » du niveau 5 au niveau 6 demande 38 XP là où
+le premier cran en demandait 5 ; la récompense suit, sans qu'aucune table de
+conversion n'existe. Compter les niveaux, comme avant, revenait à payer les
+deux le même prix — et le gain d'une vie plafonnait quoi qu'on fasse.
 
 L'équipement, les créatures, les objets, les herbes, les parchemins, le coffre,
 l'orbe, les étages eux-mêmes : chacun est un nœud à acheter, avec ses

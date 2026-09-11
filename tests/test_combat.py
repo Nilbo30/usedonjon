@@ -245,7 +245,7 @@ class TestSecondSouffle(unittest.TestCase):
         from donjon.session import Session
 
         session = Session(sauvegarde=False, seed=8)
-        session.meta.xp = 10 ** 4
+        session.meta.xp = 10 ** 6
         for _ in range(4):
             session.meta.acheter("constitution")
         session.meta.acheter("second_souffle")

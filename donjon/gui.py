@@ -71,7 +71,10 @@ TALENT_OUVERTURE = (10, 170)
 #: Écart visé entre deux nœuds d'un même rang : il décide de la largeur
 #: qu'une branche réclame, donc de la part d'éventail qu'elle reçoit.
 TALENT_ESPACEMENT = 82
-RAYON_TALENT = 13
+# Le rond porte le prix, et les prix se comptent en milliers depuis que la
+# monnaie du méta est l'XP versée : il a fallu l'élargir pour que « 3200 » ne
+# déborde pas sur le nom du voisin (voir `_marque_de_talent`).
+RAYON_TALENT = 16
 #: Trait entre un nœud et son prérequis, tant que le nœud n'est pas acquis.
 LIEN = "#494263"
 COULEUR_BRANCHE = {
@@ -984,7 +987,10 @@ class Fenetre:
                                      fill="#16141d", outline="")
         lieu = "Refuge" if self.game.config.is_hub else f"Étage {self.game.depth}"
         self._texte(10, 8, lieu, gras=True)
-        self._texte(10, 26, f"Comp. {joueur.skills.total_levels()}", pale=True)
+        # Le chiffre qui compte : l'XP versée aux compétences, c'est elle qui
+        # s'échange contre des talents. Le décompte des crans est dans le
+        # panneau des compétences, où il y a la place de l'expliquer.
+        self._texte(10, 26, f"{joueur.skills.total_xp():.0f} XP", pale=True)
 
         self._barre(95, 10, 110, joueur.hp, joueur.max_hp,
                     BARRE_PV if joueur.hp > joueur.max_hp * 0.3 else BARRE_PV_BAS,
@@ -1253,7 +1259,11 @@ class Fenetre:
         self.canvas.create_rectangle(gauche, haut, gauche + largeur,
                                      haut + hauteur, fill=PANNEAU,
                                      outline=BORDURE, width=2)
+        competences = self.game.player.skills
         self._texte(gauche + 16, haut + 14, "Compétences de ce run", gras=True)
+        self._texte(gauche + 250, haut + 14,
+                    f"{competences.total_levels()} niveaux  ·  "
+                    f"{competences.total_xp():.0f} XP gagnée", pale=True)
         self._texte(gauche + largeur - 16, haut + 14,
                     "au niveau suivant", ancre="ne", pale=True)
         for index, (nom, niveau, acquis, requis, prochain) in enumerate(lignes):
@@ -1484,13 +1494,26 @@ class Fenetre:
         # reprises est en bas, avec le reste de la fiche.
         marque = "✔" if acquis else str(noeud.prix(meta.noeuds))
         self.canvas.create_text(x, y, text=marque, fill=dedans,
-                                font=("TkDefaultFont", 8, "bold"))
+                                font=("TkDefaultFont",
+                                      self._marque_de_talent(marque), "bold"))
         self._nom_de_talent(noeud, x, y, theta, largeur, nom, gras=achetable)
         # Tout nœud se survole — savoir ce qui attend derrière un rond éteint
         # est la moitié de l'intérêt d'un arbre — mais seul l'achetable s'achète.
         action = (lambda c=noeud.key: self._acheter(c)) if achetable else \
             (lambda: None)
         self.zones.append((*zone, action, f"talent {noeud.key}"))
+
+    def _marque_de_talent(self, marque):
+        """La plus grande police où ce prix tient encore dans le rond.
+
+        Mesurée plutôt que devinée au nombre de chiffres : le jour où
+        l'échelle des prix bougera encore, personne n'aura à y repenser.
+        """
+        dedans = 2 * RAYON_TALENT - 4
+        for taille in (8, 7, 6):
+            if self.largeur_texte(marque, gras=True, taille=taille) <= dedans:
+                return taille
+        return 6
 
     def _nom_de_talent(self, noeud, x, y, theta, largeur, couleur, gras=False):
         """Le nom, posé vers l'extérieur : à côté sur les flancs, au-dessus en haut.

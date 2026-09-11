@@ -225,6 +225,7 @@ class SkillSet:
         self.catalogue = catalogue if catalogue is not None else CATALOGUE
         self.levels = {}         # clé -> niveau atteint
         self.xp = {}             # clé -> XP accumulée dans le niveau courant
+        self.investie = 0.0      # tout ce qui a été versé, niveaux franchis ou non
 
     # --- consultation ---------------------------------------------------
     def level(self, key):
@@ -240,6 +241,21 @@ class SkillSet:
     def total_levels(self):
         return sum(self.levels.values())
 
+    def total_xp(self):
+        """Toute l'XP versée aux compétences depuis le début de la vie.
+
+        C'est la monnaie du méta (voir `meta.valeur_du_run`), et non plus la
+        somme des niveaux. La différence est une pondération, et elle est
+        gratuite : les courbes étant géométriques, le premier cran d'épée coûte
+        5 XP et le sixième 38. Compter l'XP versée, c'est payer chaque cran ce
+        qu'il a réellement coûté — la difficulté est déjà écrite dans les
+        courbes, il n'y a aucune table de conversion à régler à la main.
+
+        Vaut, par construction, la somme des coûts des niveaux franchis plus ce
+        qui dort dans les niveaux en cours (un test le vérifie).
+        """
+        return self.investie
+
     def known(self):
         """Compétences déjà pratiquées, les plus hautes d'abord."""
         pratiquees = [k for k in self.levels if k in self.catalogue]
@@ -248,10 +264,16 @@ class SkillSet:
 
     # --- gain -----------------------------------------------------------
     def gain(self, key, amount=1):
-        """Ajoute de l'XP. Renvoie la liste des niveaux franchis."""
+        """Ajoute de l'XP. Renvoie la liste des niveaux franchis.
+
+        L'XP d'une compétence inconnue, ou nulle, n'est pas versée du tout :
+        c'est ce qui fait tenir la règle « on ne gagne rien au refuge », où le
+        multiplicateur vaut zéro.
+        """
         competence = self.catalogue.get(key)
         if competence is None or amount <= 0:
             return []
+        self.investie = round(self.investie + amount, 3)
         niveau = self.levels.get(key, 0)
         acquis = self.xp.get(key, 0) + amount
         franchis = []

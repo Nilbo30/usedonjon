@@ -92,21 +92,21 @@ def _enregistrer(*noeuds):
 
 _enregistrer(
     # --- Survie : ce qui existe dès le premier pas ------------------------
-    Noeud("estomac", "Estomac solide", 3,
+    Noeud("estomac", "Estomac solide", 150,
           "+25 de ventre au départ. Se reprend, de plus en plus cher.",
           branche="Survie", repetitions=4, facteur_cout=3,
           effets={"max_fullness": 25}),
-    Noeud("constitution", "Constitution", 3,
+    Noeud("constitution", "Constitution", 150,
           "+5 points de vie au départ. Se reprend, de plus en plus cher.",
           branche="Survie", repetitions=4, facteur_cout=3,
           effets={"start_hp": 5}),
-    Noeud("endurance", "Endurance", 12,
+    Noeud("endurance", "Endurance", 350,
           "La marche creuse 8 % de moins. Se reprend, de plus en plus cher.",
           branche="Survie", parents=("estomac",), repetitions=3,
           facteur_cout=3, effets={"endurance": 0.08}),
-    Noeud("besace", "Besace", 12, "+2 places dans le sac.",
+    Noeud("besace", "Besace", 350, "+2 places dans le sac.",
           branche="Survie", parents=("estomac",), effets={"inventory_size": 2}),
-    Noeud("second_souffle", "Second souffle", 220,
+    Noeud("second_souffle", "Second souffle", 3200,
           "Une fois par descente, le coup fatal ne l'est pas : tu te relèves "
           "à mi-vie.",
           branche="Survie", parents=("constitution",),
@@ -118,33 +118,33 @@ _enregistrer(
     # créatures qui savent s'en servir. Un nœud qui n'apporterait que du danger
     # ne serait jamais pris ; celui-ci arme le donjon et le joueur du même
     # geste, à lui d'aller la chercher.
-    Noeud("epee", "L'épée", 12,
+    Noeud("epee", "L'épée", 350,
           "Des épées traînent dans le donjon — et des créatures qui savent "
           "s'en servir : ce qui rôdait se met à frapper pour de bon.",
           branche="Équipement", parents=("nourriture",), unlocks=("epees",),
           classes=("guerrier",)),
-    Noeud("bouclier", "Le bouclier", 12,
+    Noeud("bouclier", "Le bouclier", 350,
           "Des boucliers apparaissent au sol. Le donjon se protège aussi : "
           "des créatures blindées, difficiles à entamer.",
           branche="Équipement", parents=("epee",),
           unlocks=("boucliers",), classes=("blinde",)),
-    Noeud("affutage", "Affûtage", 12,
+    Noeud("affutage", "Affûtage", 350,
           "+1 en attaque. Se reprend, de plus en plus cher.",
           branche="Équipement", parents=("epee",), repetitions=3,
           facteur_cout=3, effets={"start_attack": 1}),
-    Noeud("cuirasse", "Cuirasse", 12,
+    Noeud("cuirasse", "Cuirasse", 350,
           "+1 en défense. Se reprend, de plus en plus cher.",
           branche="Équipement", parents=("bouclier",), repetitions=3,
           facteur_cout=3, effets={"start_defense": 1}),
 
     # --- Monde vivant : d'abord le danger, l'équipement viendra après -----
-    Noeud("pieges", "Pièges", 12,
+    Noeud("pieges", "Pièges", 350,
           "Le sol devient traître. Les créatures marchent dessus aussi : "
           "un piège repéré est une arme.",
           branche="Monde vivant", parents=("nourriture",),
           reglages={"traps_per_floor": (1, 3)}),
 
-    Noeud("butin", "Butin", 35,
+    Noeud("butin", "Butin", 800,
           "Les créatures vaincues laissent parfois quelque chose : leur arme, "
           "leur pitance. Ce qu'on ramasse ainsi aiguise l'œil.",
           branche="Monde vivant", parents=("nourriture",), unlocks=("butin",)),
@@ -155,74 +155,74 @@ _enregistrer(
     # vivres, aucun monstre — où l'on traversait le donjon à pied sans risque,
     # et le multiplicateur de profondeur payait cette promenade mieux que le
     # jeu réel : 44 XP par vie contre 16.
-    Noeud("nourriture", "Nourriture", 3,
+    Noeud("nourriture", "Nourriture", 150,
           "Des vivres apparaissent au sol, et un pour la route. Mais l'odeur "
           "attire les bêtes : le donjon n'est plus désert.",
           branche="Trouvailles", unlocks=("vivres",), objets=("onigiri",),
           classes=("rodeur", "erratique"),
           reglages={"items_per_floor": (2, 4),
                     "monsters_per_floor": (3, 6), "spawn_interval": 30}),
-    Noeud("exploration", "Sens de l'orientation", 12,
+    Noeud("exploration", "Sens de l'orientation", 350,
           "Le héros sait explorer un étage tout seul : il s'arrête dès que "
           "quelque chose bouge, ou qu'il a fini.",
           branche="Trouvailles", unlocks=("exploration",)),
-    Noeud("auto_repas", "Repas automatique", 35,
+    Noeud("auto_repas", "Repas automatique", 800,
           "Le ventre presque vide, le héros mange sa réserve sans qu'on le "
           "lui dise.",
           branche="Trouvailles", parents=("exploration",),
           unlocks=("auto_repas",)),
-    Noeud("auto_soin", "Soin automatique", 90,
+    Noeud("auto_soin", "Soin automatique", 1600,
           "La vie basse, le héros porte une herbe à sa bouche sans qu'on le "
           "lui dise.",
           branche="Trouvailles", parents=("auto_repas", "herbes"),
           unlocks=("auto_soin",)),
-    Noeud("herbes", "Herbes", 35,
+    Noeud("herbes", "Herbes", 800,
           "Herbes et graines rejoignent les trouvailles. Le donjon apprend "
           "aussi à souffler : des créatures frappent puis se retirent.",
           branche="Trouvailles", parents=("nourriture",), unlocks=("herbes",),
           classes=("embusque",), effets={"items_per_floor": (1, 1)},
           ordre=1),
-    Noeud("projectiles", "Projectiles", 35,
+    Noeud("projectiles", "Projectiles", 800,
           "Des pierres à lancer traînent au sol : de quoi frapper sans "
           "s'approcher. Le donjon apprend à viser aussi : on te tire dessus "
           "de loin — et un archer abattu laisse ses flèches.",
           branche="Trouvailles", parents=("nourriture",),
           unlocks=("projectiles",), classes=("archer",),
           effets={"items_per_floor": (1, 1)}),
-    Noeud("grimoires", "Grimoires", 35,
+    Noeud("grimoires", "Grimoires", 800,
           "Les parchemins rejoignent les trouvailles — non identifiés.",
           branche="Trouvailles", parents=("nourriture",), unlocks=("grimoires",),
           effets={"items_per_floor": (1, 1)}),
-    Noeud("rien_ne_se_perd", "Rien ne se perd", 35,
+    Noeud("rien_ne_se_perd", "Rien ne se perd", 800,
           "Une chance sur dix de récupérer le projectile qui a touché. "
           "Se reprend trois fois.",
           branche="Trouvailles", parents=("projectiles",), repetitions=3,
           effets={"recuperation_projectile": 0.10}),
-    Noeud("intuition", "Intuition", 90,
+    Noeud("intuition", "Intuition", 1600,
           "Le premier parchemin ramassé de chaque vie est reconnu d'emblée.",
           branche="Trouvailles", parents=("grimoires",), unlocks=("intuition",)),
-    Noeud("abondance", "Abondance", 220, "Deux trouvailles de plus par étage.",
+    Noeud("abondance", "Abondance", 3200, "Deux trouvailles de plus par étage.",
           branche="Trouvailles", parents=("herbes",),
           effets={"items_per_floor": (2, 2)}),
 
     # --- Le refuge --------------------------------------------------------
-    Noeud("coffre", "Le coffre", 35,
+    Noeud("coffre", "Le coffre", 800,
           "Un coffre au refuge : ce qu'on y laisse survit à la mort.",
           branche="Le refuge", parents=("nourriture",), unlocks=("coffre",)),
-    Noeud("grand_coffre", "Grand coffre", 90, "+4 places dans le coffre.",
+    Noeud("grand_coffre", "Grand coffre", 1600, "+4 places dans le coffre.",
           branche="Le refuge", parents=("coffre",), effets={"coffre_places": 4}),
-    Noeud("voie_du_retour", "La voie du retour", 90,
+    Noeud("voie_du_retour", "La voie du retour", 1600,
           "L'orbe de retour apparaît à partir du quatrième étage : on remonte "
           "avec son butin, et le coffre sert enfin à quelque chose.",
           branche="Le refuge", parents=("coffre",), unlocks=("orbe",)),
 
     # --- Profond ----------------------------------------------------------
-    Noeud("profondeurs", "Les profondeurs", 35,
+    Noeud("profondeurs", "Les profondeurs", 800,
           "Dix étages de plus. Ce qui les habite est d'un autre calibre : "
           "passé le dixième, les créatures changent de classe.",
           branche="Profond", parents=("epee",),
           reglages={"max_depth": 20}),
-    Noeud("abysses", "Les abysses", 90,
+    Noeud("abysses", "Les abysses", 1600,
           "Dix étages encore, et la même marche à franchir. Peu remontent.",
           branche="Profond", parents=("profondeurs",),
           reglages={"max_depth": 30}),
@@ -231,6 +231,21 @@ _enregistrer(
 
 #: Effets qui ne concernent pas la partie mais la progression elle-même.
 EFFETS_META = {"coffre_places"}
+
+#: L'échelle des prix : cinq marches, et rien entre elles. Un nœud coûte l'une
+#: de ces cinq valeurs (un test le vérifie), ce qui rend le rythme d'ouverture
+#: réglable d'un seul geste — on bouge l'échelle entière, jamais un nœud isolé.
+#:
+#: Elle a été refaite de fond en comble à l'étape 16, quand la monnaie du méta
+#: est passée de la somme des niveaux à l'XP de compétences versée : une vie
+#: rapporte désormais des centaines de points là où elle en rapportait trois.
+#: L'échelle n'a pas été simplement multipliée — elle a aussi été **aplatie**
+#: (de 1:4:12:30:73 à 1:2,3:5,3:11:21), parce que la nouvelle monnaie fait
+#: moins grossir les gains d'une vie à l'autre : ouvrir la nourriture doublait
+#: le revenu, là où elle le quintuplait. Réglée pour retrouver le rythme
+#: mesuré avant le changement : premier talent à la vie 1, « Nourriture » à la
+#: vie 2,9, « L'épée » à la vie 5,8 (5,6 avant).
+ECHELLE_DES_PRIX = (150, 350, 800, 1600, 3200)
 
 #: Ordre d'affichage des branches, de la gauche vers la droite de l'éventail.
 #: Il n'a aucun effet sur le jeu, mais il décide des croisements : un nœud dont

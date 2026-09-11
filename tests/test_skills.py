@@ -221,6 +221,61 @@ class TestExtensibilite(unittest.TestCase):
         self.assertGreater(self.game.player.skills.level("marche"), 0)
 
 
+class TestXpInvestie(unittest.TestCase):
+    """La monnaie du méta : ce qu'on a versé, pas les paliers atteints."""
+
+    def _reconstituer(self, jeu):
+        """L'XP versée, recalculée depuis la fiche que le joueur a sous les yeux."""
+        total = sum(jeu.xp.values())
+        for cle, niveau in jeu.levels.items():
+            competence = jeu.catalogue[cle]
+            total += sum(competence.cost(n) for n in range(niveau))
+        return total
+
+    def test_le_compteur_vaut_ce_que_la_fiche_raconte(self):
+        """Le total versé doit être exactement les crans franchis plus le reste.
+
+        C'est ce qui rend la pondération gratuite : elle n'est écrite nulle
+        part, elle sort des courbes. Si les deux comptes divergent, c'est que
+        de l'XP a été gagnée ou perdue en route.
+        """
+        jeu = SkillSet()
+        for cle, montant in (("marche", 300.5), ("epee", 91.25),
+                             ("chance", 7), ("recuperation", 44)):
+            jeu.gain(cle, montant)
+        self.assertAlmostEqual(jeu.total_xp(), self._reconstituer(jeu), delta=0.05)
+        self.assertAlmostEqual(jeu.total_xp(), 442.75, delta=0.05)
+
+    def test_papillonner_ne_rapporte_ni_plus_ni_moins(self):
+        """Effleurer douze compétences valait mieux qu'en approfondir trois.
+
+        Les premiers crans sont les moins chers : avec la somme des niveaux
+        comme monnaie, étaler son effort était la stratégie optimale. Une XP
+        vaut maintenant une XP où qu'elle aille.
+        """
+        etale, concentre = SkillSet(), SkillSet()
+        cles = list(skills.CATALOGUE)
+        for cle in cles:
+            etale.gain(cle, 120 / len(cles))
+        for cle in cles[:2]:
+            concentre.gain(cle, 60)
+        self.assertGreater(etale.total_levels(), concentre.total_levels())
+        self.assertAlmostEqual(etale.total_xp(), concentre.total_xp(), delta=0.05)
+
+    def test_un_cran_pese_ce_qu_il_a_coute(self):
+        """Un cran de marche vaut cinq crans d'épée — parce qu'il coûte cinq fois plus.
+
+        C'est le défaut qu'Oblivion avait et que Skyrim a corrigé : tous les
+        niveaux ne se valent pas. Ici la pondération sort de `base`, personne
+        ne l'a écrite.
+        """
+        marche, epee = SkillSet(), SkillSet()
+        marche.gain("marche", skills.CATALOGUE["marche"].cost(0))
+        epee.gain("epee", skills.CATALOGUE["epee"].cost(0))
+        self.assertEqual(marche.total_levels(), epee.total_levels())
+        self.assertAlmostEqual(marche.total_xp() / epee.total_xp(), 5, delta=0.01)
+
+
 class TestRunSeulement(unittest.TestCase):
     def test_les_competences_appartiennent_au_run(self):
         """Rien ne survit : une nouvelle partie repart de zéro."""
@@ -314,6 +369,21 @@ class TestRefugeSansEntrainement(unittest.TestCase):
             for direction in (DIRECTIONS["e"], DIRECTIONS["w"]):
                 self.game.cmd_move(direction)
         self.assertEqual(self.game.player.skills.total_levels(), 0)
+
+    def test_ni_la_moindre_xp_investie(self):
+        """La monnaie du méta, c'est l'XP versée : le refuge doit en verser zéro.
+
+        Le test précédent regardait les niveaux ; depuis l'étape 16, ce n'est
+        plus ce qui s'achète. Une XP qui dort sous le seuil d'un niveau
+        rapporterait maintenant, elle aussi.
+        """
+        from donjon.geom import DIRECTIONS
+
+        for _ in range(200):
+            for direction in (DIRECTIONS["e"], DIRECTIONS["w"]):
+                self.game.cmd_move(direction)
+                self.game.cmd_wait()
+        self.assertEqual(self.game.player.skills.total_xp(), 0)
 
     def test_mais_le_donjon_entraine_bien(self):
         from donjon.geom import DIRECTIONS
