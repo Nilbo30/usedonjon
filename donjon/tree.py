@@ -16,7 +16,8 @@ contenu :
 * `repetitions` — combien de fois on peut le reprendre (1 par défaut). Les
   effets d'un nœud repris s'additionnent d'eux-mêmes : le cumul lit la liste
   des achats, pas un ensemble ;
-* `facteur_cout` — de combien son prix grimpe à chaque reprise.
+* `facteur_cout` — de combien son prix grimpe à chaque reprise ;
+* `ordre` — un simple départage d'affichage (voir `BRANCHES`).
 
 Ce dernier point est une règle du jeu, pas un détail : **ce que le héros
 apprend, le donjon l'apprend aussi**. Le nœud qui te donne une épée fait venir
@@ -45,7 +46,7 @@ BASE_VERROUILLEE = {
 class Noeud:
     def __init__(self, key, name, cost, description, branche="", parents=(),
                  effets=None, reglages=None, unlocks=(), objets=(), classes=(),
-                 repetitions=1, facteur_cout=1):
+                 repetitions=1, facteur_cout=1, ordre=0):
         self.key = key
         self.name = name
         self.cost = cost
@@ -59,6 +60,7 @@ class Noeud:
         self.classes = tuple(classes)          # créatures réveillées
         self.repetitions = repetitions         # combien de fois on peut le reprendre
         self.facteur_cout = facteur_cout       # de combien le prix grimpe à chaque reprise
+        self.ordre = ordre                     # départage d'affichage, voir BRANCHES
 
     def accessible(self, acquis):
         return all(parent in acquis for parent in self.parents)
@@ -178,7 +180,8 @@ _enregistrer(
           "Herbes et graines rejoignent les trouvailles. Le donjon apprend "
           "aussi à souffler : des créatures frappent puis se retirent.",
           branche="Trouvailles", parents=("nourriture",), unlocks=("herbes",),
-          classes=("embusque",), effets={"items_per_floor": (1, 1)}),
+          classes=("embusque",), effets={"items_per_floor": (1, 1)},
+          ordre=1),
     Noeud("projectiles", "Projectiles", 35,
           "Des pierres à lancer traînent au sol : de quoi frapper sans "
           "s'approcher. Le donjon apprend à viser aussi : on te tire dessus "
@@ -233,9 +236,13 @@ EFFETS_META = {"coffre_places"}
 #: Il n'a aucun effet sur le jeu, mais il décide des croisements : un nœud dont
 #: le prérequis vit dans une autre branche tire un trait par-dessus tout ce qui
 #: les sépare. Cet ordre-ci n'en laisse aucun (un test le vérifie) ; les trois
-#: premières suivent l'ordre où le joueur les découvre. Un croisement subsiste :
-#: aucun ordre n'en donne moins, l'arbre ayant désormais plus de liens qui
-#: traversent qu'une seule permutation ne peut en démêler.
+#: premières suivent l'ordre où le joueur les découvre.
+#:
+#: À l'intérieur d'une branche, les nœuds se rangent par prix puis par nom.
+#: Quand ce rangement met un trait en travers — « Herbes » est le second
+#: prérequis du soin automatique, et son trait traversait toute la branche pour
+#: aller le rejoindre — le champ `ordre` d'un nœud le décale, sans rien changer
+#: au jeu.
 BRANCHES = ("Survie", "Équipement", "Profond", "Monde vivant", "Le refuge",
             "Trouvailles")
 
@@ -246,7 +253,7 @@ def par_branche():
     for noeud in ARBRE.values():
         groupes.setdefault(noeud.branche, []).append(noeud)
     for noeuds in groupes.values():
-        noeuds.sort(key=lambda n: (n.cost, n.name))
+        noeuds.sort(key=lambda n: (n.ordre, n.cost, n.name))
     return [(branche, groupes[branche]) for branche in BRANCHES
             if groupes.get(branche)]
 

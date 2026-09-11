@@ -258,47 +258,64 @@ class TestRefuge(unittest.TestCase):
                                        2 * RAYON_TALENT + 6,
                                        f"{premier} / {second}")
 
-    def test_l_ordre_des_branches_croise_le_moins_possible(self):
-        """Deux traits qui se croisent donnent un prérequis faux à l'œil.
+    def _croisements(self):
+        """Les paires de traits qui se croisent, nommées par leur nœud."""
+        places = self.fenetre._disposition_talents()
+        traits = self.fenetre.traits_de_talents(places)
+        ou = {place[:2]: cle for cle, place in places.items()}
 
-        La disposition l'interdit à l'intérieur d'une branche — un enfant reste
-        dans la part de son parent. Entre branches, c'est l'ordre de
-        `tree.BRANCHES` qui décide, et il n'existe pas toujours d'ordre sans
-        aucun croisement. Plutôt qu'un seuil choisi au doigt mouillé, on
-        vérifie que l'ordre retenu vaut le meilleur possible : si ce test tombe
-        après l'ajout d'un nœud, c'est qu'un autre ordre ferait mieux, et il
-        est nommé dans le message.
-        """
-        import itertools
-
-        from donjon import tree
         def cote(un, deux, point):
             valeur = ((deux[0] - un[0]) * (point[1] - un[1])
                       - (deux[1] - un[1]) * (point[0] - un[0]))
             return (valeur > 1e-9) - (valeur < -1e-9)
 
-        def croisements():
-            traits = self.fenetre.traits_de_talents(
-                self.fenetre._disposition_talents())
-            total = 0
-            for index, (un, deux, _cle) in enumerate(traits):
-                for autre, (trois, quatre, _autre) in enumerate(traits):
-                    if autre <= index or {un, deux} & {trois, quatre}:
-                        continue
-                    total += (cote(un, deux, trois) * cote(un, deux, quatre) < 0
-                              and cote(trois, quatre, un)
-                              * cote(trois, quatre, deux) < 0)
-            return total
+        paires = []
+        for index, (un, deux, cle) in enumerate(traits):
+            for autre, (trois, quatre, sienne) in enumerate(traits):
+                if autre <= index or {un, deux} & {trois, quatre}:
+                    continue
+                if (cote(un, deux, trois) * cote(un, deux, quatre) < 0
+                        and cote(trois, quatre, un)
+                        * cote(trois, quatre, deux) < 0):
+                    paires.append(f"{ou.get(un, 'cœur')}→{cle} × "
+                                  f"{ou.get(trois, 'cœur')}→{sienne}")
+        return paires
+
+    def test_aucun_trait_de_talent_n_en_croise_un_autre(self):
+        """Deux traits qui se croisent donnent un prérequis faux à l'œil.
+
+        La disposition l'interdit à l'intérieur d'une sous-branche — un enfant
+        reste dans la part de son parent. Restent deux leviers, qui ne changent
+        rien au jeu : l'ordre de `tree.BRANCHES` entre branches, et le champ
+        `ordre` d'un nœud entre voisins. Si ce test tombe après l'ajout d'un
+        nœud, le message nomme les deux traits qui se coupent : c'est l'un de
+        ces deux leviers qu'il faut bouger.
+        """
+        self.fenetre.mode = "talents"
+        self.fenetre.dessiner()
+        paires = self._croisements()
+        self.assertEqual(paires, [], " ; ".join(paires))
+
+    def test_l_ordre_des_branches_croise_le_moins_possible(self):
+        """Aucun autre ordre de branches ne ferait mieux que celui retenu.
+
+        Le test précédent exige zéro croisement ; celui-ci vérifie que l'ordre
+        écrit dans `tree.BRANCHES` reste le bon choix, et nomme le meilleur
+        ordre s'il a cessé de l'être.
+        """
+        import itertools
+
+        from donjon import tree
 
         self.fenetre.mode = "talents"
         self.fenetre.dessiner()
         origine = tree.BRANCHES
         try:
-            actuel = croisements()
+            actuel = len(self._croisements())
             meilleur, ordre = actuel, origine
             for essai in itertools.permutations(origine):
                 tree.BRANCHES = essai
-                compte = croisements()
+                compte = len(self._croisements())
                 if compte < meilleur:
                     meilleur, ordre = compte, essai
         finally:

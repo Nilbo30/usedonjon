@@ -855,6 +855,28 @@ Effet cumulé sur le bot, arbre complet : étage **12,3** en moyenne au lieu de
 10,4, maximum **27** au lieu de 19, et la faim ne tue plus que 18 fois sur 40
 au lieu de 21.
 
+### Le dernier trait en travers
+
+Il restait un croisement, et il était visible : « Herbes » est le second
+prérequis du soin automatique, et son trait traversait toute la branche des
+trouvailles pour aller le rejoindre — en coupant au passage celui qui relie les
+projectiles à « Rien ne se perd ».
+
+Jusqu'ici un seul levier décidait des croisements, l'ordre de `tree.BRANCHES`.
+Il ne pouvait rien ici : les deux traits vivent dans la même branche, où l'ordre
+vient du rangement par prix puis par nom — « Herbes » avant « Projectiles »,
+alphabétiquement, alors que le soin automatique l'attend de l'autre côté.
+
+D'où un second levier, de la même nature : le champ `ordre` d'un nœud, qui le
+départage avant le prix. « Herbes » prend `ordre=1` et passe donc après les
+projectiles, contre la frontière de la sous-branche où vit le soin automatique.
+Le trait est devenu court, et **l'éventail ne compte plus aucun croisement**.
+
+Le test qui vérifiait jusqu'ici que `BRANCHES` était le moins mauvais ordre
+possible en exige maintenant zéro, et nomme les deux traits fautifs quand il
+tombe : il y a désormais deux leviers à bouger, et aucun des deux ne touche au
+jeu.
+
 ## Règles fixées en cours de route
 
 **Descendre paie.** L'XP par action est multipliée par
