@@ -1051,6 +1051,19 @@ avant d'en conclure quoi que ce soit sur leur prix.
   et son solde, mais ce solde ne vaut plus grand-chose face aux nouveaux prix.
   Rien ne plante.
 
+### Étape 17 — les effets deviennent des réactions (proposition)
+
+Les deux formes possibles, confrontées aux onze effets existants, sont dans
+`docs/effets-reactions.md`. Rien n'est codé : le choix revient au joueur, et la
+migration se fera à comportement identique.
+
+Ce que l'inventaire a appris avant même de choisir : les onze effets font
+**treize points de lecture**, et ce nombre ne grandit pas avec le contenu — il
+grandit avec le nombre d'endroits où le moteur calcule un nombre. Trois des
+treize portent une **borne** (le plancher de la faim, les plafonds d'esquive et
+de butin) qui n'est pas une somme : c'est le détail qui départage les deux
+formes.
+
 ## Règles fixées en cours de route
 
 **Descendre paie.** L'XP par action est multipliée par
