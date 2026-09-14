@@ -114,17 +114,19 @@ homoncule : ce qu'elles sont) et de 6 **classes** (rôdeur, erratique, embusqué
 guerrier, archer, blindé : ce qu'elles font). Elles laissent du butin sur les
 mêmes axes — la classe lâche son outil, la famille sa matière.
 
-**Les objets** — 22 : vivres, herbes, parchemins non identifiés, armes,
+**Les objets** — 37 : vivres, herbes, parchemins non identifiés, armes,
 boucliers, pierres à lancer, l'orbe de retour, et le bâton de flammes — le seul
 qu'on **vise** : un souffle de feu en cône, cinq charges. Armes et boucliers ne
-s'écrivent pas un par un : ils se croisent. La **forme** dit comment on frappe
-et porte les chiffres, la **matière** dit sur quoi ça mord et n'en porte
-aucun — cinq matières, du bois à l'obsidienne, chacune avec ce qu'elle mord et
-ce sur quoi elle glisse. Les munitions s'empilent, les
+s'écrivent pas un par un : ils se croisent. La **forme** — dague, épée, lance,
+hache, bouclier — dit comment on frappe et porte les chiffres : les dégâts, le
+coût du coup en énergie, et pour la lance le fait de traverser jusqu'à la case
+suivante. La **matière** — du bois à l'obsidienne — dit sur quoi ça mord et ne
+porte **aucun** chiffre d'attaque. Cinq formes × cinq matières font
+vingt-cinq équipements pour douze lignes de données. Les munitions s'empilent, les
 consommables se ramassent en marchant dessus, et les fiches au survol
 annoncent ce que l'objet fera *dans ces mains-là*, compétences comprises.
 
-**Les compétences** — 18, gagnées en pratiquant : marcher entraîne la marche,
+**Les compétences** — 21, gagnées en pratiquant : marcher entraîne la marche,
 frapper entraîne l'arme en main **et sa matière**, encaisser entraîne le
 bouclier — ou l'esquive si le bras est nu. Deux courbes par emplacement : c'est
 ce qui fait le prix d'un changement de matière, sans qu'aucune règle ne
@@ -233,11 +235,13 @@ ItemType("baguette_gel", "baguette de gel", "/", SCROLL, weight=6, on_hit="jet_g
 quel évènement la nourrit :
 
 ```python
-Skill("hache", "Hache", base=5, scope=EQUIPEMENT, effects={"attaque": 2})
+Skill("fouet", "Fouet", base=5, scope=EQUIPEMENT, effects={"attaque": 2})
 ```
 
-Une arme de cette famille se déclare avec `skill="hache"` dans `items.py` : la
-règle `"@arme"` fait le reste, le moteur n'est pas touché. Un objet d'une
+Une arme de cette famille se déclare avec `skill="fouet"` dans `items.py` : la
+règle `"@arme"` fait le reste, le moteur n'est pas touché. Pour une arme de
+mêlée, il y a plus court encore — une ligne dans `items.FORMES` la croise
+automatiquement avec les cinq matières. Un objet d'une
 catégorie déjà connue (herbe, parchemin…) hérite automatiquement de sa
 compétence.
 
@@ -360,8 +364,8 @@ ont fait changer d'avis — sont dans
 
 ## Pistes pour la suite
 
-- **Les trois autres formes** — dague, lance, hache : quatre formes × cinq
-  matières font vingt armes pour neuf lignes de données
+- **Le bot qui décide d'un pivot** : sans lui, ni la distribution des matières
+  ni le nombre de changements d'arme par partie ne mesurent quoi que ce soit
 - **Les baguettes**, et le mage qui va avec (il fait des dégâts à distance :
   aucun monstre ne prend le contrôle du héros, c'est une règle)
 - **L'arc**, en amélioration du nœud des projectiles — les flèches attendent

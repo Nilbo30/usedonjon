@@ -130,7 +130,7 @@ entraîne deux compétences.
 | | | |
 |---|---|---|
 | 19.1 | [L'axe des matières : deux formes, cinq matières](journal.md#étape-191--la-matière-et-ce-quelle-ne-donne-jamais) | ✅ fait |
-| 19.2 | Les trois autres formes : dague, lance, hache | ⏳ à faire |
+| 19.2 | [Les trois autres formes, et le coût d'un coup](journal.md#étape-192--les-trois-autres-formes-et-le-coût-dun-coup) | ✅ fait |
 | 19.3 | Le bot apprend à décider d'un pivot — sans quoi rien ne se mesure | ⏳ à faire |
 
 ## Les deux boucles

@@ -16,7 +16,7 @@ from . import (affinites, ai, dungeon, events, hub, items, monsters, path,
 from .config import RunConfig
 from .entities import ACTION_COST, Monster, Player, equiper_kit
 from .events import Event
-from .geom import ALL_DIRS, add, chebyshev, is_diagonal, sub
+from .geom import ALL_DIRS, add, chebyshev, is_diagonal, step_toward, sub
 from .log import MessageLog
 from .rng import Rng
 from .run import RunSummary
@@ -617,7 +617,63 @@ class Game:
         return True
 
     def attack(self, attacker, defender):
-        self.spend(attacker)
+        """Un coup : ce qu'il coûte, puis tout ce qu'il atteint.
+
+        Le coût et le nombre de cibles viennent de la **forme** de l'arme
+        (`items.FORMES`) : une dague frappe pour 70 d'énergie, une hache pour
+        160, une lance touche ce qui se trouve derrière. Rien de tout cela
+        n'est écrit ici — l'arme le dit, le moteur le lit.
+        """
+        self.spend(attacker, self._cout_du_coup(attacker))
+        for cible in self._cibles_du_coup(attacker, defender):
+            self._porter_le_coup(attacker, cible)
+
+    def _cout_du_coup(self, attacker):
+        """L'énergie que coûte un coup, arme en main.
+
+        Posée en question pour que le jour où un talent veut accélérer les
+        coups, il le fasse en données. Le plancher n'est là que pour qu'une
+        interception maladroite ne rende jamais un coup gratuit — c'est la
+        seule des cinq bornes du moteur que rien n'atteint encore.
+        """
+        arme = getattr(attacker, "weapon", None)
+        cadence = arme.type.cadence if arme is not None else 0
+        return int(questions.demander(questions.COUT_COUP,
+                                      cadence or ACTION_COST,
+                                      porteur=attacker, arme=arme, mini=1))
+
+    def _cibles_du_coup(self, attacker, defender):
+        """La cible, et ce que l'arme atteint derrière elle.
+
+        Une forme longue traverse : `portee` 2 fait mordre la case suivante
+        dans le même axe. La géométrie vient de `acteurs_dans_la_zone`, écrite
+        pour le souffle du bâton — une arme de mêlée n'en demandait pas
+        d'autre, et c'est pour ça que la lance n'ajoute pas une ligne de
+        géométrie.
+
+        Elle ne change rien au **déplacement** : on continue de frapper en
+        avançant sur la case d'à côté. Une lance qui attaquerait à deux cases
+        empêcherait de marcher vers une créature, ce qui est un piège et non
+        une portée.
+        """
+        arme = getattr(attacker, "weapon", None)
+        portee = arme.type.portee if arme is not None else 0
+        if portee < 2:
+            return (defender,)
+        direction = step_toward(attacker.pos, defender.pos)
+        cibles = [acteur for acteur
+                  in self.acteurs_dans_la_zone(attacker.pos, direction, portee)
+                  if acteur is not attacker
+                  and acteur.is_player is not attacker.is_player]
+        return tuple(cibles) or (defender,)
+
+    def _porter_le_coup(self, attacker, defender):
+        """Un coup sur une cible : esquive, échec, dégâts. Sans coût.
+
+        Le coût est payé une fois par attaque et non une fois par cible ;
+        l'esquive, elle, se joue cible par cible — deux créatures alignées ne
+        se dérobent pas ensemble.
+        """
         arme = attacker.weapon if attacker.is_player else None
         if self.esquive(defender, attacker):
             return

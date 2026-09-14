@@ -177,6 +177,11 @@ PARTITIONS = (
      {"tours": 100, "pv": 20, "xp": 100.0, "pas": 101}),
 )
 
+#: Le jour des trois formes (19.2), quatre de ces huit vies ont bougé et zéro
+#: partition : exactement celles qui achètent « Les armes ». Les autres n'ont
+#: pas frémi — la cadence d'une épée vaut 100, c'est-à-dire l'ancien coût, et
+#: c'est la preuve que le coût du coup n'a rien changé là où il n'y a rien à
+#: changer.
 #: Huit vies de bot, choisies pour couvrir le contenu : le couloir vide des
 #: premières vies, les vivres, l'équipement, les pièges, les parchemins (donc
 #: l'identification), le tir, et deux fois l'arbre entier — dont une qui
@@ -190,10 +195,10 @@ PARTIES = (
      "5993e657845c2021073ece2ecf39f5b8",
      {"etage": 5, "tours": 215, "pv": 0, "xp": 312.4, "pas": 148}),
     ("armes", 3, ("nourriture", "epee", "bouclier", "affutage"),
-     "4b556060b919c4fd90af82dc6148c702",
-     {"etage": 5, "tours": 203, "pv": 0, "xp": 276.45, "pas": 141}),
+     "55eb9782612964151e90e5ec2f5565a3",
+     {"etage": 5, "tours": 188, "pv": 0, "xp": 255.35, "pas": 116}),
     ("pieges", 16, ("nourriture", "epee", "pieges"),
-     "2637e0b840b24a076353a419286f85da",
+     "5dbb1a4344afb3d92a683943b2a1395c",
      {"etage": 9, "tours": 548, "pv": 0, "xp": 861.3, "pas": 430}),
     ("herbes et parchemins", 13,
      ("nourriture", "herbes", "grimoires", "intuition"),
@@ -204,14 +209,14 @@ PARTIES = (
      "ef4b91bf9082e62043a71f35abf83c45",
      {"etage": 5, "tours": 150, "pv": 0, "xp": 217.75, "pas": 155}),
     # Ces deux-là achètent tout l'arbre : tout ce qui touche au contenu les
-    # déplace. Elles ont bougé une première fois pour « Les bâtons », une
-    # seconde pour les matières (chantier 3). Voir le journal des deux jours.
+    # déplace. Elles ont bougé pour « Les bâtons », pour les matières, puis
+    # pour les trois formes neuves. Voir le journal de ces jours-là.
     ("arbre complet", 39, TOUT,
-     "671d2640fc258c0365101119441b27f2",
-     {"etage": 11, "tours": 589, "pv": 0, "xp": 1381.4, "pas": 461}),
+     "a74e044c55528dc1fa0e00a135461024",
+     {"etage": 12, "tours": 616, "pv": 0, "xp": 1220.15, "pas": 469}),
     ("arbre complet, profond", 36, TOUT,
-     "5f97c2f82ea28e39237f13fdd2dbdca5",
-     {"etage": 17, "tours": 1046, "pv": 0, "xp": 2283.05, "pas": 736}),
+     "e507e909007e91197945bc3bf4b1516e",
+     {"etage": 9, "tours": 724, "pv": 0, "xp": 1601.65, "pas": 602}),
 )
 
 

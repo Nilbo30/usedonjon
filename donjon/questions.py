@@ -49,6 +49,7 @@ SATIETE = "satiete"              # ventre rendu par un repas
 DUREE_EFFET = "duree_effet"      # tours que dure un parchemin
 DEGATS_JET = "degats_jet"        # puissance d'un objet lancé
 DEGATS_SORT = "degats_sort"      # puissance d'un sort lancé depuis un bâton
+COUT_COUP = "cout_coup"          # énergie que coûte un coup, 100 = un tour
 
 #: Chaque question, et ce qu'elle veut dire. Une interception qui vise un nom
 #: absent d'ici est refusée : c'est ce qui empêche une faute de frappe de
@@ -66,6 +67,7 @@ QUESTIONS = {
     DUREE_EFFET: "tours que dure l'effet d'un parchemin",
     DEGATS_JET: "puissance d'un objet lancé",
     DEGATS_SORT: "puissance d'un sort",
+    COUT_COUP: "énergie dépensée par un coup porté",
 }
 
 AJOUTER, RETIRER = "ajouter", "retirer"
@@ -188,8 +190,11 @@ def demander(nom, depart, porteur=None, mini=None, maxi=None, **contexte):
 
     `mini` et `maxi` sont les bornes du moteur — elles restent au point de
     lecture tant que les constantes de `game.py` n'ont pas déménagé (c'est une
-    étape à part). Il y en a quatre dans tout le jeu : le plancher de la faim,
-    le plancher du repos, le plafond d'esquive et le plafond de butin.
+    étape à part). Il y en a cinq dans tout le jeu : le plancher de la faim, le
+    plancher du repos, le plafond d'esquive, le plafond de butin — que le
+    corpus des empreintes franchit tous les quatre — et le plancher du coût
+    d'un coup, qui n'est là que pour qu'une interception ne rende jamais un
+    coup gratuit, et que rien n'atteint encore.
     """
     contexte["porteur"] = porteur
     question = Question(nom, depart, mini=mini, maxi=maxi, contexte=contexte)

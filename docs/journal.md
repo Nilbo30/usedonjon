@@ -1749,3 +1749,117 @@ frappant personne. Quatre parties sur huit, dont les deux qui achètent
 l'arbre entier.
 
 446 tests, dont vingt et un neufs sur les matières.
+
+## Étape 19.2 — les trois autres formes, et le coût d'un coup
+
+L'axe des matières était posé, mais il ne croisait qu'une seule arme. Cette
+étape ajoute la **dague**, la **lance** et la **hache** : cinq formes × cinq
+matières font **vingt-cinq équipements** à partir de douze lignes de données.
+
+### Ce que porte une forme
+
+| forme | attaque | cadence | portée | part |
+|---|---|---|---|---|
+| dague | 3 | 70 | 1 | 0,35 |
+| épée | 5 | 100 | 1 | 0,30 |
+| lance | 4 | 100 | **2** | 0,20 |
+| hache | 8 | 160 | 1 | 0,15 |
+| bouclier | 5 | — | — | 1,0 |
+
+`cadence` est l'énergie que coûte un coup, 100 étant le tour plein : la dague
+frappe 1,43 fois plus souvent que l'épée, la hache 1,6 fois moins. Ramenés à
+cent d'énergie, les quatre valent 4,3 · 5,0 · 4,0 · 5,0 — la lance paie sa
+portée, la dague paie le droit d'agir souvent.
+
+### La part, qui n'a l'air de rien
+
+`poids` n'est pas un poids de tirage mais une **part** : les quatre formes de
+mêlée se partagent 1,0. Sans ça, passer d'une forme à quatre multipliait par
+quatre le poids total des armes dans la table de butin, et le donjon se serait
+couvert d'épées au détriment des herbes et des vivres. Une refonte de
+l'équipement aurait refait, discrètement, l'économie des objets.
+
+La mesure le confirme : **211 armes portées en fin de vie avant, 211 après**.
+La part donne au passage une rareté à chaque forme, gratuitement.
+
+### Deux points de moteur, et pourquoi ils sont deux
+
+**Le coût du coup.** `attack` dépensait `ACTION_COST` en dur. Il pose
+maintenant la question `COUT_COUP`, dont la valeur de départ est la cadence de
+l'arme. C'est une question et non une lecture directe pour que le jour où un
+talent veut accélérer les coups, il le fasse en données — la machinerie de
+l'étape 17.1 sert telle quelle.
+
+Son plancher est la **cinquième borne** du moteur, et la seule que le corpus
+des empreintes n'atteint pas : elle n'existe que pour qu'une interception
+maladroite ne rende jamais un coup gratuit, ce qui ferait boucler le jeu. Elle
+est déclarée comme telle dans `questions.demander`, plutôt que passée sous
+silence.
+
+**La portée.** `attack` se coupe en deux : `_cibles_du_coup` dit *qui* est
+touché, `_porter_le_coup` fait ce que faisait l'ancien corps. Le coût est payé
+une fois par attaque, l'esquive se joue cible par cible — deux créatures
+alignées ne se dérobent pas ensemble.
+
+La géométrie, elle, n'a **rien coûté** : `acteurs_dans_la_zone`, écrite à
+l'étape 17.6 pour le souffle du bâton, fait exactement ce qu'il faut. C'est la
+première fois qu'une primitive de moteur écrite pour un contenu resserve telle
+quelle pour un autre.
+
+### Une décision de jeu, prise contre la lettre du brief
+
+Le brief disait « portée ». J'ai fait **traverser** la lance plutôt que
+frapper à deux cases. La raison est un piège que la seconde forme créait : le
+coup se donne en avançant sur la case d'à côté, donc une lance qui attaque à
+deux cases **empêche de marcher vers une créature**. On ne peut plus
+s'approcher, plus fuir en diagonale autour d'elle, plus rien. Ce n'est pas une
+portée, c'est une malédiction.
+
+En traversant, la lance garde tout ce que la portée promettait — la meilleure
+arme des couloirs, qui sont partout — sans toucher au déplacement. Un test
+garde cette propriété explicitement.
+
+### Le bot a dû réapprendre à choisir
+
+`_a_mieux_en_main` comparait les `power` bruts. C'était juste tant que toutes
+les armes coûtaient un tour plein ; avec la hache à 8 pour 160 d'énergie, le
+bot l'aurait prise à tous les coups et « le bot préfère la hache » n'aurait
+rien dit du jeu. Il compare maintenant la valeur **pour cent d'énergie**.
+
+Ce n'est pas encore choisir sa matière — ça, c'est l'étape 19.3, et c'est la
+seule qui rendra lisibles les deux mesures qui comptent.
+
+### Mesures
+
+Soixante campagnes de quinze vies, mêmes graines des deux côtés, comparaison
+appariée vie par vie, contre l'étape 19.1.
+
+| | avant | après | |
+|---|---|---|---|
+| effort/vie | 43,89 | 43,54 | −0,35 (0,6 σ) |
+| étage atteint | 7,18 | 7,13 | −0,06 (1,3 σ) |
+
+**Neutre**, ce qui est le bon résultat pour un ajout de contenu : trois formes
+de plus ne doivent pas déplacer l'économie, seulement ouvrir des façons de
+jouer. À 450 vies l'étage disait 1,7 σ ; à 900 il dit 1,3. Quatrième fois qu'un
+écart se dégonfle en doublant l'échantillon, et je commence à croire que c'est
+une propriété de la mesure et non une série de coïncidences.
+
+Formes portées en fin de vie, sur 900 vies :
+
+    épée 126 · dague 126 · hache 112 · lance 60
+
+La hache sort au-dessus de sa rareté (0,15 de part pour 25 % des armes
+portées) : le bot la garde dès qu'il la trouve, puisqu'elle égale l'épée à
+énergie constante. La lance reste sous la sienne, le bot ne sachant pas qu'un
+couloir double sa valeur. Les deux écarts sont lisibles, et aucun n'est un bug.
+
+### Les empreintes
+
+**Quatre parties sur seize ont bougé, et zéro partition.** Exactement les
+quatre qui achètent « Les armes ». Les douze autres n'ont pas frémi — la
+cadence d'une épée vaut 100, c'est-à-dire l'ancien coût, et c'est la preuve la
+plus nette qu'on pouvait donner que le coût du coup ne change rien là où il n'y
+a rien à changer.
+
+462 tests, dont seize neufs sur les formes.

@@ -296,6 +296,23 @@ def _tir_possible(game, portee=6):
     return None
 
 
+def _valeur_en_main(objet):
+    """Ce que vaut un équipement pour cent d'énergie.
+
+    Comparer les `power` bruts suffisait tant que toutes les armes coûtaient un
+    tour plein. Depuis les formes, une hache frappe à 8 mais pour 160 d'énergie
+    et une dague à 3 pour 70 : à `power` nu, le bot prendrait la hache à tous
+    les coups et « le bot préfère la hache » ne dirait rien du jeu.
+
+    Ce n'est pas encore choisir sa matière — ça, c'est l'étape 19.3. C'est
+    seulement ne pas être aveugle à la cadence.
+    """
+    from .entities import ACTION_COST
+
+    cadence = getattr(objet.type, "cadence", 0) or ACTION_COST
+    return objet.power * ACTION_COST / cadence
+
+
 def _a_mieux_en_main(game):
     """Le slot d'un équipement meilleur que celui porté, sinon None.
 
@@ -310,7 +327,9 @@ def _a_mieux_en_main(game):
         if objet.category not in porte:
             continue
         actuel = porte[objet.category]
-        if objet is not actuel and objet.power > (actuel.power if actuel else 0):
+        if objet is actuel:
+            continue
+        if _valeur_en_main(objet) > (_valeur_en_main(actuel) if actuel else 0):
             return index
     return None
 

@@ -121,9 +121,10 @@ _enregistrer(
     # créatures qui savent s'en servir. Un nœud qui n'apporterait que du danger
     # ne serait jamais pris ; celui-ci arme le donjon et le joueur du même
     # geste, à lui d'aller la chercher.
-    Noeud("epee", "L'épée", 30,
-          "Des épées traînent dans le donjon — et des créatures qui savent "
-          "s'en servir : ce qui rôdait se met à frapper pour de bon.",
+    Noeud("epee", "Les armes", 30,
+          "Dagues, épées, lances et haches traînent dans le donjon — et des "
+          "créatures qui savent s'en servir : ce qui rôdait se met à frapper "
+          "pour de bon.",
           branche="Équipement", parents=("nourriture",), unlocks=("epees",),
           classes=("guerrier",)),
     Noeud("bouclier", "Le bouclier", 30,

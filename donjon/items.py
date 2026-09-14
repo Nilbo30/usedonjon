@@ -36,11 +36,27 @@ WAND = "bâton"
 # Ce qui rend le pivot coûteux, ce n'est donc pas l'objet mais la **compétence**
 # de matière : passer du bois au fer, c'est repartir de zéro sur une courbe.
 
+# La forme dit **comment on frappe**, et c'est elle qui porte les chiffres :
+# ce qu'un coup fait mal (`attaque`), ce qu'il coûte d'énergie (`cadence`, où
+# 100 est le tour plein), et jusqu'où il va (`portee`, 2 = il traverse).
+#
+# `poids` est une part, pas un poids de tirage : les quatre formes de mêlée se
+# partagent 1,0. Sans ça, passer d'une forme à quatre multipliait par quatre le
+# poids total des armes dans la table de butin, et le donjon se serait couvert
+# d'épées au détriment des herbes. La part garde la table exactement où elle
+# était, et donne au passage une rareté à chaque forme.
 FORMES = {
+    "dague": {"nom": "dague", "glyphe": ")", "categorie": WEAPON,
+              "attaque": 3, "cadence": 70, "poids": 0.35, "unlock": "epees"},
     "epee": {"nom": "épée", "glyphe": ")", "categorie": WEAPON,
-             "attaque": 5, "unlock": "epees"},
+             "attaque": 5, "cadence": 100, "poids": 0.30, "unlock": "epees"},
+    "lance": {"nom": "lance", "glyphe": ")", "categorie": WEAPON,
+              "attaque": 4, "cadence": 100, "portee": 2, "poids": 0.20,
+              "unlock": "epees"},
+    "hache": {"nom": "hache", "glyphe": ")", "categorie": WEAPON,
+              "attaque": 8, "cadence": 160, "poids": 0.15, "unlock": "epees"},
     "bouclier": {"nom": "bouclier", "glyphe": "[", "categorie": SHIELD,
-                 "attaque": 5, "unlock": "boucliers"},
+                 "attaque": 5, "poids": 1.0, "unlock": "boucliers"},
 }
 
 #: Les matières, et ce qu'elles mordent : voir `affinites.py` pour la table.
@@ -56,10 +72,10 @@ MATIERES = {
 
 
 def _equipements():
-    """Le croisement, déplié : deux formes × cinq matières = dix objets.
+    """Le croisement, déplié : cinq formes × cinq matières = vingt-cinq objets.
 
-    Sept lignes de données pour dix objets — et vingt le jour où les trois
-    autres formes arriveront, sans une ligne de plus ici.
+    Douze lignes de données. Ajouter une forme en ajoute cinq de plus, ajouter
+    une matière en ajoute cinq aussi — et pas une ligne de moteur ni d'ici.
     """
     for cle_forme, forme in FORMES.items():
         for cle_matiere, matiere in MATIERES.items():
@@ -67,9 +83,11 @@ def _equipements():
                 f"{cle_forme}_{cle_matiere}",
                 f"{forme['nom']} {matiere['nom']}",
                 forme["glyphe"], forme["categorie"],
-                power=forme["attaque"], weight=matiere["poids"],
+                power=forme["attaque"],
+                weight=matiere["poids"] * forme["poids"],
                 depth_min=matiere["profondeur"], unlock=forme["unlock"],
-                skill=cle_forme, matiere=cle_matiere)
+                skill=cle_forme, matiere=cle_matiere,
+                cadence=forme.get("cadence", 0), portee=forme.get("portee", 0))
 
 #: Apparences des objets non identifiés, par catégorie. Ajouter une catégorie
 #: ici suffit à la rendre mystérieuse — les potions, le jour venu.
@@ -146,7 +164,7 @@ class ItemType:
     def __init__(self, key, name, glyph, category, power=0, weight=10,
                  on_use=None, on_hit=None, note="", skill=None, depth_min=1,
                  unlock=None, bonus=None, regles=(), on_aim=None,
-                 portee=0, largeur=0, charges=0, matiere=None):
+                 portee=0, largeur=0, charges=0, matiere=None, cadence=0):
         self.key = key
         self.name = name
         self.glyph = glyph
@@ -165,6 +183,10 @@ class ItemType:
         self.largeur = largeur      # 0 = un rayon, plus = un cône qui s'ouvre
         self.charges = charges      # usages avant épuisement (0 = consommable)
         self.matiere = matiere      # axe « contre quoi ça mord » (voir FORMES)
+        # Énergie que coûte un coup porté avec cette arme, 100 étant le tour
+        # plein. 0 veut dire « le coût ordinaire » : c'est le cas de tout ce
+        # qui n'est pas une arme de mêlée.
+        self.cadence = cadence
         self.note = note
         self.depth_min = depth_min  # étage à partir duquel l'objet apparaît
         self.unlock = unlock        # talent requis pour qu'il apparaisse
