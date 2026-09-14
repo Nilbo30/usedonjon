@@ -182,6 +182,11 @@ PARTITIONS = (
 #: pas frémi — la cadence d'une épée vaut 100, c'est-à-dire l'ancien coût, et
 #: c'est la preuve que le coût du coup n'a rien changé là où il n'y a rien à
 #: changer.
+#:
+#: Le jour du pivot (19.3), **une seule** a bougé, « pièges » — la seule assez
+#: longue pour porter deux armes de matières différentes en même temps. Le bot
+#: a beau avoir appris à choisir, il ne choisit que lorsqu'il a le choix, et
+#: c'est déjà la moitié de ce que cette étape a mesuré.
 #: Huit vies de bot, choisies pour couvrir le contenu : le couloir vide des
 #: premières vies, les vivres, l'équipement, les pièges, les parchemins (donc
 #: l'identification), le tir, et deux fois l'arbre entier — dont une qui
@@ -198,8 +203,8 @@ PARTIES = (
      "55eb9782612964151e90e5ec2f5565a3",
      {"etage": 5, "tours": 188, "pv": 0, "xp": 255.35, "pas": 116}),
     ("pieges", 16, ("nourriture", "epee", "pieges"),
-     "5dbb1a4344afb3d92a683943b2a1395c",
-     {"etage": 9, "tours": 548, "pv": 0, "xp": 861.3, "pas": 430}),
+     "4b00fea3975b7f0ee4681b1930eddc75",
+     {"etage": 10, "tours": 438, "pv": 0, "xp": 598.6, "pas": 321}),
     ("herbes et parchemins", 13,
      ("nourriture", "herbes", "grimoires", "intuition"),
      "693d960b2f666af94e45834891f2d9a0",

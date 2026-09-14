@@ -116,12 +116,12 @@ _enregistrer(
           effects={"attaque": 0.5, "pv_max": 2},
           note="Toute arme entretient la carrure."),
     # Les quatre écoles de mêlée. Leur `base` n'est pas un jugement de valeur
-    # mais une correction de cadence : une dague frappe 1,43 fois plus souvent
-    # qu'une épée, donc elle monterait 1,43 fois plus vite à base égale, et une
-    # hache 1,6 fois moins vite. La lance touche jusqu'à deux créatures d'un
-    # coup, donc elle s'entraîne plus vite en couloir. Les bases suivent, pour
-    # que choisir une forme reste un choix de jeu et non de rendement.
-    Skill("dague", "Dague", base=7, scope=EQUIPEMENT,
+    # mais une correction de cadence : une dague frappe 1,18 fois plus souvent
+    # qu'une épée, donc elle monterait d'autant plus vite à base égale, et une
+    # hache 0,77 fois moins. La lance touche jusqu'à deux créatures d'un coup,
+    # donc elle s'entraîne plus vite en couloir. Les bases suivent, pour que
+    # choisir une forme reste un choix de jeu et non de rendement.
+    Skill("dague", "Dague", base=6, scope=EQUIPEMENT,
           effects={"attaque": 1},
           note="Frappe vite, et laisse le temps de fuir."),
     Skill("epee", "Épée", base=5, scope=EQUIPEMENT,
@@ -130,7 +130,7 @@ _enregistrer(
     Skill("lance", "Lance", base=6, scope=EQUIPEMENT,
           effects={"attaque": 1},
           note="Elle traverse : en couloir, deux créatures d'un seul coup."),
-    Skill("hache", "Hache", base=3, scope=EQUIPEMENT,
+    Skill("hache", "Hache", base=4, scope=EQUIPEMENT,
           effects={"attaque": 1},
           note="Lente, mais chaque coup compte double."),
     Skill("pugilat", "Pugilat", base=5, scope=EQUIPEMENT,

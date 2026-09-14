@@ -40,6 +40,13 @@ WAND = "bâton"
 # ce qu'un coup fait mal (`attaque`), ce qu'il coûte d'énergie (`cadence`, où
 # 100 est le tour plein), et jusqu'où il va (`portee`, 2 = il traverse).
 #
+# Les cadences se calent sur l'attaque **totale** et non sur la puissance de
+# l'arme : une cadence multiplie tout, la carrure et les compétences comprises.
+# Calées sur la seule puissance (étape 19.2), elles faisaient de la dague la
+# meilleure arme du jeu dès le deuxième point d'attaque. Recalées, les trois
+# formes se relaient — la hache tant qu'on frappe faible, l'épée le temps
+# d'apprendre, la dague quand la carrure fait le gros du travail.
+#
 # `poids` est une part, pas un poids de tirage : les quatre formes de mêlée se
 # partagent 1,0. Sans ça, passer d'une forme à quatre multipliait par quatre le
 # poids total des armes dans la table de butin, et le donjon se serait couvert
@@ -47,14 +54,14 @@ WAND = "bâton"
 # était, et donne au passage une rareté à chaque forme.
 FORMES = {
     "dague": {"nom": "dague", "glyphe": ")", "categorie": WEAPON,
-              "attaque": 3, "cadence": 70, "poids": 0.35, "unlock": "epees"},
+              "attaque": 3, "cadence": 85, "poids": 0.35, "unlock": "epees"},
     "epee": {"nom": "épée", "glyphe": ")", "categorie": WEAPON,
              "attaque": 5, "cadence": 100, "poids": 0.30, "unlock": "epees"},
     "lance": {"nom": "lance", "glyphe": ")", "categorie": WEAPON,
               "attaque": 4, "cadence": 100, "portee": 2, "poids": 0.20,
               "unlock": "epees"},
     "hache": {"nom": "hache", "glyphe": ")", "categorie": WEAPON,
-              "attaque": 8, "cadence": 160, "poids": 0.15, "unlock": "epees"},
+              "attaque": 8, "cadence": 130, "poids": 0.15, "unlock": "epees"},
     "bouclier": {"nom": "bouclier", "glyphe": "[", "categorie": SHIELD,
                  "attaque": 5, "poids": 1.0, "unlock": "boucliers"},
 }

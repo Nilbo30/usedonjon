@@ -98,7 +98,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 16 | [La monnaie du méta devient l'XP investie, et non la somme des niveaux](journal.md#étape-16--la-monnaie-du-méta-devient-lxp-investie) | ✅ fait |
 | 17 | [Le bus de déclencheurs : tout contenu devient de la donnée](journal.md#étape-170--un-filet-quil-a-fallu-mesurer-avant-dy-croire) | ✅ fait |
 | 18 | [La monnaie devient l'effort : un pas ne vaut plus un coup](journal.md#étape-18--leffort-et-la-marche-qui-redescend-de-60--à-26-) | ✅ fait |
-| 19 | [L'arme devient forme × matière](journal.md#étape-191--la-matière-et-ce-quelle-ne-donne-jamais) | 🚧 en cours |
+| 19 | [L'arme devient forme × matière](journal.md#étape-191--la-matière-et-ce-quelle-ne-donne-jamais) | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -131,7 +131,7 @@ entraîne deux compétences.
 |---|---|---|
 | 19.1 | [L'axe des matières : deux formes, cinq matières](journal.md#étape-191--la-matière-et-ce-quelle-ne-donne-jamais) | ✅ fait |
 | 19.2 | [Les trois autres formes, et le coût d'un coup](journal.md#étape-192--les-trois-autres-formes-et-le-coût-dun-coup) | ✅ fait |
-| 19.3 | Le bot apprend à décider d'un pivot — sans quoi rien ne se mesure | ⏳ à faire |
+| 19.3 | [Le bot apprend à pivoter, et la mesure répond autre chose](journal.md#étape-193--le-bot-apprend-à-pivoter-et-la-mesure-répond-autre-chose) | ✅ fait |
 
 ## Les deux boucles
 
@@ -255,3 +255,12 @@ ligne dans `RunConfig`.
   regénérer sans dire pourquoi dans le journal, c'est retirer le filet.
 - Un filet se mesure avant qu'on s'y fie : la première version des empreintes
   ne couvrait ni la pose, ni le jet, ni aucune des quatre bornes du moteur.
+- **Un instrument se vérifie avant qu'on lise ses chiffres.** Le bot est
+  l'instrument de mesure du projet : tant qu'il ne sait pas faire une chose, il
+  ne mesure rien de cette chose — il mesure sa propre cécité. Douze tests
+  tiennent sa décision d'armement (`tests/test_pivot.py`) avant qu'on croie un
+  seul chiffre de distribution des matières.
+- **Un écart sous deux sigma n'existe pas, et se dégonfle en doublant
+  l'échantillon.** Quatre fois de suite, un écart mesuré entre 1,7 et 1,9 σ
+  est retombé sous 1,3 σ en doublant le nombre de vies. Une mesure unique ne
+  vaut jamais une décision.

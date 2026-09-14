@@ -364,8 +364,11 @@ ont fait changer d'avis — sont dans
 
 ## Pistes pour la suite
 
-- **Le bot qui décide d'un pivot** : sans lui, ni la distribution des matières
-  ni le nombre de changements d'arme par partie ne mesurent quoi que ce soit
+- **L'horizon du pivot** : la bascule des familles commence à l'étage 8, le bot
+  meurt en moyenne au 7 — le changement de matière est juste mais n'a presque
+  jamais lieu. Faire remonter les homoncules, ouvrir « Les profondeurs » plus
+  tôt, ou allonger la survie : trois décisions de jeu, mesurées avant d'être
+  prises
 - **Les baguettes**, et le mage qui va avec (il fait des dégâts à distance :
   aucun monstre ne prend le contrôle du héros, c'est une règle)
 - **L'arc**, en amélioration du nœud des projectiles — les flèches attendent

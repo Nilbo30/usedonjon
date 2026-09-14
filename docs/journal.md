@@ -1863,3 +1863,142 @@ plus nette qu'on pouvait donner que le coût du coup ne change rien là où il n
 a rien à changer.
 
 462 tests, dont seize neufs sur les formes.
+
+## Étape 19.3 — le bot apprend à pivoter, et la mesure répond autre chose
+
+Le brief le disait sans détour : « le bot devra apprendre à décider d'un pivot.
+**S'il ne sait pas le faire, il ne mesure rien.** » Cette étape lui apprend,
+prouve qu'il a appris, puis mesure. La réponse n'est pas celle qu'attendait la
+question, et c'est tout l'intérêt.
+
+### Ce que « décider d'un pivot » veut dire
+
+Comparer des `power`, c'est choisir une arme comme on choisit un nombre.
+Décider d'un pivot, c'est répondre à trois questions que le jeu pose déjà :
+
+1. **qu'est-ce que je vais croiser ici ?** `_familles_attendues` lit la table
+   de l'étage, pondérée. Le bot juge sur la population et non sur la créature
+   qu'il a sous le nez : sinon il changerait d'arme à chaque rencontre, ce qui
+   n'est pas un pivot mais un tic.
+2. **qu'est-ce que ma matière leur fait ?** `_mordant_moyen` croise cette
+   population avec la table des affinités.
+3. **qu'est-ce que je perds en lâchant ce que je tiens ?** La compétence de
+   matière ne vaut que l'objet en main — mais elle vaut aussi le **bouclier**.
+   Lâcher l'épée en argent quand le bras porte de l'argent ne coûte rien. Un
+   bot qui l'ignore surestime le prix du pivot et ne pivote jamais.
+
+Plus une marge de 10 % : chaque échange coûte un tour, et sans marge deux armes
+à un pour cent l'une de l'autre se relaieraient à chaque étage.
+
+**Zéro ligne de moteur.** Le bot apprend à lire ce qui était déjà écrit.
+
+### Vérifier l'instrument avant de croire ses chiffres
+
+Douze tests (`tests/test_pivot.py`) tiennent la décision dans les cinq
+situations qui comptent : il prend l'argent en haut, le fer en bas, il pivote
+quand l'étage change de peuple, il **ne** pivote **pas** quand sa compétence
+d'argent est haute — et il pivote quand même si le bouclier garde l'argent.
+Coupez les affinités, sept tombent ; coupez la lecture des compétences, un
+tombe. L'instrument mord.
+
+### Ce que l'instrument a révélé de mes propres chiffres
+
+Le bot lucide s'est mis à prendre la dague partout. Il avait raison : **une
+cadence multiplie l'attaque entière**, carrure et compétences comprises, pas la
+seule puissance de l'arme. J'avais calé les cadences de l'étape 19.2 sur la
+puissance seule, ce qui était faux.
+
+| attaque hors arme | dague 70 | épée 100 | hache 160 |
+|---|---|---|---|
+| 2 | 7,1 | 7,0 | 6,2 |
+| 12 | **21,4** | 17,0 | 12,5 |
+| 25 | **40,0** | 30,0 | 20,6 |
+
+La dague gagnait dès le deuxième point d'attaque, et l'écart explosait. Cadences
+recalées — dague **85**, hache **130** — et les trois formes se relaient :
+
+| attaque hors arme | dague | épée | hache |
+|---|---|---|---|
+| 4 | 8,2 | 9,0 | **9,2** |
+| 8 | 12,9 | **13,0** | 12,3 |
+| 20 | **27,1** | 25,0 | 21,5 |
+
+La hache tant qu'on frappe faible, l'épée le temps d'apprendre, la dague quand
+la carrure fait le gros du travail. Les bases de compétence suivent (dague 6,
+hache 4). C'est une correction de l'étape précédente, pas une trouvaille : le
+chiffre était faux et l'outil neuf l'a montré en trois campagnes.
+
+Formes portées en fin de vie, 900 vies, contre leur rareté au tirage :
+
+| | dague | épée | lance | hache |
+|---|---|---|---|---|
+| trouvées | 35 % | 30 % | 20 % | 15 % |
+| portées | 35 % | 26 % | 16 % | 23 % |
+
+Aucune forme ne domine : la distribution portée suit la distribution trouvée.
+C'est le meilleur résultat possible pour un axe d'équilibre.
+
+### Les mesures du brief
+
+Comparaison à cadences identiques des deux côtés — **bot aveugle contre bot
+lucide**, seule la décision change. 60 campagnes de 15 vies, appariées.
+
+| | bot aveugle | bot lucide | |
+|---|---|---|---|
+| effort/vie | 43,77 | 42,77 | −1,00 (2,2 σ) |
+| étage atteint | 7,14 | 7,13 | 0,2 σ |
+| **pivots/vie** | 0,109 | 0,117 | 0,7 σ |
+
+Matières portées en fin de vie :
+
+| | bois | bronze | fer | argent | obsidienne |
+|---|---|---|---|---|---|
+| bot aveugle | 536 | 208 | 35 | 24 | 9 |
+| bot lucide | 480 | 220 | **52** | **39** | 8 |
+
+### Ce que ça dit, et ce que ça ne dit pas
+
+**Le bot choisit mieux ses matières** : +49 % de fer, +63 % d'argent, −10 % de
+bois. L'axe est enfin visible dans une mesure. C'était le but de l'étape.
+
+**Il ne pivote pas plus souvent.** 0,109 contre 0,117, sous la barre. Et le
+chiffre du bot aveugle n'était pas nul : il changeait de matière **par
+accident**, en changeant d'arme pour d'autres raisons. Le pivot délibéré n'est
+pas plus fréquent que le pivot accidentel.
+
+Le brief avait prévu deux lectures : « zéro = le creux est trop profond, cinq =
+ça n'existe pas ». Aucune des deux ne s'applique. La vraie raison est ailleurs,
+et elle se lit dans le tableau des populations :
+
+| étage | animal | humanoïde | homoncule | meilleure matière |
+|---|---|---|---|---|
+| 1–7 | 100 → 39 % | 0 → 61 % | **0 %** | argent |
+| 8 | 0 % | 82 % | 18 % | obsidienne / fer |
+| 10 | 0 % | 52 % | 48 % | **fer** |
+| 11+ | 0 % | 31 % | 69 % | **fer** |
+
+La bascule des familles commence à l'étage **8**. Le bot meurt en moyenne à
+**7,1**. Sur 900 vies, celles qui atteignent l'étage 8 pivotent presque deux
+fois plus (0,207 contre 0,109), et celles qui s'arrêtent avant ne pivotent
+**jamais** — pas une seule fois.
+
+Autrement dit : **le donjon s'arrête avant que le pivot ait une raison
+d'exister.** Ce n'est ni un creux trop profond ni un pivot inexistant, c'est un
+horizon trop court. Le mécanisme est juste, prouvé par douze tests ; il lui
+manque des étages.
+
+Je ne le corrige pas ici. Trois leviers existent — faire remonter les
+homoncules, ouvrir « Les profondeurs » plus tôt, ou rendre la survie plus
+longue — et ce sont trois décisions de jeu, pas une correction de code.
+
+### Une dernière chose, désagréable et vraie
+
+Le bot lucide gagne **moins d'effort** (−1,00, 2,2 σ). Ce n'est pas une
+régression : il se bat mieux, donc il frappe moins de fois, et la monnaie
+compte les coups. C'est une propriété connue de l'effort depuis l'étape 18 —
+mais c'est la première fois qu'on la voit pénaliser le fait de **bien jouer**.
+À garder en tête le jour où l'on jugera un talent défensif.
+
+474 tests, dont douze neufs sur le pivot. Une seule empreinte a bougé :
+« pièges », la seule vie assez longue pour porter deux armes de matières
+différentes en même temps.

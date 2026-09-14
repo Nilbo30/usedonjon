@@ -296,21 +296,103 @@ def _tir_possible(game, portee=6):
     return None
 
 
-def _valeur_en_main(objet):
-    """Ce que vaut un équipement pour cent d'énergie.
+# --------------------------------------------------------------------------
+# Choisir son arme — et savoir en changer
+# --------------------------------------------------------------------------
+# Le brief du chantier des matières le disait sans détour : « le bot devra
+# apprendre à décider d'un pivot. S'il ne sait pas le faire, **il ne mesure
+# rien** ». Comparer les `power` bruts, c'était choisir une arme comme on
+# choisit un nombre ; décider d'un pivot, c'est répondre à trois questions que
+# le jeu pose vraiment :
+#
+#   1. qu'est-ce que je vais croiser à cet étage ? (les familles, pondérées)
+#   2. qu'est-ce que cette matière leur fait ? (la table des affinités)
+#   3. qu'est-ce que je perds en lâchant ce que je tiens ? (ma compétence de
+#      matière ne vaut que l'objet en main)
+#
+# Rien de tout ça n'est une règle de jeu : le moteur n'a pas bougé d'une ligne.
+# C'est le bot qui apprend à lire ce qui était déjà écrit.
 
-    Comparer les `power` bruts suffisait tant que toutes les armes coûtaient un
-    tour plein. Depuis les formes, une hache frappe à 8 mais pour 160 d'énergie
-    et une dague à 3 pour 70 : à `power` nu, le bot prendrait la hache à tous
-    les coups et « le bot préfère la hache » ne dirait rien du jeu.
+#: Marge exigée pour changer d'équipement. Sans elle, deux armes à un pour
+#: cent l'une de l'autre se relaieraient à chaque étage, et chaque échange
+#: coûte un tour : le bot passerait sa vie à se rhabiller.
+MARGE_DE_PIVOT = 1.10
 
-    Ce n'est pas encore choisir sa matière — ça, c'est l'étape 19.3. C'est
-    seulement ne pas être aveugle à la cadence.
+
+def _familles_attendues(game):
+    """Ce qu'on risque de croiser à cet étage, famille par famille.
+
+    Le bot juge sur la population de l'étage et non sur le monstre qu'il a sous
+    le nez : sans ça il changerait d'arme à chaque rencontre, ce qui n'est pas
+    un pivot mais un tic.
     """
+    from . import monsters as monsters_mod
+
+    table = monsters_mod.table_for_depth(game.depth, game.config.classes)
+    total = sum(poids for _, poids in table)
+    if not total:
+        return {}
+    parts = {}
+    for espece, poids in table:
+        famille = espece["famille"]
+        parts[famille] = parts.get(famille, 0) + poids / total
+    return parts
+
+
+def _mordant_moyen(matiere, parts):
+    """Ce que cette matière vaut contre la population attendue."""
+    from . import affinites as affinites_mod
+
+    if not matiere or not parts:
+        return 1.0
+    return sum(part * affinites_mod.multiplicateur(matiere, famille)
+               for famille, part in parts.items())
+
+
+def _familles_si(joueur, objet):
+    """Les familles équipées si on prenait cet objet, l'autre main inchangée.
+
+    Le détail qui compte : une compétence de matière se gagne dès qu'on porte
+    la matière, arme **ou** bouclier. Lâcher l'épée en bois quand le bouclier
+    est en bois ne fait donc rien perdre. Un bot qui l'ignore surestime le prix
+    du pivot, et ne pivote jamais.
+    """
+    from . import items as items_mod
+
+    autre = (joueur.shield if objet.category == items_mod.WEAPON
+             else joueur.weapon)
+    familles = []
+    for porte in (objet, autre):
+        if porte is None:
+            continue
+        familles.append(porte.type.skill)
+        if porte.type.matiere:
+            familles.append(porte.type.matiere)
+    return familles
+
+
+def _valeur_en_main(game, objet, parts):
+    """Ce que vaut cet équipement **dans ces mains-là, à cet étage-là**.
+
+    Une arme se juge aux dégâts qu'elle sortira pour cent d'énergie : la forme
+    donne l'attaque et la cadence, la matière donne le mordant, la compétence
+    donne le reste. Un bouclier se juge à ce qu'il évite d'encaisser — sa
+    défense, et la matière qui repousse ce qui frappe.
+    """
+    from . import items as items_mod
     from .entities import ACTION_COST
 
-    cadence = getattr(objet.type, "cadence", 0) or ACTION_COST
-    return objet.power * ACTION_COST / cadence
+    joueur = game.player
+    familles = _familles_si(joueur, objet)
+    mordant = _mordant_moyen(objet.type.matiere, parts)
+    if objet.category == items_mod.WEAPON:
+        attaque = (joueur.base_attack + objet.power
+                   + joueur.skills.bonus("attaque", familles))
+        cadence = objet.type.cadence or ACTION_COST
+        return attaque * mordant * ACTION_COST / cadence
+    defense = (joueur.base_defense + objet.power
+               + joueur.skills.bonus("defense", familles))
+    return defense * mordant
 
 
 def _a_mieux_en_main(game):
@@ -323,15 +405,21 @@ def _a_mieux_en_main(game):
 
     player = game.player
     porte = {items_mod.WEAPON: player.weapon, items_mod.SHIELD: player.shield}
+    parts = _familles_attendues(game)
+    meilleur, ecart = None, MARGE_DE_PIVOT
     for index, objet in enumerate(player.inventory):
         if objet.category not in porte:
             continue
         actuel = porte[objet.category]
         if objet is actuel:
             continue
-        if _valeur_en_main(objet) > (_valeur_en_main(actuel) if actuel else 0):
-            return index
-    return None
+        tenu = _valeur_en_main(game, actuel, parts) if actuel else 0.0
+        candidat = _valeur_en_main(game, objet, parts)
+        if tenu <= 0:
+            return index          # une main vide se remplit sans discuter
+        if candidat / tenu > ecart:
+            meilleur, ecart = index, candidat / tenu
+    return meilleur
 
 
 def _find(game, key):
