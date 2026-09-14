@@ -1449,3 +1449,76 @@ le nœud arrive.
 
 420 tests, dont treize sur le bâton. Les seize empreintes sont intactes pour la
 septième étape d'affilée : du contenu verrouillé ne change rien à une partie.
+
+### Le bâton rejoint l'arbre — et une mesure qui se dégonfle
+
+Le nœud **« Les bâtons »** ouvre la famille, derrière « Grimoires » : la magie
+s'approfondit, on lit avant de brûler. Prix 800, comme ses quatre voisins qui
+ouvrent une famille d'objets (Herbes, Projectiles, Grimoires, Butin) — il en
+ouvre une, il coûte comme eux.
+
+`VERROUS_EN_ATTENTE` est vide : la dette posée à l'étape 17.6 est soldée, et le
+test qui exige qu'elle disparaisse quand le nœud arrive a fait son travail.
+
+#### Le bot d'abord, la mesure ensuite
+
+`_baton_possible` : le bot n'allume le bâton que pour **au moins deux cibles**,
+ou pour une seule dont l'échange coup pour coup lui serait défavorable, et il
+choisit la direction qui touche le plus de monde. Cinq charges : le brûler sur
+un rat ne mesurerait rien.
+
+C'est la leçon payée deux fois — le bot qui ne s'équipait pas, le bot qui ne
+lisait pas — appliquée **avant** de mesurer et non après. Il s'en sert dix fois
+sur douze vies.
+
+#### La mesure, et ce qu'elle ne dit pas
+
+| | XP/vie | étage |
+|---|---|---|
+| arbre sans les bâtons | 1 954 ± 130 | 9,59 ± 0,37 |
+| arbre complet | 2 149 ± 173 | 10,16 ± 0,38 |
+
++195 XP par vie, soit **+0,9 σ**. Le critère du plan tient — l'XP monte après
+l'achat, rien ne recule — mais **l'effet n'est pas mesurable au-dessus de la
+barre du projet**.
+
+Et voici le vrai enseignement : la même mesure à 40 vies donnait +707 XP,
+**+1,86 σ**. Presque la barre. À 100 vies il n'en reste que la moitié. C'est la
+deuxième fois en deux étapes qu'un chiffre mesuré une seule fois se dégonfle
+quand on le regarde mieux, après les « +6,5 % » de coût qui n'existaient pas.
+
+La raison est visible dans le jeu : à poids 4 et profondeur minimale 3, le
+bâton apparaît **moins d'une fois par vie**. Le nœud n'achète pas une
+puissance, il achète une rencontre rare. C'est très shirenien, et ça rend le
+nœud difficile à évaluer au bot. À revoir en jouant.
+
+#### Deux entorses assumées, et elles se disent
+
+**Le nœud ne réveille aucune classe de créatures.** La règle du fichier est
+qu'un nœud qui donne un outil fait venir ceux qui savent s'en servir — le
+donjon apprend ce que le héros apprend. « Grimoires » l'enfreignait déjà ;
+« Les bâtons » l'enfreint aussi. La magie du donjon attend sa classe, le mage,
+et la bâcler en recoloriant un archer ne vaut rien. C'est écrit dans `tree.py`,
+au-dessus des deux nœuds concernés.
+
+**Deux empreintes sur seize ont été regénérées** : les deux parties qui
+achètent tout l'arbre achètent désormais le bâton. Les quatorze autres n'ont
+pas bougé d'un caractère — c'est la preuve que seul le contenu neuf a bougé.
+
+#### Un plancher de couverture qui descend, et pourquoi
+
+Le corpus est passé de quinze butins à neuf : le bot, sachant brûler, tue
+autrement et donc ailleurs. Le plancher descend de dix à huit.
+
+Baisser une barre parce que le chiffre a baissé est exactement ce qu'une barre
+existe pour empêcher — alors j'ai d'abord cherché à restaurer la couverture, en
+densifiant la scène du butin. Ça a échoué, et l'échec apprend quelque chose sur
+le jeu : **dans une mêlée serrée, la moitié du butin ne tombe jamais**, parce
+que la case porte déjà ce qu'a lâché le mort précédent. Six kills sur douze
+dans ce cas. Une scène dense ne peut donc pas produire plus de butin qu'une
+scène clairsemée.
+
+Le chemin reste exercé neuf fois, le plancher le garde à huit, et la raison est
+écrite à côté du chiffre.
+
+422 tests.

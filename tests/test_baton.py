@@ -123,15 +123,34 @@ class TestCeQuiADemandeDuMoteur(unittest.TestCase):
             self.assertTrue(getattr(type_baton, champ), champ)
 
 
-class TestIlResteHorsDuJeu(unittest.TestCase):
-    def test_le_baton_n_est_ouvert_par_aucun_noeud(self):
-        """Prouvé, pas livré : l'accrocher à l'arbre est une autre décision."""
-        self.assertIn("batons", tree.VERROUS_EN_ATTENTE)
+class TestIlEstDansLeJeu(unittest.TestCase):
+    """Prouvé à l'étape 17.6, accroché à l'arbre juste après."""
+
+    def test_un_noeud_l_ouvre(self):
         ouverts = {drapeau for noeud in tree.ARBRE.values()
                    for drapeau in noeud.unlocks}
-        self.assertNotIn("batons", ouverts)
+        self.assertIn("batons", ouverts)
+        self.assertNotIn("batons", tree.VERROUS_EN_ATTENTE)
 
-    def test_la_pyromancie_existe_quand_meme_dans_le_catalogue(self):
+    def test_il_vient_apres_les_grimoires(self):
+        """La magie s'approfondit : on lit avant de brûler."""
+        self.assertEqual(tree.ARBRE["batons"].parents, ("grimoires",))
+
+    def test_le_bot_sait_s_en_servir(self):
+        """Un instrument aveugle ne mesure rien — la leçon payée deux fois."""
+        from donjon.script import _baton_possible
+
+        jeu = sandbox(seed=1)
+        jeu.player.inventory.clear()
+        donner(jeu, "baton_flammes")
+        self.assertIsNone(_baton_possible(jeu), "aucune cible : on ne gâche pas")
+        for distance in (2, 3):
+            place_monster(jeu, (jeu.player.pos[0] + distance,
+                                jeu.player.pos[1]), hp=200)
+        slot, direction = _baton_possible(jeu)
+        self.assertEqual((slot, direction), (0, DIRECTIONS["e"]))
+
+    def test_la_pyromancie_existe_dans_le_catalogue(self):
         self.assertIn("pyromancie", skills.CATALOGUE)
 
 

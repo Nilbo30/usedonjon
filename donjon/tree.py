@@ -192,6 +192,10 @@ _enregistrer(
           branche="Trouvailles", parents=("nourriture",),
           unlocks=("projectiles",), classes=("archer",),
           effets={"items_per_floor": (1, 1)}),
+    # « Grimoires » et « Les bâtons » sont les deux nœuds qui ouvrent une
+    # famille d'objets **sans** réveiller de classe de créatures. C'est une
+    # entorse assumée à la règle du fichier : la magie du donjon attend sa
+    # classe — le mage — et la bâcler en recoloriant un archer ne vaut rien.
     Noeud("grimoires", "Grimoires", 800,
           "Les parchemins rejoignent les trouvailles — non identifiés.",
           branche="Trouvailles", parents=("nourriture",), unlocks=("grimoires",),
@@ -201,6 +205,11 @@ _enregistrer(
           "Se reprend trois fois.",
           branche="Trouvailles", parents=("projectiles",), repetitions=3,
           effets={"recuperation_projectile": 0.10}),
+    Noeud("batons", "Les bâtons", 800,
+          "Des bâtons de flammes traînent au sol : un souffle de feu sur "
+          "plusieurs cases, et cinq charges avant de s'éteindre.",
+          branche="Trouvailles", parents=("grimoires",), unlocks=("batons",),
+          effets={"items_per_floor": (1, 1)}),
     Noeud("intuition", "Intuition", 1600,
           "Le premier parchemin ramassé de chaque vie est reconnu d'emblée.",
           branche="Trouvailles", parents=("grimoires",), unlocks=("intuition",)),
@@ -240,11 +249,7 @@ EFFETS_META = {"coffre_places"}
 #: un talent tomberait — et l'affaiblir aurait laissé passer du contenu
 #: réellement injoignable. Une entrée ici est une dette : elle se solde en
 #: ajoutant le nœud, pas en allongeant la liste.
-VERROUS_EN_ATTENTE = {
-    "batons": "Le bâton de flammes a servi de test au bus de déclencheurs "
-              "(étape 17.6). Le mécanisme est prouvé ; l'accrocher à l'arbre "
-              "est une décision de contenu, avec son équilibrage à mesurer.",
-}
+VERROUS_EN_ATTENTE = {}
 
 #: L'échelle des prix : cinq marches, et rien entre elles. Un nœud coûte l'une
 #: de ces cinq valeurs (un test le vérifie), ce qui rend le rythme d'ouverture

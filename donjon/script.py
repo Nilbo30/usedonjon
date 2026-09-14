@@ -142,6 +142,9 @@ def autoplay(game, steps=200, on_step=None):
             acted = game.cmd_use(_find(game, "herbe_vie"))   # PV définitifs
         elif bloques:
             acted = _se_replacer(game, bloques[0])
+        elif _baton_possible(game) is not None:
+            slot, direction = _baton_possible(game)
+            acted = game.cmd_use(slot, direction)
         elif _tir_possible(game) is not None:
             slot, direction = _tir_possible(game)
             acted = game.cmd_throw(slot, direction)
@@ -225,6 +228,45 @@ def _fuir(game, path):
     if game.player.pos == game.level.stairs:
         return game.cmd_descend()
     return _seek(game, path, game.level.stairs)
+
+
+def _baton_possible(game):
+    """(slot, direction) pour un souffle de flammes qui vaut une charge, sinon None.
+
+    Cinq charges par bâton : le brûler sur un rat ne mesure rien. Le bot ne
+    l'allume que pour au moins deux cibles, ou pour une seule dont l'échange
+    coup pour coup lui serait défavorable. Il choisit la direction qui touche
+    le plus de monde.
+
+    Sans ça, une campagne sur le nœud « Les bâtons » mesurerait sa cécité — le
+    bot ne s'équipait pas, le bot ne lisait pas, et les deux fois la mesure
+    était muette avant qu'on le lui apprenne.
+    """
+    from .geom import ALL_DIRS
+
+    slot = _find(game, "baton_flammes")
+    if slot is None:
+        return None
+    baton = game.player.inventory[slot]
+    meilleure, combien = None, 0
+    for direction in ALL_DIRS:
+        cibles = [acteur for acteur
+                  in game.acteurs_dans_la_zone(game.player.pos, direction,
+                                               baton.type.portee,
+                                               baton.type.largeur)
+                  if not acteur.is_player]
+        if len(cibles) > combien:
+            meilleure, combien = direction, len(cibles)
+    if meilleure is None:
+        return None
+    if combien >= 2:
+        return slot, meilleure
+    cibles = [a for a in game.acteurs_dans_la_zone(
+        game.player.pos, meilleure, baton.type.portee, baton.type.largeur)
+        if not a.is_player]
+    if cibles and _echange_perdant(game, cibles[0]):
+        return slot, meilleure
+    return None
 
 
 def _tir_possible(game, portee=6):

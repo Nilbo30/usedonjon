@@ -17,7 +17,7 @@ from . import monsters
 #: Une config construite à la main (tests, bot, CLI) a tout le contenu.
 TOUT_DEBLOQUE = frozenset({"butin", "vivres", "projectiles", "herbes",
                            "exploration", "auto_repas", "auto_soin",
-                           "grimoires",
+                           "grimoires", "batons",
                            "intuition", "epees", "boucliers", "coffre", "orbe"})
 
 #: De même pour le bestiaire : toutes les classes de créatures.

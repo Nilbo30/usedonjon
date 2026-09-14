@@ -116,6 +116,7 @@ comparées avant de choisir sont dans
 | 17.4 | [Les garde-fous](journal.md#étape-174--deux-garde-fous-qui-nont-encore-rien-à-garder) | ✅ fait |
 | 17.5 | [Le porteur générique](journal.md#étape-175--le-porteur-générique) | ✅ fait |
 | 17.6 | [Le bâton de pyromancie : cinq points de moteur, et pourquoi](journal.md#étape-176--le-bâton-de-flammes-et-le-compte-exact) | ✅ fait |
+| 17.7 | [Le bâton rejoint l'arbre](journal.md#le-bâton-rejoint-larbre--et-une-mesure-qui-se-dégonfle) | ✅ fait |
 
 ## Les deux boucles
 

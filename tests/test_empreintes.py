@@ -198,12 +198,17 @@ PARTIES = (
      ("nourriture", "projectiles", "rien_ne_se_perd", "butin"),
      "ef4b91bf9082e62043a71f35abf83c45",
      {"etage": 5, "tours": 150, "pv": 0, "xp": 217.75, "pas": 155}),
+    # Ces deux-là ont changé quand « Les bâtons » a rejoint l'arbre : elles
+    # achètent tout, donc elles achètent le bâton de flammes. Regénérées le
+    # jour de cet ajout, et c'est écrit dans le journal — les quatorze autres
+    # n'ont pas bougé d'un caractère, ce qui est la preuve que seul le contenu
+    # neuf a bougé.
     ("arbre complet", 39, TOUT,
-     "1ad2b5f57ad1294dbeec6c829f20c443",
-     {"etage": 14, "tours": 1106, "pv": 3, "xp": 2406.95, "pas": 700}),
+     "98ae60baca958e6a4802ec1acdf2a82f",
+     {"etage": 12, "tours": 859, "pv": 0, "xp": 1758.0, "pas": 569}),
     ("arbre complet, profond", 36, TOUT,
-     "4ccbbe7e3e0210e501b3b9fde0480ee7",
-     {"etage": 18, "tours": 1010, "pv": 0, "xp": 2044.45, "pas": 690}),
+     "bfe5f96846e19fc03c2394b34ba3781d",
+     {"etage": 16, "tours": 1011, "pv": 0, "xp": 2041.8, "pas": 710}),
 )
 
 
@@ -255,8 +260,14 @@ class TestEmpreintes(unittest.TestCase):
         bruit à mesure que le bot change.
         """
         compte = self._compter_les_evenements()
+        # Ces planchers sont des garde-fous contre la **disparition** d'un
+        # chemin, pas des objectifs. Le butin est passé de quinze à neuf quand
+        # le bot a appris le bâton de flammes : il tue autrement, donc il tue
+        # ailleurs. Le chemin reste exercé neuf fois — le plancher descend à
+        # huit, et il redescendra encore le jour où ce sera justifié, jamais
+        # en silence.
         for nom, minimum in ((events.JET, 8), (events.POSE, 3),
-                             (events.EQUIPEMENT, 12), (events.BUTIN, 10),
+                             (events.EQUIPEMENT, 12), (events.BUTIN, 8),
                              (events.USAGE_OBJET, 40),
                              (events.MONSTRE_VAINCU, 50)):
             self.assertGreaterEqual(compte.get(nom, 0), minimum, nom)

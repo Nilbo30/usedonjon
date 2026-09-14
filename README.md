@@ -114,8 +114,9 @@ homoncule : ce qu'elles sont) et de 6 **classes** (rôdeur, erratique, embusqué
 guerrier, archer, blindé : ce qu'elles font). Elles laissent du butin sur les
 mêmes axes — la classe lâche son outil, la famille sa matière.
 
-**Les objets** — 15 : vivres, herbes, parchemins non identifiés, armes,
-boucliers, pierres à lancer, l'orbe de retour. Les munitions s'empilent, les
+**Les objets** — 16 : vivres, herbes, parchemins non identifiés, armes,
+boucliers, pierres à lancer, l'orbe de retour, et le bâton de flammes — le seul
+qu'on **vise** : un souffle de feu en cône, cinq charges. Les munitions s'empilent, les
 consommables se ramassent en marchant dessus, et les fiches au survol
 annoncent ce que l'objet fera *dans ces mains-là*, compétences comprises.
 
@@ -145,8 +146,9 @@ Repères actuels, arbre complet acheté, 40 vies :
 | cause de mort | la faim une fois sur deux, sinon les homoncules |
 
 Le bot est un instrument, pas un joueur : il fuit ce qu'il ne peut pas battre,
-lit un parchemin quand il n'a plus le choix et mange l'herbe de vie, mais il
-n'utilise ni graine de sommeil ni tactique de terrain. **Ce qu'il ne sait pas
+lit un parchemin quand il n'a plus le choix, mange l'herbe de vie et n'allume le
+bâton de flammes que pour au moins deux cibles — mais il n'utilise ni graine de
+sommeil ni tactique de terrain. **Ce qu'il ne sait pas
 faire, aucune campagne ne peut l'évaluer** — c'est écrit noir sur blanc dans le
 plan à chaque fois que ça compte.
 
