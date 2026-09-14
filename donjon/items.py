@@ -8,6 +8,7 @@ skills.py). Elle est déduite de la catégorie par défaut, et ne se déclare qu
 pour distinguer des familles d'armes (épée, hache, arc...).
 """
 
+from . import questions
 from .geom import add
 
 WEAPON = "arme"
@@ -172,11 +173,17 @@ class Item:
         return Item(self.type, self.plus, self.registre, quantite)
 
     def puissance_pour(self, joueur=None):
-        """La puissance réelle entre ces mains : l'objet plus la compétence."""
-        valeur = self.power
-        if joueur is not None and self.type.bonus:
-            valeur += joueur.bonus(self.type.bonus)
-        return int(valeur)
+        """La puissance réelle entre ces mains : l'objet plus la compétence.
+
+        Passe par la même question que l'usage réel — sinon la fiche
+        annoncerait un chiffre et le jeu en ferait un autre.
+        """
+        from . import questions
+
+        if joueur is None or not self.type.bonus:
+            return int(self.power)
+        return int(questions.demander(self.type.bonus, self.power,
+                                      porteur=joueur, objet=self))
 
     def description(self, joueur=None):
         """Une ligne expliquant l'effet, chiffres compris.
@@ -208,7 +215,8 @@ class Item:
 
 @effect("soigner")
 def _soigner(game, user, item):
-    healed = user.heal(item.power + user.bonus("soin"))
+    healed = user.heal(questions.demander(questions.SOIN, item.power,
+                                          porteur=user, objet=item))
     if healed:
         game.say(game.act(user, "récupères", "récupère") + f" {healed} PV.")
     else:
@@ -229,7 +237,8 @@ def _manger(game, user, item):
     if not user.is_player:
         return False
     before = user.fullness
-    gagne = item.power + user.bonus("satiete")
+    gagne = questions.demander(questions.SATIETE, item.power,
+                               porteur=user, objet=item)
     user.fullness = min(user.max_fullness, user.fullness + gagne)
     game.say(f"Tu manges {item.name}. Ventre : {before} -> {user.fullness}.")
     return True
@@ -259,7 +268,8 @@ def _lire_lumiere(game, user, item):
 @effect("lire_panique")
 def _lire_panique(game, user, item):
     room = game.level.room_at(user.pos)
-    duree = 10 + user.bonus("duree_effet")
+    duree = questions.demander(questions.DUREE_EFFET, 10,
+                               porteur=user, objet=item)
     touched = 0
     for monster in game.monsters():
         if room and room.contains(monster.pos):
@@ -296,7 +306,9 @@ def _lire_teleport(game, user, item):
 
 @effect("jet_degats")
 def _jet_degats(game, thrower, target, item):
-    dmg = max(1, int(game.rng.variance(item.power + thrower.bonus("degats_jet"))))
+    puissance = questions.demander(questions.DEGATS_JET, item.power,
+                                   porteur=thrower, objet=item, cible=target)
+    dmg = max(1, int(game.rng.variance(puissance)))
     target.take_damage(dmg)
     game.say(f"{item.name} touche {target.name} ({dmg} dégâts).")
     game.check_death(target, killer=thrower)

@@ -154,9 +154,12 @@ min(ESQUIVE_MAX, defenseur.bonus("esquive"))                 # game.py:504
 L'objet « effet en route » : une valeur, son contexte, ses bornes. Et la
 conversion des treize points.
 
-**La difficulté est les bornes.** Trois des treize en portent une, et ce ne
-sont pas des sommes : le plancher de faim à 0,25, `ESQUIVE_MAX`,
-`CHANCE_BUTIN_MAX`. Comme les constantes restent hors périmètre (décision 3),
+**La difficulté est les bornes.** Quatre des treize en portent une, et ce ne
+sont pas des sommes : le plancher de faim à 0,25, le plancher du repos à 1,
+`ESQUIVE_MAX`, `CHANCE_BUTIN_MAX`. *(Cet audit n'en avait compté que trois : le
+`max(1, brut)` du repos a été trouvé en écrivant l'étape 17.1. Le corpus
+d'empreintes ne l'atteignait pas non plus — il lui manquait un niveau de
+récupération sur les huit qu'il faut.)* Comme les constantes restent hors périmètre (décision 3),
 l'objet effet prendra sa borne en argument au point de lecture. Le jour où on
 déménagera les constantes, ce sera une ligne par point, sans retoucher au
 mécanisme.

@@ -1003,3 +1003,87 @@ beaucoup. Il ne garantit pas d'attraper un écart d'un pour cent sur une
 probabilité rarement tirée — `CHANCE_BUTIN_MAX` n'est franchi qu'une vingtaine
 de fois dans tout le corpus. Le même plafond déplacé de moitié, lui, casse
 l'empreinte : vérifié.
+
+### Étape 17.1 — l'interception : le moteur pose des questions
+
+Les treize points de lecture ne sont plus des expressions arithmétiques. Le
+moteur ne lit plus « le bonus d'attaque » : il **demande** combien vaut
+l'attaque, et ce qui sait répondre répond.
+
+```python
+# avant
+int(self.base_attack + equipement + self.bonus("attaque"))
+
+# après
+int(questions.demander(questions.ATTAQUE, self.base_attack + equipement,
+                       porteur=self, arme=self.weapon))
+```
+
+Trois choses changent, et la troisième est la raison du chantier :
+
+1. Les compétences répondent toujours, par une table de onze lignes qui relie
+   chaque effet à la question qu'il alimente. Aucun des onze n'a été réécrit.
+2. Une **interception** peut modifier la réponse en route, en données :
+   `@intercepte(ATTAQUE)` et rien d'autre.
+3. La question **porte son contexte** — qui frappe, qui encaisse, avec quoi.
+   C'est ce que `porteur.bonus("attaque")` ne pouvait pas dire, et c'est ce
+   qu'il faut pour les affinités de matière du chantier 3.
+
+#### Nommer la question d'après la quantité, pas d'après le bonus
+
+Le choix qui décide de la lisibilité de tout le reste. « Endurance » ne
+s'ajoute pas à une question « endurance » : elle se **retire** de la question
+« faim ». On intercepte donc « la faim », pas « l'endurance » — ce qu'on veut
+changer, pas le moyen par lequel on le changeait jusqu'ici.
+
+#### Deux garanties, tenues par le code
+
+**L'ordre est déterministe sans table de priorités.** Deux passes : tout ce qui
+ajoute, puis tout ce qui multiplie, puis le bornage. À l'intérieur d'une passe
+l'ordre n'existe pas, l'addition et la multiplication étant commutatives. Un
+test le vérifie en déclarant le multiplicateur *avant* l'addition.
+
+**Une interception ne peut rien déclencher.** Elle ne reçoit pas le `Game` : il
+n'y a aucune cascade possible au milieu d'un calcul de dégâts. Ce n'est pas une
+règle de discipline, c'est une propriété de structure — et c'est elle qui
+dispensera les questions du garde-fou de l'étape 17.4.
+
+#### Une quatrième borne, trouvée en route
+
+L'audit comptait trois bornes. Il y en a **quatre** : `max(1, brut)` sur
+l'intervalle de repos avait été manqué. Et le corpus d'empreintes ne l'atteignait
+pas non plus — il montait à sept niveaux de récupération là où il en faut huit.
+D'où une seizième partie, « le repos », et un test qui vérifie que les quatre
+bornes sont réellement franchies par le corpus. Une borne qu'aucune partie
+n'atteint n'est pas protégée : on peut la déplacer sans qu'une empreinte bouge.
+
+#### Ce que le filet a attrapé
+
+Une seule régression, et aucun autre test ne l'aurait vue : **`20` devenu
+`20.0`**. `resultat()` multipliait systématiquement par un facteur valant 1.0,
+ce qui transformait tous les entiers en flottants — et « PV 20/20.0 » sur la
+fiche du héros est déjà un changement de comportement. Les seize empreintes ont
+toutes cassé d'un coup, les repères étaient identiques, et le message l'a dit :
+*« les repères sont les mêmes mais la trace diffère »*. Correction : ne pas
+multiplier quand personne n'a déclaré de multiplicateur.
+
+C'est exactement ce pour quoi l'étape 17.0 existait.
+
+#### Ce que ça coûte
+
+Campagne de 25 vies, arbre complet, **14 629 tours des deux côtés** — ce qui est
+déjà une preuve d'identité de plus :
+
+| | durée | par tour |
+|---|---|---|
+| avant | 9,87 s | 0,674 ms |
+| après | 10,51 s | 0,718 ms |
+
+**+6,5 %.** Une allocation d'objet par nombre calculé, et l'attaque du héros est
+recalculée à chaque coup. C'est le prix annoncé dans la comparaison des deux
+formes, et il est payé.
+
+370 tests, dont dix-huit neufs sur les questions — les cinq effets témoins du
+brief, l'ordre des passes, le bornage, et le test qui compte : une interception
+déclarée en données change bien `joueur.attack`, sans qu'une ligne de moteur
+ait bougé.

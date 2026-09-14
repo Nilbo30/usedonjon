@@ -109,8 +109,8 @@ comparées avant de choisir sont dans
 
 | | | |
 |---|---|---|
-| 17.0 | Le filet : quinze parties, quinze empreintes | ✅ fait |
-| 17.1 | L'interception : les treize points de lecture deviennent des questions | à faire |
+| 17.0 | [Le filet : seize parties, seize empreintes](journal.md#étape-170--un-filet-quil-a-fallu-mesurer-avant-dy-croire) | ✅ fait |
+| 17.1 | [L'interception : les treize points de lecture deviennent des questions](journal.md#étape-171--linterception--le-moteur-pose-des-questions) | ✅ fait |
 | 17.2 | Toute mutation passe par le moteur | à faire |
 | 17.3 | Ces méthodes publient | à faire |
 | 17.4 | Les garde-fous | à faire |
@@ -235,7 +235,7 @@ ligne dans `RunConfig`.
 - Pas de refonte globale : on avance par incréments sur l'existant.
 - Le jeu reste jouable après chaque étape.
 - Toute refonte du moteur qui se dit « à comportement identique » doit laisser
-  les **quinze empreintes** de `tests/test_empreintes.py` intactes. Les
+  les **seize empreintes** de `tests/test_empreintes.py` intactes. Les
   regénérer sans dire pourquoi dans le journal, c'est retirer le filet.
 - Un filet se mesure avant qu'on s'y fie : la première version des empreintes
-  ne couvrait ni la pose, ni le jet, ni aucune des trois bornes du moteur.
+  ne couvrait ni la pose, ni le jet, ni aucune des quatre bornes du moteur.

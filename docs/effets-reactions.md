@@ -16,7 +16,7 @@ Onze effets, **treize points de lecture**, tous de la même forme :
 | `attaque` | `entities.py:152` | `int(base + arme + bonus)` |
 | `defense` | `entities.py:157` | `int(base + bouclier + bonus)` |
 | `endurance` | `game.py:278` | `max(0.25, creuse − bonus)` — **soustraction avec plancher** |
-| `regeneration` | `game.py:325` | `config − bonus` |
+| `regeneration` | `game.py:325` | `max(1, config − bonus)` — **plancher** |
 | `esquive` | `game.py:504` | `min(0.55, bonus)` — **probabilité avec plafond** |
 | `chance` | `game.py:570` | `min(plafond, 0.22 + bonus)` |
 | `degats_jet` | `game.py:875`, `items.py:299` | `power + bonus` |
@@ -29,9 +29,10 @@ Deux choses à retenir avant de choisir :
 1. **Le nombre de points de lecture ne grandit pas avec le contenu.** Il
    grandit avec le nombre d'endroits où le moteur calcule un nombre. Il y en a
    treize, et une hache n'en ajoutera aucun.
-2. **Les bornes vivent au point de lecture**, pas dans l'effet. Le plancher de
-   la faim et le plafond d'esquive ne sont pas des sommes : c'est la raison
-   pour laquelle « tout additionner ailleurs » ne suffit pas.
+2. **Les bornes vivent au point de lecture**, pas dans l'effet. Les quatre
+   bornes — le plancher de la faim, celui du repos, le plafond d'esquive et
+   celui du butin — ne sont pas des sommes : c'est la raison pour laquelle
+   « tout additionner ailleurs » ne suffit pas.
 
 Et ce que le système ne sait pas exprimer du tout, aujourd'hui : un effet qui
 dépend de **la cible**. « +50 % contre le métal » n'a nulle part où se poser —

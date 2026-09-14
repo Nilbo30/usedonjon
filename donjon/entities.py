@@ -6,6 +6,7 @@ dans monsters.py, pas une sous-classe.
 """
 
 from . import items as items_mod
+from . import questions
 from .config import RunConfig
 from .skills import SkillSet
 
@@ -41,7 +42,8 @@ class Actor:
 
     @property
     def max_hp(self):
-        return self.base_max_hp + self.bonus("pv_max")
+        return questions.demander(questions.PV_MAX, self.base_max_hp,
+                                  porteur=self)
 
     def bonus(self, effet):
         """Bonus de compétence. Nul pour tout le monde sauf le héros."""
@@ -149,12 +151,16 @@ class Player(Actor):
     @property
     def attack(self):
         equipement = self.weapon.power if self.weapon else 0
-        return int(self.base_attack + equipement + self.bonus("attaque"))
+        return int(questions.demander(
+            questions.ATTAQUE, self.base_attack + equipement,
+            porteur=self, arme=self.weapon))
 
     @property
     def defense(self):
         equipement = self.shield.power if self.shield else 0
-        return int(self.base_defense + equipement + self.bonus("defense"))
+        return int(questions.demander(
+            questions.DEFENSE, self.base_defense + equipement,
+            porteur=self, bouclier=self.shield))
 
     def add_item(self, item):
         """Range un objet — ou l'ajoute à la pile de ses semblables.

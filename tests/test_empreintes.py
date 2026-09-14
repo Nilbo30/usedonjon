@@ -1,7 +1,7 @@
-"""Le filet du chantier des déclencheurs : quinze parties, quinze empreintes.
+"""Le filet du chantier des déclencheurs : seize parties, seize empreintes.
 
 Chaque refonte du moteur qui se dit « à comportement identique » doit laisser
-ces quinze empreintes intactes. C'est la seule façon de le prouver ; sans elles,
+ces seize empreintes intactes. C'est la seule façon de le prouver ; sans elles,
 « identique » reste une intention.
 
 L'empreinte porte sur l'**état** à chaque commande — position, jauges, stats
@@ -122,6 +122,20 @@ def scene_de_la_faim():
     return jeu
 
 
+def scene_du_repos():
+    """Un héros qui souffle, assez entraîné pour buter sur le plancher du repos.
+
+    `max(1, rest_regen_interval − regeneration)` : à douze niveaux de
+    récupération le bonus vaut 3, donc le plancher décide. C'est la quatrième
+    borne du moteur — l'audit n'en avait compté que trois, et le corpus
+    n'atteignait que sept niveaux de récupération sur les huit qu'il faut.
+    """
+    jeu = sandbox(seed=6, config=_reglage(start_hp=120))
+    jeu.player.hp = 10
+    jeu.player.skills.levels["recuperation"] = 12
+    return jeu
+
+
 def _reglage(**champs):
     """Une `RunConfig` de scène : un étage nu, et ce qu'on veut par-dessus."""
     from donjon.config import RunConfig
@@ -130,7 +144,7 @@ def _reglage(**champs):
                      items_per_floor=(0, 0), traps_per_floor=(0, 0), **champs)
 
 
-#: Les sept partitions, en notation `script.py`.
+#: Les huit partitions, en notation `script.py`.
 PARTITIONS = (
     ("le jet", scene_du_jet, "TalTalTalTakTal,",
      "f07b58ae81159cfa8c0b5c0366885885",
@@ -150,6 +164,9 @@ PARTITIONS = (
     ("le butin", scene_du_butin, "lnbhyk" * 12,
      "c45fbac6d053f6d960fdab782e55dcab",
      {"tours": 51, "pv": 22, "xp": 106.0, "pas": 73}),
+    ("le repos", scene_du_repos, "." * 60,
+     "0363cccd0774d8ba36f2b0355ca653ea",
+     {"tours": 60, "pv": 85, "xp": 61.0, "pas": 61}),
     ("la faim", scene_de_la_faim, "lh" * 50,
      "4a82eec08ef94cbabee4e9c8f25be474",
      {"tours": 100, "pv": 20, "xp": 100.0, "pas": 101}),
@@ -191,7 +208,7 @@ PARTIES = (
 
 
 class TestEmpreintes(unittest.TestCase):
-    """Quinze parties rejouées à l'identique, ou le moteur a changé."""
+    """Seize parties rejouées à l'identique, ou le moteur a changé."""
 
     def _comparer(self, nom, obtenue, obtenus, empreinte, reperes):
         # Les repères d'abord : ils nomment ce qui a bougé. Une empreinte
@@ -272,10 +289,10 @@ class TestEmpreintes(unittest.TestCase):
             compte.update(recorder.noms())
         return compte
 
-    def test_les_trois_bornes_du_moteur_sont_reellement_atteintes(self):
+    def test_les_quatre_bornes_du_moteur_sont_reellement_atteintes(self):
         """Une borne que le corpus n'atteint jamais n'est pas protégée.
 
-        Les trois bornes du moteur — le plancher du creusement, le plafond
+        Les quatre bornes du moteur — le plancher du creusement, le plafond
         d'esquive, le plafond de butin — sont exactement celles que l'étape 1
         va convertir en interceptions. Avant les scènes de l'esquive, du butin
         et de la faim, on pouvait porter `ESQUIVE_MAX` de 0,55 à 0,90 sans
@@ -298,6 +315,11 @@ class TestEmpreintes(unittest.TestCase):
         jeu = scene_du_butin()
         self.assertGreater(CHANCE_BUTIN + jeu.player.bonus("chance"),
                            CHANCE_BUTIN_MAX)
+
+        jeu = scene_du_repos()
+        self.assertLess(
+            jeu.config.rest_regen_interval - jeu.player.bonus("regeneration"),
+            1, "sans ça le plancher du repos ne décide de rien")
 
     def test_le_filet_attrape_bien_quelque_chose(self):
         """Un filet qu'on ne teste pas peut être inerte sans qu'on le sache.

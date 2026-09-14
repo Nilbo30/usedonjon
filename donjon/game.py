@@ -11,7 +11,8 @@ Deux idées portent l'extensibilité :
    appellent exactement les mêmes fonctions.
 """
 
-from . import ai, dungeon, events, hub, items, monsters, path, skills, tiles, traps
+from . import (ai, dungeon, events, hub, items, monsters, path, questions,
+               skills, tiles, traps)
 from .config import RunConfig
 from .entities import ACTION_COST, Monster, Player, equiper_kit
 from .events import Event
@@ -275,7 +276,9 @@ class Game:
             # restante pour que le rythme reste régulier.
             creuse = (1.0 + self.config.hunger_scaling * (self.depth - 1)
                       - self.config.endurance)
-            self._hunger_acc += max(0.25, creuse - player.bonus("endurance"))
+            self._hunger_acc += questions.demander(
+                questions.FAIM, creuse, porteur=player, mini=0.25,
+                etage=self.depth)
             while self._hunger_acc >= 1.0 and player.fullness > 0:
                 self._hunger_acc -= 1.0
                 player.fullness -= 1
@@ -322,8 +325,9 @@ class Game:
         """
         if not self._repos_ce_tour:
             return self.config.regen_interval
-        brut = self.config.rest_regen_interval - self.player.bonus("regeneration")
-        return max(1, brut)
+        return questions.demander(
+            questions.REPOS, self.config.rest_regen_interval,
+            porteur=self.player, mini=1)
 
     def _spawn_tick(self):
         self._spawn_countdown -= 1
@@ -501,7 +505,8 @@ class Game:
         """
         if not defenseur.is_player:
             return False
-        chance = min(ESQUIVE_MAX, defenseur.bonus("esquive"))
+        chance = questions.demander(questions.ESQUIVE, 0, porteur=defenseur,
+                                    maxi=ESQUIVE_MAX, attaquant=attaquant)
         if chance <= 0 or not self.rng.chance(chance):
             return False
         self.say(f"Tu te dérobes au coup de {attaquant.name}.")
@@ -566,8 +571,9 @@ class Game:
                      if items.ITEM_TYPES[cle].unlock in (None, *self.config.unlocks)]
         if not possibles or monstre.pos in self.level.items:
             return
-        chance = min(CHANCE_BUTIN_MAX,
-                     CHANCE_BUTIN + self.player.bonus("chance"))
+        chance = questions.demander(questions.BUTIN, CHANCE_BUTIN,
+                                    porteur=self.player, maxi=CHANCE_BUTIN_MAX,
+                                    monstre=monstre)
         if not self.rng.chance(chance):
             return
         objet = items.make(self.rng.choice(possibles),
@@ -872,7 +878,9 @@ class Game:
         if target:
             self.say(f"Tu lances {item.name} sur {target.name}.")
             if not item.hit(self, self.player, target):
-                puissance = max(1, item.power or 2) + self.player.bonus("degats_jet")
+                puissance = questions.demander(
+                    questions.DEGATS_JET, max(1, item.power or 2),
+                    porteur=self.player, objet=item, cible=target)
                 dmg = max(1, int(self.rng.variance(puissance)))
                 target.take_damage(dmg)
                 self.say(f"{item.name} inflige {dmg} dégâts.")
