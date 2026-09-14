@@ -1217,5 +1217,5 @@ pv_max_gagne       14
 `ventre_change` domine largement : environ un par tour, la faim creusant à
 chaque pas. Si le coût de 17.5 dérape, c'est là qu'il faudra regarder d'abord.
 
-384 tests, dont sept neufs sur les faits. Les seize empreintes sont intactes
+383 tests, dont six neufs sur les faits. Les seize empreintes sont intactes
 pour la quatrième étape d'affilée.
