@@ -98,6 +98,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 16 | [La monnaie du méta devient l'XP investie, et non la somme des niveaux](journal.md#étape-16--la-monnaie-du-méta-devient-lxp-investie) | ✅ fait |
 | 17 | [Le bus de déclencheurs : tout contenu devient de la donnée](journal.md#étape-170--un-filet-quil-a-fallu-mesurer-avant-dy-croire) | ✅ fait |
 | 18 | [La monnaie devient l'effort : un pas ne vaut plus un coup](journal.md#étape-18--leffort-et-la-marche-qui-redescend-de-60--à-26-) | ✅ fait |
+| 19 | [L'arme devient forme × matière](journal.md#étape-191--la-matière-et-ce-quelle-ne-donne-jamais) | 🚧 en cours |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -118,6 +119,19 @@ comparées avant de choisir sont dans
 | 17.5 | [Le porteur générique](journal.md#étape-175--le-porteur-générique) | ✅ fait |
 | 17.6 | [Le bâton de pyromancie : cinq points de moteur, et pourquoi](journal.md#étape-176--le-bâton-de-flammes-et-le-compte-exact) | ✅ fait |
 | 17.7 | [Le bâton rejoint l'arbre](journal.md#le-bâton-rejoint-larbre--et-une-mesure-qui-se-dégonfle) | ✅ fait |
+
+### Étape 19 — forme × matière
+
+La forme dit *comment on frappe* et porte les chiffres ; la matière dit *sur
+quoi ça mord* et n'en porte **aucun**. Le pivot ne coûte rien d'artificiel : il
+coûte parce que les familles se répartissent en profondeur et que chaque coup
+entraîne deux compétences.
+
+| | | |
+|---|---|---|
+| 19.1 | [L'axe des matières : deux formes, cinq matières](journal.md#étape-191--la-matière-et-ce-quelle-ne-donne-jamais) | ✅ fait |
+| 19.2 | Les trois autres formes : dague, lance, hache | ⏳ à faire |
+| 19.3 | Le bot apprend à décider d'un pivot — sans quoi rien ne se mesure | ⏳ à faire |
 
 ## Les deux boucles
 

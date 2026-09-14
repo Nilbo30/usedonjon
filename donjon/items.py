@@ -19,6 +19,58 @@ FOOD = "nourriture"
 AMMO = "projectile"
 WAND = "bâton"
 
+# ---------------------------------------------------------------------------
+# Forme × matière : l'équipement est un croisement, comme le bestiaire
+# ---------------------------------------------------------------------------
+# Une arme n'est pas une chose, c'est une case de tableau. La **forme** dit
+# comment on frappe et porte **tous les chiffres** ; la **matière** dit contre
+# quoi ça mord et n'en porte **aucun**.
+#
+# Cette séparation n'est pas une élégance : c'est ce qui garde la boucle de
+# butin vivante. Si la matière donnait de l'attaque à l'objet, une épée en
+# argent ramassée à l'étage 8 serait moins bonne que l'épée en bois qu'on
+# traîne depuis le premier — et on cesserait de ramasser. Ici, les deux frappent
+# pareil ; ce qui les sépare, c'est ce qu'elles mordent (voir affinites.py) et
+# ce qu'elles pèsent.
+#
+# Ce qui rend le pivot coûteux, ce n'est donc pas l'objet mais la **compétence**
+# de matière : passer du bois au fer, c'est repartir de zéro sur une courbe.
+
+FORMES = {
+    "epee": {"nom": "épée", "glyphe": ")", "categorie": WEAPON,
+             "attaque": 5, "unlock": "epees"},
+    "bouclier": {"nom": "bouclier", "glyphe": "[", "categorie": SHIELD,
+                 "attaque": 5, "unlock": "boucliers"},
+}
+
+#: Les matières, et ce qu'elles mordent : voir `affinites.py` pour la table.
+#: `profondeur` décide où elles commencent à apparaître, `poids` leur rareté —
+#: l'argent est léger au tirage parce qu'il est rare, pas parce qu'il est bon.
+MATIERES = {
+    "bois": {"nom": "en bois", "poids": 10, "profondeur": 1},
+    "bronze": {"nom": "en bronze", "poids": 7, "profondeur": 2},
+    "fer": {"nom": "en fer", "poids": 5, "profondeur": 4},
+    "argent": {"nom": "en argent", "poids": 3, "profondeur": 5},
+    "obsidienne": {"nom": "en obsidienne", "poids": 2, "profondeur": 7},
+}
+
+
+def _equipements():
+    """Le croisement, déplié : deux formes × cinq matières = dix objets.
+
+    Sept lignes de données pour dix objets — et vingt le jour où les trois
+    autres formes arriveront, sans une ligne de plus ici.
+    """
+    for cle_forme, forme in FORMES.items():
+        for cle_matiere, matiere in MATIERES.items():
+            yield ItemType(
+                f"{cle_forme}_{cle_matiere}",
+                f"{forme['nom']} {matiere['nom']}",
+                forme["glyphe"], forme["categorie"],
+                power=forme["attaque"], weight=matiere["poids"],
+                depth_min=matiere["profondeur"], unlock=forme["unlock"],
+                skill=cle_forme, matiere=cle_matiere)
+
 #: Apparences des objets non identifiés, par catégorie. Ajouter une catégorie
 #: ici suffit à la rendre mystérieuse — les potions, le jour venu.
 APPARENCES = {
@@ -94,7 +146,7 @@ class ItemType:
     def __init__(self, key, name, glyph, category, power=0, weight=10,
                  on_use=None, on_hit=None, note="", skill=None, depth_min=1,
                  unlock=None, bonus=None, regles=(), on_aim=None,
-                 portee=0, largeur=0, charges=0):
+                 portee=0, largeur=0, charges=0, matiere=None):
         self.key = key
         self.name = name
         self.glyph = glyph
@@ -112,6 +164,7 @@ class ItemType:
         self.portee = portee        # jusqu'où, en cases (0 = sans portée)
         self.largeur = largeur      # 0 = un rayon, plus = un cône qui s'ouvre
         self.charges = charges      # usages avant épuisement (0 = consommable)
+        self.matiere = matiere      # axe « contre quoi ça mord » (voir FORMES)
         self.note = note
         self.depth_min = depth_min  # étage à partir duquel l'objet apparaît
         self.unlock = unlock        # talent requis pour qu'il apparaisse
@@ -462,16 +515,15 @@ _register(
              on_hit="jet_degats",
              note="À lancer : {n} dégâts. Faite pour un arc, faute de mieux.",
              unlock="projectiles", bonus="degats_jet"),
-    ItemType("epee_bois", "épée en bois", ")", WEAPON, power=3, weight=8, unlock="epees"),
-    ItemType("epee_fer", "épée en fer", ")", WEAPON, power=6, weight=5, unlock="epees"),
-    ItemType("bouclier_bois", "bouclier en bois", "[", SHIELD, power=3, weight=8, unlock="boucliers"),
-    ItemType("bouclier_fer", "bouclier en fer", "[", SHIELD, power=6, weight=5, unlock="boucliers"),
 )
 
 
 def make(key, plus=0, registre=None, quantite=1):
     return Item(ITEM_TYPES[key], plus, registre, quantite)
 
+
+# Les dix équipements ne s'écrivent pas : ils se déplient (voir FORMES).
+_register(*_equipements())
 
 #: Une pile ne monte pas indéfiniment : au-delà, le sac deviendrait infini.
 MAX_PILE = 99

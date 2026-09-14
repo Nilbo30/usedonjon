@@ -32,10 +32,27 @@ class Actor:
         self.is_player = False
         self.regles = ()         # règles portées (voir regles.py)
 
-    # --- statistiques (surchargées par le joueur : équipement + compétences)
+    # --- statistiques ----------------------------------------------------
+    def attaque_contre(self, cible=None):
+        """Ce que vaut ce coup-ci — face à quelqu'un, ou dans l'absolu.
+
+        Une propriété ne peut pas savoir qui elle frappe, et l'affinité de
+        matière ne vit que dans cette rencontre (voir affinites.py). D'où la
+        méthode : `attack` en est le cas « personne en face », celui de la
+        fiche du héros.
+
+        Portée par `Actor` et non par `Player` : un monstre qui frappe doit
+        poser la même question, sinon le bouclier du héros ne saurait jamais
+        qui il encaisse.
+        """
+        arme = getattr(self, "weapon", None)
+        return int(questions.demander(
+            questions.ATTAQUE, self.base_attack + (arme.power if arme else 0),
+            porteur=self, arme=arme, cible=cible))
+
     @property
     def attack(self):
-        return self.base_attack
+        return self.attaque_contre()
 
     @property
     def defense(self):
@@ -144,18 +161,18 @@ class Player(Actor):
         return "esquive"
 
     def families(self):
-        """Familles d'équipement actives, pour les bonus de compétence."""
-        return [self.weapon_skill, self.shield_skill]
+        """Ce qui est porté, et qui donne donc ses bonus : formes **et** matières.
+
+        Une compétence de matière ne vaut que l'objet en main : lâcher l'épée
+        en argent, c'est perdre l'argent. C'est ce qui fait du pivot une
+        décision et pas une accumulation.
+        """
+        matieres = [objet.type.matiere for objet in (self.weapon, self.shield)
+                    if objet is not None and objet.type.matiere]
+        return [self.weapon_skill, self.shield_skill] + matieres
 
     def bonus(self, effet):
         return self.skills.bonus(effet, self.families())
-
-    @property
-    def attack(self):
-        equipement = self.weapon.power if self.weapon else 0
-        return int(questions.demander(
-            questions.ATTAQUE, self.base_attack + equipement,
-            porteur=self, arme=self.weapon))
 
     @property
     def defense(self):

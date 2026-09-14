@@ -145,12 +145,17 @@ def _reglage(**champs):
 
 
 #: Les huit partitions, en notation `script.py`.
+#: Cinq d'entre elles ont été regénérées le jour du chantier 3 : l'épée de
+#: départ est passée de 3 à 5 points d'attaque (la forme donne le chiffre, la
+#: matière ne donne plus rien de brut), donc toute scène où le héros tient une
+#: arme a changé d'état. Les trois autres — le jet, les objets, les pièges —
+#: n'ont pas bougé d'un caractère : le héros n'y frappe personne.
 PARTITIONS = (
     ("le jet", scene_du_jet, "TalTalTalTakTal,",
      "f07b58ae81159cfa8c0b5c0366885885",
      {"tours": 5, "pv": 20, "xp": 8.0, "pas": 7}),
     ("l'équipement", scene_de_l_equipement, ",Eal,Ebl,EaEbDalDalDa",
-     "9359dc53017634088bb166a54e595615",
+     "869623c9aad68b215fa482ebaa8a9f55",
      {"tours": 14, "pv": 20, "xp": 4.0, "pas": 15}),
     ("les objets", scene_des_objets, "UaUaUaUa",
      "c0fce7c892ea7643c2605111eb70cf90",
@@ -159,16 +164,16 @@ PARTITIONS = (
      "f2ef0b750df617e1eb2b10b8489025b8",
      {"tours": 17, "pv": 18, "xp": 9.0, "pas": 13}),
     ("l'esquive", scene_de_l_esquive, "." * 150,
-     "be68736ef5117698e9e87d0f00aa4cf0",
+     "fce51b59c22bbcfe8fdd423882a1c435",
      {"tours": 84, "pv": 0, "xp": 124.0, "pas": 86}),
     ("le butin", scene_du_butin, "lnbhyk" * 12,
-     "c45fbac6d053f6d960fdab782e55dcab",
-     {"tours": 51, "pv": 22, "xp": 106.0, "pas": 73}),
+     "90cd05a70b45c6829993ce77ebedf04e",
+     {"tours": 51, "pv": 22, "xp": 133.0, "pas": 73}),
     ("le repos", scene_du_repos, "." * 60,
-     "0363cccd0774d8ba36f2b0355ca653ea",
+     "4252b075da9dab04632e729862e5b608",
      {"tours": 60, "pv": 85, "xp": 61.0, "pas": 61}),
     ("la faim", scene_de_la_faim, "lh" * 50,
-     "4a82eec08ef94cbabee4e9c8f25be474",
+     "1ee5de18be56c3f914c998bd994757fb",
      {"tours": 100, "pv": 20, "xp": 100.0, "pas": 101}),
 )
 
@@ -185,11 +190,11 @@ PARTIES = (
      "5993e657845c2021073ece2ecf39f5b8",
      {"etage": 5, "tours": 215, "pv": 0, "xp": 312.4, "pas": 148}),
     ("armes", 3, ("nourriture", "epee", "bouclier", "affutage"),
-     "a9c79d3dc0d6a937371d75d2e1149ca4",
-     {"etage": 6, "tours": 206, "pv": 0, "xp": 305.8, "pas": 160}),
+     "4b556060b919c4fd90af82dc6148c702",
+     {"etage": 5, "tours": 203, "pv": 0, "xp": 276.45, "pas": 141}),
     ("pieges", 16, ("nourriture", "epee", "pieges"),
-     "f03c3ab4212a8c3146caddee47b95b2d",
-     {"etage": 8, "tours": 470, "pv": 0, "xp": 629.45, "pas": 339}),
+     "2637e0b840b24a076353a419286f85da",
+     {"etage": 9, "tours": 548, "pv": 0, "xp": 861.3, "pas": 430}),
     ("herbes et parchemins", 13,
      ("nourriture", "herbes", "grimoires", "intuition"),
      "693d960b2f666af94e45834891f2d9a0",
@@ -198,17 +203,15 @@ PARTIES = (
      ("nourriture", "projectiles", "rien_ne_se_perd", "butin"),
      "ef4b91bf9082e62043a71f35abf83c45",
      {"etage": 5, "tours": 150, "pv": 0, "xp": 217.75, "pas": 155}),
-    # Ces deux-là ont changé quand « Les bâtons » a rejoint l'arbre : elles
-    # achètent tout, donc elles achètent le bâton de flammes. Regénérées le
-    # jour de cet ajout, et c'est écrit dans le journal — les quatorze autres
-    # n'ont pas bougé d'un caractère, ce qui est la preuve que seul le contenu
-    # neuf a bougé.
+    # Ces deux-là achètent tout l'arbre : tout ce qui touche au contenu les
+    # déplace. Elles ont bougé une première fois pour « Les bâtons », une
+    # seconde pour les matières (chantier 3). Voir le journal des deux jours.
     ("arbre complet", 39, TOUT,
-     "98ae60baca958e6a4802ec1acdf2a82f",
-     {"etage": 12, "tours": 859, "pv": 0, "xp": 1758.0, "pas": 569}),
+     "671d2640fc258c0365101119441b27f2",
+     {"etage": 11, "tours": 589, "pv": 0, "xp": 1381.4, "pas": 461}),
     ("arbre complet, profond", 36, TOUT,
-     "bfe5f96846e19fc03c2394b34ba3781d",
-     {"etage": 16, "tours": 1011, "pv": 0, "xp": 2041.8, "pas": 710}),
+     "5f97c2f82ea28e39237f13fdd2dbdca5",
+     {"etage": 17, "tours": 1046, "pv": 0, "xp": 2283.05, "pas": 736}),
 )
 
 

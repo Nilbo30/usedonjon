@@ -114,15 +114,21 @@ homoncule : ce qu'elles sont) et de 6 **classes** (rôdeur, erratique, embusqué
 guerrier, archer, blindé : ce qu'elles font). Elles laissent du butin sur les
 mêmes axes — la classe lâche son outil, la famille sa matière.
 
-**Les objets** — 16 : vivres, herbes, parchemins non identifiés, armes,
+**Les objets** — 22 : vivres, herbes, parchemins non identifiés, armes,
 boucliers, pierres à lancer, l'orbe de retour, et le bâton de flammes — le seul
-qu'on **vise** : un souffle de feu en cône, cinq charges. Les munitions s'empilent, les
+qu'on **vise** : un souffle de feu en cône, cinq charges. Armes et boucliers ne
+s'écrivent pas un par un : ils se croisent. La **forme** dit comment on frappe
+et porte les chiffres, la **matière** dit sur quoi ça mord et n'en porte
+aucun — cinq matières, du bois à l'obsidienne, chacune avec ce qu'elle mord et
+ce sur quoi elle glisse. Les munitions s'empilent, les
 consommables se ramassent en marchant dessus, et les fiches au survol
 annoncent ce que l'objet fera *dans ces mains-là*, compétences comprises.
 
-**Les compétences** — 12, gagnées en pratiquant : marcher entraîne la marche,
-frapper entraîne l'arme en main, encaisser entraîne le bouclier — ou l'esquive
-si le bras est nu. Elles sont perdues à la mort.
+**Les compétences** — 18, gagnées en pratiquant : marcher entraîne la marche,
+frapper entraîne l'arme en main **et sa matière**, encaisser entraîne le
+bouclier — ou l'esquive si le bras est nu. Deux courbes par emplacement : c'est
+ce qui fait le prix d'un changement de matière, sans qu'aucune règle ne
+l'interdise. Elles sont perdues à la mort.
 
 **Le méta** — un refuge où l'on marche, son coffre, sa stèle des talents ;
 24 nœuds (32 achats avec les reprises) répartis en 6 branches, dont une
@@ -354,9 +360,8 @@ ont fait changer d'avis — sont dans
 
 ## Pistes pour la suite
 
-- **Forces et faiblesses par famille** : le métal encaisse le tranchant et
-  redoute le contondant, la chair l'inverse — l'axe qui donnera tout son sens
-  aux homoncules, et une raison de porter deux armes
+- **Les trois autres formes** — dague, lance, hache : quatre formes × cinq
+  matières font vingt armes pour neuf lignes de données
 - **Les baguettes**, et le mage qui va avec (il fait des dégâts à distance :
   aucun monstre ne prend le contrôle du héros, c'est une règle)
 - **L'arc**, en amélioration du nœud des projectiles — les flèches attendent

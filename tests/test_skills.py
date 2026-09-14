@@ -141,9 +141,11 @@ class TestBonus(unittest.TestCase):
 
     def test_le_bouclier_ne_compte_qu_equipe(self):
         self.joueur.skills.levels["bouclier"] = 3
+        porte = self.joueur.shield
         avec = self.joueur.defense
         self.joueur.shield = None
-        self.assertEqual(self.joueur.defense, avec - 3 - 3)  # bonus + l'objet
+        # le bonus de compétence (3) **et** l'objet lui-même
+        self.assertEqual(self.joueur.defense, avec - 3 - porte.type.power)
 
     def test_l_herboristerie_augmente_les_soins(self):
         self.joueur.base_max_hp = 100          # pour ne pas buter sur le plafond

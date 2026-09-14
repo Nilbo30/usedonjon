@@ -12,8 +12,11 @@ class TestFiches(unittest.TestCase):
             self.assertTrue(items.make(cle).description(), cle)
 
     def test_l_equipement_annonce_son_bonus_reel(self):
-        self.assertIn("+8", items.make("epee_fer", plus=2).description())
-        self.assertIn("+1", items.make("bouclier_bois", plus=-2).description())
+        """Les chiffres viennent du catalogue : un rééquilibrage ne doit rien casser."""
+        for cle, plus in (("epee_fer", 2), ("bouclier_bois", -2)):
+            attendu = items.ITEM_TYPES[cle].power + plus
+            self.assertIn(f"+{attendu}",
+                          items.make(cle, plus=plus).description(), cle)
 
     def test_les_chiffres_des_fiches_suivent_les_donnees(self):
         """Garde-fou : une fiche qui ment après un changement de puissance."""
@@ -197,7 +200,8 @@ class TestObjets(unittest.TestCase):
         game.player.inventory = [items.make("epee_fer", plus=3)]
         before = game.player.attack
         game.cmd_equip(0)
-        self.assertEqual(game.player.attack, before + 9)
+        self.assertEqual(game.player.attack,
+                         before + items.ITEM_TYPES["epee_fer"].power + 3)
 
     def test_ramasser_et_poser(self):
         game = sandbox()

@@ -11,8 +11,8 @@ Deux idées portent l'extensibilité :
    appellent exactement les mêmes fonctions.
 """
 
-from . import (ai, dungeon, events, hub, items, monsters, path, questions,
-               regles as regles_mod, skills, tiles, traps)
+from . import (affinites, ai, dungeon, events, hub, items, monsters, path,
+               questions, regles as regles_mod, skills, tiles, traps)
 from .config import RunConfig
 from .entities import ACTION_COST, Monster, Player, equiper_kit
 from .events import Event
@@ -76,6 +76,7 @@ class Game:
         # Auditeurs d'évènements. Le formateur de compétences en est un comme
         # un autre : le moteur ne sait pas ce qu'il fait de ce qu'on lui dit.
         self.listeners = [skills.Trainer(), regles_mod.Distributeur()]
+        assert affinites.AFFINITES      # l'import pose les interceptions
         # Le garde-fou des chaînes : combien de maillons sont en cours, et ce
         # qui a été coupé. Voir `notify`.
         self.maillons = 0
@@ -626,7 +627,8 @@ class Game:
                 self.notify(events.COUP, arme=arme, cible=defender,
                             touche=False, degats=0)
             return
-        raw = max(1.0, attacker.attack - defender.defense * 0.7)
+        raw = max(1.0, attacker.attaque_contre(defender)
+                  - defender.defense * 0.7)
         dmg = max(1, int(round(self.rng.variance(raw))))
         self.blesser(defender, dmg, source=attacker)
         if attacker.is_player:
@@ -1010,7 +1012,8 @@ class Game:
             return False
         if self.esquive(cible, tireur):
             return False
-        brut = max(1.0, tireur.attack * DEGATS_A_DISTANCE - cible.defense * 0.7)
+        brut = max(1.0, tireur.attaque_contre(cible) * DEGATS_A_DISTANCE
+                   - cible.defense * 0.7)
         degats = max(1, int(round(self.rng.variance(brut))))
         self.blesser(cible, degats, source=tireur)
         self.say(f"{tireur.name} te touche à distance ({degats} dégâts)."

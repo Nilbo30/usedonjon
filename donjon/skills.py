@@ -151,6 +151,26 @@ _enregistrer(
     Skill("jet", "Jet", base=3,
           effects={"degats_jet": 1},
           note="Viser fait mal."),
+    # Les matières. Elles donnent de l'attaque comme les formes — c'est ce qui
+    # rend le pivot **coûteux** : passer du bois au fer, c'est repartir de zéro
+    # sur une courbe pendant que l'autre était haute. L'objet, lui, ne change
+    # pas de chiffres d'une matière à l'autre (voir items.FORMES) : une épée
+    # en argent ramassée à l'étage huit n'est jamais pire que le bois qu'on
+    # traîne, et la boucle de butin tient.
+    #
+    # Elles montent lentement (base 8) : on ne change pas de matière comme de
+    # chemise, et une matière maîtrisée doit se sentir.
+    Skill("bois", "Bois", base=8, scope=EQUIPEMENT, effects={"attaque": 1},
+          note="Le bois est commun : on apprend vite à s'en contenter."),
+    Skill("bronze", "Bronze", base=8, scope=EQUIPEMENT, effects={"attaque": 1},
+          note="Le premier métal du donjon."),
+    Skill("fer", "Fer", base=8, scope=EQUIPEMENT, effects={"attaque": 1},
+          note="Il mord ce qui est fabriqué, et le fond du donjon en est plein."),
+    Skill("argent", "Argent", base=8, scope=EQUIPEMENT, effects={"attaque": 1},
+          note="Il mord le vivant, qui peuple le haut du donjon."),
+    Skill("obsidienne", "Obsidienne", base=8, scope=EQUIPEMENT,
+          effects={"attaque": 1},
+          note="Tranchante sur tout ce qui respire."),
     Skill("parchemins", "Parchemins", base=2, growth=1.6,
           effects={"duree_effet": 1},
           note="Les incantations durent plus longtemps."),
@@ -172,6 +192,10 @@ class Regle:
     `competence` est soit une clé du catalogue, soit `"@champ"` : on lit alors
     la famille (`skill`) de l'objet rangé sous ce champ de l'évènement. C'est ce
     qui rend l'ajout d'une arme purement déclaratif.
+
+    `"@champ.attribut"` lit un **autre** attribut du type — c'est ce qui permet
+    à un coup de créditer deux compétences à la fois, la forme de l'arme et sa
+    matière, sans que le moteur connaisse ni l'une ni l'autre.
     """
 
     def __init__(self, evenement, competence, xp=1, defaut=None, si=None,
@@ -195,10 +219,11 @@ class Regle:
             return None
         if not self.competence.startswith("@"):
             return self.competence
-        objet = event.get(self.competence[1:])
+        champ, _, attribut = self.competence[1:].partition(".")
+        objet = event.get(champ)
         if objet is None:
             return self.defaut
-        return getattr(objet.type, "skill", None) or self.defaut
+        return getattr(objet.type, attribut or "skill", None) or self.defaut
 
 
 REGLES = (
@@ -206,6 +231,9 @@ REGLES = (
     # Un coup nourrit à la fois la famille d'arme et la carrure générale :
     # c'est le cas type d'une action qui crédite deux compétences.
     Regle(events.COUP, "@arme", defaut="pugilat", si=lambda e: e["touche"]),
+    # La seconde moitié du croisement : la matière s'apprend en frappant avec,
+    # exactement comme la forme. Une ligne, et le moteur n'en sait rien.
+    Regle(events.COUP, "@arme.matiere", si=lambda e: e["touche"]),
     Regle(events.COUP, "combat", si=lambda e: e["touche"]),
     # Au contact seulement : abattre une créature d'un caillou entretenait la
     # carrure sans qu'on ait échangé un coup.
@@ -214,6 +242,8 @@ REGLES = (
     # Deux écoles pour la même leçon, selon ce qu'on a au bras — le pendant
     # exact de « épée / pugilat » du côté de la défense.
     Regle(events.COUP_RECU, "bouclier", si=lambda e: e["bouclier"] is not None),
+    Regle(events.COUP_RECU, "@bouclier.matiere",
+          si=lambda e: e["bouclier"] is not None),
     Regle(events.COUP_RECU, "esquive", si=lambda e: e["bouclier"] is None),
     # Et surtout : bouger pendant que quelque chose peut te toucher. Encaisser
     # seul ne suffit pas à la faire monter — encaisser est ce qui tue.

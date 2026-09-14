@@ -1612,3 +1612,140 @@ surtout ceux qui descendent plus bas. Un humain qui joue mieux y arrivera plus
 tôt. À confirmer en jouant, pas au bot.
 
 425 tests, dont trois neufs sur l'effort.
+
+## Étape 19.1 — la matière, et ce qu'elle ne donne jamais
+
+Le chantier 3 coupe l'arme en deux : la **forme** dit *comment on frappe* et
+porte les chiffres, la **matière** dit *sur quoi ça mord* et ne porte aucun
+chiffre d'attaque. Cette étape pose l'axe entier avec deux formes seulement —
+épée et bouclier — parce que l'axe est ce qui se mesure, et que les trois
+autres formes n'ajouteront pas une ligne de moteur.
+
+### Sept lignes de données, dix objets
+
+Les quatre équipements écrits à la main ont disparu. À leur place :
+
+```python
+FORMES   = {"epee": {...,"attaque": 5}, "bouclier": {...,"attaque": 5}}
+MATIERES = {"bois":   {"poids": 10, "profondeur": 1},
+            "bronze": {"poids":  7, "profondeur": 2},
+            "fer":    {"poids":  5, "profondeur": 4},
+            "argent": {"poids":  3, "profondeur": 5},
+            "obsidienne": {"poids": 2, "profondeur": 7}}
+```
+
+Deux formes × cinq matières = **dix objets**, dépliés par `_equipements()`.
+Les clés restent `epee_bois`, `bouclier_fer` — ce qui n'a rien cassé du kit de
+départ ni de la table de butin. Le jour où les trois autres formes arrivent,
+ce sont vingt objets pour deux lignes de plus.
+
+`MATIERES` n'a pas de champ `attaque`, et un test refuse qu'on lui en ajoute
+un : c'est le verrou du chantier. Une matière qui donnerait de l'attaque brute
+ferait gagner l'épée en bois entraînée contre l'épée en argent trouvée le jour
+même, et la boucle du butin mourrait.
+
+### La rencontre : matière contre famille
+
+`donjon/affinites.py`, quinze nombres et **zéro ligne de moteur** :
+
+|  | animal | humanoïde | homoncule |
+|---|---|---|---|
+| bois | 1,0 | 1,0 | 0,7 |
+| bronze | 1,1 | 1,0 | 0,9 |
+| fer | 1,0 | 1,1 | **1,3** |
+| argent | **1,3** | 1,2 | 0,8 |
+| obsidienne | 1,2 | **1,3** | 1,0 |
+
+Une seule interception, sur la question `ATTAQUE` ouverte à l'étape 17.1. Elle
+porte les deux moitiés du coup : l'arme de celui qui frappe mord la famille
+d'en face, le bouclier de celui qui encaisse repousse la famille de celui qui
+frappe. La moitié défensive vit sur `ATTAQUE` et non sur `DEFENSE` parce que
+`Actor.defense` est une **propriété**, lue sans savoir qui attaque ; lui
+apprendre l'attaquant coûtait une ligne de moteur pour un effet gratuit ici.
+C'est écrit dans le fichier, pas seulement ici.
+
+Hors combat il n'y a personne en face : la fiche du héros affiche l'attaque
+nue. Afficher ×1,3 serait un mensonge d'affichage.
+
+### Le pivot coûte, et personne ne l'a écrit
+
+Le brief interdisait d'ajouter un coût artificiel au changement d'arme — pas
+de malus, pas de temps d'adaptation. Il n'y en a pas. Le coût vient de deux
+faits déjà présents dans le jeu :
+
+* les animaux peuplent les étages 1 à 7, les homoncules 8 et au-delà. Une
+  matière forte contre le vivant est donc **automatiquement faible en
+  profondeur** ;
+* chaque coup crédite **deux** compétences, la forme et la matière. Changer de
+  matière, c'est repartir de zéro sur une courbe pendant que l'autre reste
+  haute.
+
+`Actor.attaque_contre(cible)` est remontée sur la classe de base : les
+monstres posent désormais la même question que le héros, ce qui était la
+condition pour que le bouclier du héros voie la famille de celui qui frappe.
+
+### Ce qui garde la boucle du butin en vie
+
+La compétence de matière donne +1 d'attaque par niveau — c'est sa courbe, et
+c'est ce qui fait le prix du pivot. Le danger était qu'elle finisse par
+écraser l'affinité. Elle ne le peut pas, et pas grâce à un plafond : la
+compétence **s'ajoute** avant que l'affinité ne **multiplie**. Maîtriser une
+matière qui glisse, c'est voir sa maîtrise glisser avec elle.
+
+Le chiffre : contre un homoncule, l'épée en bois rattrape l'épée en fer neuve
+à **26 de compétence « Bois »** — pour un héros d'étage 8 déjà monté en
+« Épée » et en « Combat ». Le bot, sur douze campagnes de quinze vies, plafonne
+à **4**. La marge est de six fois. Le test, lui, tient la structure et non la
+marge, parce que la marge bougera et que la structure, non.
+
+### Mesures
+
+Douze campagnes de quinze vies, puis trente, mêmes graines des deux côtés,
+comparaison appariée vie par vie.
+
+| | avant | après | écart |
+|---|---|---|---|
+| effort/vie (180 vies) | 43,63 | 44,22 | +0,6 (0,4 σ) |
+| étage atteint (180 vies) | 7,33 | 7,02 | −0,31 (1,8 σ) |
+| effort/vie (**450 vies**) | 43,09 | 45,64 | **+2,54 (2,3 σ)** |
+| étage atteint (**450 vies**) | 7,24 | 7,17 | −0,07 (0,7 σ) |
+
+**Pour la troisième fois en trois étapes, une mesure se dégonfle en doublant
+l'échantillon** : le recul d'étage à 1,8 σ tombe à 0,7 σ. Et la hausse
+d'effort fait l'inverse, de 0,4 σ à 2,3 σ. La règle du projet — ne rien croire
+sous deux sigma — a encore protégé d'une conclusion fausse, dans les deux sens.
+
+Ce qui reste : **+6 % d'effort par vie**, au-dessus de la barre. L'explication
+tient en deux faits — l'épée de départ est passée de 3 à 5 d'attaque (la forme
+donne le chiffre, et il est unique), et chaque emplacement porte maintenant
+deux courbes au lieu d'une. Je ne recale pas l'échelle des prix aujourd'hui :
+l'étape suivante ajoute trois formes et déplacera le même nombre. Recaler deux
+fois, c'est recaler à l'aveugle.
+
+### Ce que cette étape ne mesure pas, et le dit
+
+La distribution des matières en fin de vie, sur 450 vies :
+
+    bois 289 · bronze 76 · fer 19 · argent 13 · obsidienne 3
+
+**Ce chiffre ne dit rien du jeu.** Toutes les formes frappent à 5 : le bot
+choisit son équipement sur `power`, donc il ne voit plus aucune différence
+entre une épée en bois et une épée en argent et garde ce qu'il a. C'est
+exactement ce que sa propre docstring redoutait — « toute mesure sur
+l'armement mesurerait sa cécité, pas le jeu » — pour une raison neuve.
+
+Le brief l'avait prévu : « le bot devra apprendre à décider d'un pivot. S'il ne
+sait pas le faire, **il ne mesure rien**. » C'est le travail de l'étape 19.3,
+et jusque-là les deux mesures qui comptent — distribution des matières, nombre
+de pivots par vie — restent en attente.
+
+### Les empreintes
+
+Neuf des seize ont bougé, et c'est du contenu assumé, pas une dérive. Cinq
+partitions sur huit : l'épée de départ est passée de 3 à 5 d'attaque, donc
+toute scène où le héros tient une arme a changé d'état. Les trois autres — le
+jet, les objets, les pièges — n'ont pas bougé d'un caractère, le héros n'y
+frappant personne. Quatre parties sur huit, dont les deux qui achètent
+l'arbre entier.
+
+446 tests, dont vingt et un neufs sur les matières.
