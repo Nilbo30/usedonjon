@@ -205,10 +205,10 @@ class Game:
         return f"{actor.name} {third_person}"
 
     def notify(self, nom, **donnees):
-        """Annonce une action accomplie du héros (contrat : voir events.py).
+        """Annonce une action ou un fait (contrat : voir events.py).
 
         Le moteur ne sait pas ce qu'en feront les auditeurs — c'est ce qui
-        permettra de brancher les compétences sans le modifier.
+        permet de brancher les compétences sans le modifier.
         """
         event = Event(nom, donnees)
         for listener in list(self.listeners):
@@ -226,10 +226,19 @@ class Game:
     # l'écouterait.
     #
     # Un test de source interdit désormais ces méthodes hors d'ici.
+    #
+    # Depuis l'étape 17.3, chacune **publie un fait d'effet** — et seulement
+    # quand quelque chose a réellement changé, comme une commande refusée
+    # n'annonce rien. Un fait précède toujours la mort qu'il cause : c'est le
+    # point d'appel, et non `blesser`, qui vérifie la mort.
 
     def soigner(self, cible, points, source=None):
         """Rend des PV. Renvoie ce qui a réellement été rendu."""
-        return cible.heal(points)
+        rendu = cible.heal(points)
+        if rendu:
+            self.notify(events.SOIN_RECU, cible=cible, points=rendu,
+                        source=source)
+        return rendu
 
     def blesser(self, cible, degats, source=None):
         """Retire des PV. **N'appelle pas `check_death`** — et c'est mesuré.
@@ -242,17 +251,32 @@ class Game:
         coup qui l'a tué, ce qui déplace `monstre_vaincu` dans le flux. Ce
         n'est pas « à comportement identique ».
         """
-        return cible.take_damage(degats)
+        subis = cible.take_damage(degats)
+        if subis:
+            self.notify(events.DEGATS_SUBIS, cible=cible, degats=subis,
+                        source=source)
+        return subis
 
     def nourrir(self, cible, points):
         """Remplit ou creuse le ventre, bornes comprises. Renvoie l'écart réel."""
         avant = cible.fullness
         cible.fullness = max(0, min(cible.max_fullness, avant + points))
-        return cible.fullness - avant
+        ecart = cible.fullness - avant
+        if ecart:
+            self.notify(events.VENTRE_CHANGE, cible=cible, ecart=ecart)
+        return ecart
 
     def poser_statut(self, cible, nom, tours, source=None):
-        """Pose un statut (confus, endormi...). Le plus long des deux l'emporte."""
+        """Pose un statut (confus, endormi...). Le plus long des deux l'emporte.
+
+        Rien n'est annoncé si le statut en place durait déjà plus longtemps :
+        dans ce cas, il ne s'est rien passé.
+        """
+        avant = cible.statuses.get(nom, 0)
         cible.add_status(nom, tours)
+        if cible.statuses[nom] != avant:
+            self.notify(events.STATUT_POSE, cible=cible, statut=nom,
+                        tours=cible.statuses[nom], source=source)
 
     def gagner_pv_max(self, cible, points, source=None):
         """Augmente le maximum de PV — l'herbe de vie, et rien d'autre pour l'instant.
@@ -263,6 +287,9 @@ class Game:
         n'aurait rien eu à publier pour l'herbe de vie.
         """
         cible.base_max_hp += points
+        if points:
+            self.notify(events.PV_MAX_GAGNE, cible=cible, points=points,
+                        source=source)
         return points
 
     def monsters(self):

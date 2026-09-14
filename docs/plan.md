@@ -112,7 +112,7 @@ comparées avant de choisir sont dans
 | 17.0 | [Le filet : seize parties, seize empreintes](journal.md#étape-170--un-filet-quil-a-fallu-mesurer-avant-dy-croire) | ✅ fait |
 | 17.1 | [L'interception : les treize points de lecture deviennent des questions](journal.md#étape-171--linterception--le-moteur-pose-des-questions) | ✅ fait |
 | 17.2 | [Toute mutation passe par le moteur](journal.md#étape-172--cinq-portes-et-le-moteur-seul-à-les-franchir) | ✅ fait |
-| 17.3 | Ces méthodes publient | à faire |
+| 17.3 | [Ces méthodes publient](journal.md#étape-173--les-cinq-portes-publient) | ✅ fait |
 | 17.4 | Les garde-fous | à faire |
 | 17.5 | Le porteur générique | à faire |
 | 17.6 | Le bâton de pyromancie, en données | à faire |

@@ -38,7 +38,7 @@ class TestActionsSimples(BaseEvents):
 
     def test_attendre_est_annonce(self):
         self.game.cmd_wait()
-        self.assertEqual(self.journal.noms(), [events.ATTENTE])
+        self.assertEqual(self.journal.actions(), [events.ATTENTE])
 
     def test_une_action_refusee_n_annonce_rien(self):
         pos = self.game.player.pos
@@ -82,7 +82,7 @@ class TestCombat(BaseEvents):
                 break
             self.game.cmd_move((1, 0))
         self.assertFalse(cible.alive)
-        self.assertEqual(self.journal.noms()[-2:],
+        self.assertEqual(self.journal.actions()[-2:],
                          [events.COUP, events.MONSTRE_VAINCU])
         (mise_a_mort,) = self.journal.of(events.MONSTRE_VAINCU)
         self.assertIs(mise_a_mort["monstre"], cible)
@@ -96,11 +96,22 @@ class TestCombat(BaseEvents):
         self.assertIs(recu["source"], monstre)
         self.assertIs(recu["bouclier"], self.game.player.shield)
 
-    def test_un_coup_de_monstre_sur_un_monstre_n_annonce_rien(self):
+    def test_un_coup_de_monstre_sur_un_monstre_n_annonce_aucune_action(self):
+        """Aucune action — mais le **fait** part, et c'est la décision de 17.3.
+
+        Une action dit « le héros vient de frapper » ; un fait dit « des PV
+        viennent d'être retirés ». Le second doit passer même quand le héros
+        n'y est pour rien, sinon « quand une créature meurt, soigne » ne
+        marcherait que sur ses propres victimes.
+        """
         a = place_monster(self.game, self.voisine())
         b = place_monster(self.game, self.voisine((0, 1)))
         self.game.attack(a, b)
-        self.assertEqual(len(self.journal), 0)
+        self.assertEqual(self.journal.actions(), [])
+        self.assertEqual(self.journal.faits(), [events.DEGATS_SUBIS])
+        (fait,) = self.journal.of(events.DEGATS_SUBIS)
+        self.assertIs(fait["cible"], b)
+        self.assertIs(fait["source"], a)
 
 
 class TestObjets(BaseEvents):
@@ -126,7 +137,8 @@ class TestObjets(BaseEvents):
         self.game.level.items[self.game.player.pos] = items.make("fleche")
         self.game.cmd_pickup()
         self.game.cmd_drop(0)
-        self.assertEqual(self.journal.noms(), [events.RAMASSAGE, events.POSE])
+        self.assertEqual(self.journal.actions(),
+                         [events.RAMASSAGE, events.POSE])
         self.assertEqual(self.journal.of(events.POSE)[0]["objet"].type.key, "fleche")
 
     def test_un_jet_qui_touche(self):
@@ -166,8 +178,7 @@ class TestBus(unittest.TestCase):
         a, b = Recorder(), Recorder()
         game.listeners += [a, b]
         game.cmd_wait()
-        self.assertEqual(len(a), 1)
-        self.assertEqual(len(b), 1)
+        self.assertEqual(a.noms(), b.noms())
         self.assertIs(a.events[0], b.events[0])
 
     def test_l_auditeur_recoit_la_partie_et_l_evenement(self):
@@ -175,7 +186,8 @@ class TestBus(unittest.TestCase):
         recus = []
         game.listeners.append(lambda g, e: recus.append((g, e.nom)))
         game.cmd_wait()
-        self.assertEqual(recus, [(game, events.ATTENTE)])
+        self.assertIn((game, events.ATTENTE), recus)
+        self.assertTrue(all(jeu is game for jeu, _ in recus))
 
     def test_le_formateur_de_competences_est_branche_par_defaut(self):
         from donjon.skills import Trainer

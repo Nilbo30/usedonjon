@@ -90,5 +90,93 @@ class TestLesQuatrePortes(unittest.TestCase):
         self.assertEqual(self.joueur.statuses["confus"], 10)
 
 
+class TestLesFaitsPublies(unittest.TestCase):
+    """Étape 17.3 : les cinq portes annoncent ce qu'elles viennent de faire."""
+
+    def setUp(self):
+        from donjon.events import Recorder
+
+        self.jeu = sandbox(seed=1)
+        self.joueur = self.jeu.player
+        self.journal = Recorder()
+        self.jeu.listeners.append(self.journal)
+
+    def test_chaque_porte_publie_son_fait(self):
+        from donjon import events
+
+        self.joueur.hp = 1
+        self.jeu.soigner(self.joueur, 5, source="test")
+        self.jeu.blesser(self.joueur, 2, source="test")
+        self.jeu.nourrir(self.joueur, -7)
+        self.jeu.poser_statut(self.joueur, "confus", 4, source="test")
+        self.jeu.gagner_pv_max(self.joueur, 3, source="test")
+        self.assertEqual(self.journal.faits(),
+                         [events.SOIN_RECU, events.DEGATS_SUBIS,
+                          events.VENTRE_CHANGE, events.STATUT_POSE,
+                          events.PV_MAX_GAGNE])
+
+    def test_le_fait_porte_ce_qui_est_reellement_arrive(self):
+        """Et non ce qui était demandé : soigner de 99 quand il en manque 3."""
+        from donjon import events
+
+        self.joueur.hp = self.joueur.max_hp - 3
+        self.jeu.soigner(self.joueur, 99, source="test")
+        (fait,) = self.journal.of(events.SOIN_RECU)
+        self.assertEqual(fait["points"], 3)
+        self.assertIs(fait["cible"], self.joueur)
+        self.assertEqual(fait["source"], "test")
+
+    def test_rien_ne_part_quand_rien_ne_change(self):
+        """Comme une commande refusée n'annonce rien."""
+        self.jeu.soigner(self.joueur, 10)           # déjà au maximum
+        self.jeu.nourrir(self.joueur, 10 ** 6)      # déjà repu
+        self.jeu.poser_statut(self.joueur, "confus", 10)
+        self.journal.clear()
+        self.jeu.poser_statut(self.joueur, "confus", 3)   # plus court : sans effet
+        self.assertEqual(self.journal.faits(), [])
+
+    def test_un_fait_precede_toujours_la_mort_qu_il_cause(self):
+        """Un auditeur voit les dégâts avant `monstre_vaincu`, jamais l'inverse.
+
+        C'est la raison pour laquelle `blesser` ne replie pas `check_death` :
+        au coup au contact, un `notify` s'intercale entre les deux.
+        """
+        from donjon import events
+
+        cible = place_monster(self.jeu, (self.joueur.pos[0] + 1,
+                                         self.joueur.pos[1]), hp=1)
+        for _ in range(20):
+            if not cible.alive:
+                break
+            self.jeu.cmd_move((1, 0))
+        self.assertFalse(cible.alive)
+        noms = self.journal.noms()
+        self.assertLess(noms.index(events.DEGATS_SUBIS),
+                        noms.index(events.MONSTRE_VAINCU))
+
+    def test_un_piege_publie_lui_aussi(self):
+        """Un fait part quel que soit l'acteur — un piège n'a pas d'auteur."""
+        from donjon import events
+        from tests.helpers import poser_piege
+
+        case = (self.joueur.pos[0] + 1, self.joueur.pos[1])
+        poser_piege(self.jeu, case, "explosion")
+        self.jeu.cmd_move((1, 0))
+        (fait,) = self.journal.of(events.DEGATS_SUBIS)
+        self.assertIs(fait["cible"], self.joueur)
+        self.assertIsNone(fait["source"])
+
+    def test_aucune_regle_de_competence_n_ecoute_encore(self):
+        """L'étape ne change rien au jeu : les nouveaux noms sont inertes.
+
+        C'est ce que les seize empreintes prouvent sur le jeu entier ; ce test
+        le dit à l'endroit où ça se décide.
+        """
+        from donjon import events, skills
+
+        ecoutes = {regle.evenement for regle in skills.REGLES}
+        self.assertEqual(ecoutes & set(events.FAITS), set())
+
+
 if __name__ == "__main__":
     unittest.main()

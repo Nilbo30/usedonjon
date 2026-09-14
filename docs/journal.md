@@ -1141,3 +1141,81 @@ même campagne de 25 vies. Et **14 629 tours des deux côtés**, pour la troisi�
 fois — une preuve d'identité de plus, gratuite.
 
 377 tests. Les seize empreintes n'ont pas bougé d'un caractère.
+
+### Étape 17.3 — les cinq portes publient
+
+Les cinq méthodes qui touchent aux jauges annoncent maintenant ce qu'elles
+viennent de faire. C'est une seconde famille d'évènements, à côté des treize
+actions existantes :
+
+| nom | données |
+|---|---|
+| `soin_recu` | `cible`, `points`, `source` |
+| `degats_subis` | `cible`, `degats`, `source` |
+| `ventre_change` | `cible`, `ecart` |
+| `statut_pose` | `cible`, `statut`, `tours`, `source` |
+| `pv_max_gagne` | `cible`, `points`, `source` |
+
+La différence n'est pas cosmétique. Une **action** dit « le héros vient de
+frapper » ; un **fait** dit « sept points de vie viennent d'être retirés à X ».
+La conséquence, pas le geste.
+
+#### Les deux règles qui donnent leur sens aux faits
+
+**Un fait est émis quel que soit l'acteur.** C'est la décision prise avant de
+commencer, et elle renverse une ligne du contrat d'`events.py` : « les coups
+portés par les monstres sur d'autres monstres n'émettent rien ». Ça reste vrai
+des actions ; c'est maintenant faux des faits. Sans ça, « quand une créature
+meurt, soigne » ne marcherait que sur ses propres victimes — et un piège qui
+achève un monstre ne déclencherait rien. Les règles d'XP, elles, gardent leur
+filtre sur le héros : l'équilibrage mesuré ne bouge pas d'un point.
+
+**Un fait ne part que si quelque chose a changé.** Soigner un héros déjà au
+maximum n'annonce rien, et reposer un statut plus court que celui en place non
+plus. C'est la même règle que pour les actions — une commande refusée
+n'annonce rien — et elle évite au futur bus un flot de « il ne s'est rien
+passé ».
+
+Le fait porte **ce qui est réellement arrivé**, pas ce qui était demandé :
+soigner de 99 quand il en manque 3 annonce 3.
+
+#### Ce que les six tests cassés ont appris
+
+Six tests d'`events.py` sont tombés d'un coup — et les seize empreintes, elles,
+n'ont pas bougé. C'est exactement le bon signal : le **jeu** est identique,
+seuls des tests qui énuméraient le flux complet voyaient les nouveaux noms
+s'intercaler. Marcher creuse le ventre, donc un `pas` est désormais toujours
+suivi d'un `ventre_change`.
+
+Leur intention était « voici les actions attendues », pas « voici tout ce qui
+passe sur le bus ». Le `Recorder` sait maintenant le dire : `actions()` et
+`faits()` à côté de `noms()`. Un seul test a changé de sens plutôt que de
+forme — celui du coup entre monstres, qui affirme désormais les deux moitiés de
+la décision : aucune action, mais le fait part.
+
+#### Ce que ça coûte
+
+| | par tour |
+|---|---|
+| avant 17.1 | 0,674 ms |
+| après 17.1 | 0,718 ms |
+| après 17.2 | 0,709 ms |
+| après 17.3 | 0,715 ms |
+
+Rien de neuf : le chantier entier tient dans les +6 % payés par l'interception.
+Et **14 629 tours à chaque mesure**, pour la quatrième fois.
+
+Volume émis sur 25 vies, à garder en tête pour l'étape 17.5 — c'est ce que la
+collecte des porteurs devra traverser :
+
+```
+ventre_change  15 003      degats_subis  2 433
+soin_recu       2 413      statut_pose     116
+pv_max_gagne       14
+```
+
+`ventre_change` domine largement : environ un par tour, la faim creusant à
+chaque pas. Si le coût de 17.5 dérape, c'est là qu'il faudra regarder d'abord.
+
+384 tests, dont sept neufs sur les faits. Les seize empreintes sont intactes
+pour la quatrième étape d'affilée.
