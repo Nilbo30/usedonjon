@@ -60,6 +60,7 @@ class RunConfig:
         recuperation_projectile=0.0,
         reanimations=0,
         endurance=0.0,
+        profondeur_max_chaine=8,
     ):
         self.max_depth = max_depth
         self.spawn_interval = spawn_interval
@@ -99,6 +100,13 @@ class RunConfig:
         # mêmes choses : c'est un talent qui ouvre chacune (voir tree.py).
         self.classes = frozenset(classes) if classes else TOUTES_CLASSES
         # Chance qu'un projectile qui touche retombe au sol au lieu d'être perdu.
+        # Combien de maillons une chaîne évènement → effet → évènement a le
+        # droit d'enchaîner. Aucune règle n'agit encore : mesurée sur trois
+        # vies complètes, la profondeur maximale vaut **un**. Le jour où un
+        # pouvoir soignera en tuant, et où être soigné déclenchera autre
+        # chose, c'est ce nombre qui empêchera la boucle. Il est ici, et pas
+        # en dur dans le moteur, pour qu'un talent puisse un jour l'ouvrir.
+        self.profondeur_max_chaine = profondeur_max_chaine
         self.recuperation_projectile = recuperation_projectile
         # Combien de fois le coup fatal ne l'est pas, dans une descente.
         self.reanimations = reanimations

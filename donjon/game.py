@@ -76,6 +76,10 @@ class Game:
         # Auditeurs d'évènements. Le formateur de compétences en est un comme
         # un autre : le moteur ne sait pas ce qu'il fait de ce qu'on lui dit.
         self.listeners = [skills.Trainer()]
+        # Le garde-fou des chaînes : combien de maillons sont en cours, et ce
+        # qui a été coupé. Voir `notify`.
+        self.maillons = 0
+        self.chaines_coupees = []
         self._spawn_countdown = self.config.spawn_interval
         self._regen_acc = 0.0
         self._hunger_acc = 0.0
@@ -209,10 +213,32 @@ class Game:
 
         Le moteur ne sait pas ce qu'en feront les auditeurs — c'est ce qui
         permet de brancher les compétences sans le modifier.
+
+        **Le garde-fou des chaînes.** Un auditeur a le droit d'agir, donc
+        d'émettre à son tour : « tuer soigne » plus « être soigné blesse » plus
+        « être blessé peut tuer » ferme la boucle. Au-delà de
+        `config.profondeur_max_chaine` maillons, l'évènement n'est pas émis.
+
+        Une coupure **se voit** : elle est écrite au journal et retenue dans
+        `chaines_coupees`. Un garde-fou silencieux est pire que la boucle qu'il
+        coupe — on déboguerait un effet qui marche une fois sur deux.
+
+        Aujourd'hui, aucune règle n'agit : mesurée sur trois vies complètes, la
+        profondeur maximale vaut **un**. Un test le vérifie sur tout le corpus,
+        et c'est ce qui fera remarquer le jour où ça changera.
         """
+        if self.maillons >= self.config.profondeur_max_chaine:
+            self.chaines_coupees.append(nom)
+            self.say(f"(chaîne coupée : « {nom} » au-delà de "
+                     f"{self.config.profondeur_max_chaine} maillons)")
+            return None
         event = Event(nom, donnees)
-        for listener in list(self.listeners):
-            listener(self, event)
+        self.maillons += 1
+        try:
+            for listener in list(self.listeners):
+                listener(self, event)
+        finally:
+            self.maillons -= 1
         return event
 
     # ------------------------------------------------------------------ #

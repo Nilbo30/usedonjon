@@ -1083,6 +1083,11 @@ déjà une preuve d'identité de plus :
 recalculée à chaque coup. C'est le prix annoncé dans la comparaison des deux
 formes, et il est payé.
 
+> **Correction, étape 17.4 :** ces +6,5 % étaient du **bruit**. Mesuré une seule
+> fois, sur une machine dont la dispersion atteint ±18 % à code identique. La
+> reprise en cinq passes ne trouve aucun écart. Voir « la mesure de coût était
+> du bruit » plus bas.
+
 370 tests, dont dix-huit neufs sur les questions — les cinq effets témoins du
 brief, l'ordre des passes, le bornage, et le test qui compte : une interception
 déclarée en données change bien `joueur.attack`, sans qu'une ligne de moteur
@@ -1205,6 +1210,9 @@ la décision : aucune action, mais le fait part.
 Rien de neuf : le chantier entier tient dans les +6 % payés par l'interception.
 Et **14 629 tours à chaque mesure**, pour la quatrième fois.
 
+> **Correction, étape 17.4 :** ce tableau n'a aucune valeur. Chacune de ses
+> lignes est une mesure unique, et le bruit de la machine les recouvre toutes.
+
 Volume émis sur 25 vies, à garder en tête pour l'étape 17.5 — c'est ce que la
 collecte des porteurs devra traverser :
 
@@ -1219,3 +1227,72 @@ chaque pas. Si le coût de 17.5 dérape, c'est là qu'il faudra regarder d'abord
 
 383 tests, dont six neufs sur les faits. Les seize empreintes sont intactes
 pour la quatrième étape d'affilée.
+
+### Étape 17.4 — deux garde-fous qui n'ont encore rien à garder
+
+Un auditeur a le droit d'agir, donc d'émettre à son tour. « Tuer soigne » plus
+« être soigné blesse » plus « être blessé peut tuer » ferme la boucle. Deux
+garde-fous, tous deux en données :
+
+- **la profondeur de chaîne** — `RunConfig.profondeur_max_chaine`, à 8. Au-delà,
+  l'évènement n'est pas émis. Dans `RunConfig` et pas en dur, pour qu'un talent
+  puisse un jour l'ouvrir ;
+- **le plafond par règle et par tour** — `Regle.max_par_tour`, à `None` partout.
+  Le compteur ne garde qu'un tour, donc rien ne s'accumule sur mille tours.
+
+#### Ce qu'ils gardent aujourd'hui : rien, et c'est mesuré
+
+Aucune règle n'agit encore. Mesurée sur trois vies complètes puis sur deux
+autres en test permanent, **la profondeur de chaîne maximale vaut un**. Un test
+l'affirme et échouera le jour où ça changera — c'est lui qui fera remarquer que
+les garde-fous commencent à servir, plutôt que de le laisser arriver en
+silence.
+
+Un garde-fou préventif est exactement le genre de mécanisme que ce projet a
+appris à se méfier d'ajouter avant son contenu. D'où la contrepartie : le
+prouver en le faisant mordre. `Boucleur`, trois lignes, se mord la queue —
+soigné il blesse, blessé il soigne. Sans garde-fou il tourne jusqu'à la pile ;
+avec, il s'arrête exactement à la profondeur déclarée, et la coupure s'écrit au
+journal. Vérifié aussi à l'envers, en désarmant la coupure : six tests sur dix
+tombent immédiatement.
+
+Une coupure **se voit** : au journal et dans `chaines_coupees`. Un garde-fou
+silencieux est pire que la boucle qu'il coupe — on déboguerait un effet qui
+« marche une fois sur deux ».
+
+#### La mesure de coût était du bruit — les trois étapes précédentes incluses
+
+En mesurant cette étape, le chiffre est tombé *sous* celui d'avant le chantier.
+Un gain impossible : on a ajouté un test et un `try/finally` par évènement.
+Alors j'ai mesuré trois fois le même code :
+
+```
+0,626   0,606   0,535 ms/tour
+```
+
+**±18 % de dispersion à code identique.** Toutes les mesures de coût de ce
+chantier étaient des passes uniques : elles ne mesuraient pas le code, elles
+mesuraient la charge de la machine à cet instant. Les « +6,5 % » de l'étape
+17.1 n'existaient pas.
+
+Reprise proprement, cinq passes par version, comparées sur la médiane et le
+minimum — la version d'avant le chantier reconstruite dans un
+`git worktree` pour que les deux tournent dans les mêmes conditions :
+
+| | min | médiane | max |
+|---|---|---|---|
+| avant 17.1 | 0,594 | **0,607** | 0,618 |
+| après 17.4 | 0,536 | **0,589** | 0,621 |
+
+Les plages se recouvrent entièrement. **Le chantier entier — interception,
+convergence des mutations, publication des faits, garde-fous — ne coûte rien de
+mesurable.** L'allocation d'un objet `Question` par nombre calculé se perd dans
+le reste.
+
+C'est la discipline du projet appliquée à moi-même : ne jamais croire un signal
+qu'on n'a mesuré qu'une fois. Elle avait déjà servi contre « trois régressions
+d'affilée » qui étaient plates à une barre d'erreur près ; elle vient de servir
+contre un coût que j'avais annoncé trois fois.
+
+393 tests, dont dix sur les garde-fous. Les seize empreintes sont intactes pour
+la cinquième étape d'affilée.

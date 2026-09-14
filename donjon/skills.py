@@ -6,7 +6,9 @@ Trois tables, et **rien d'autre à toucher pour ajouter du contenu** :
   bonus par niveau.
 * `REGLES` — quel évènement (voir events.py) crédite quelle compétence, et de
   combien. Plusieurs règles peuvent viser le même évènement : une action peut
-  donc nourrir plusieurs compétences à la fois.
+  donc nourrir plusieurs compétences à la fois. Une règle peut aussi se
+  plafonner (`max_par_tour`) ; aucune ne le fait, c'est le garde-fou qui
+  attend les règles qui agiront.
 * le champ `skill` des objets (items.py), déduit par défaut de leur catégorie.
 
 Ajouter une hache = une entrée `Skill("hache", ...)` + `skill="hache"` sur les
@@ -163,12 +165,20 @@ class Regle:
     qui rend l'ajout d'une arme purement déclaratif.
     """
 
-    def __init__(self, evenement, competence, xp=1, defaut=None, si=None):
+    def __init__(self, evenement, competence, xp=1, defaut=None, si=None,
+                 max_par_tour=None):
         self.evenement = evenement
         self.competence = competence
         self.xp = xp
         self.defaut = defaut
         self.si = si            # prédicat optionnel sur l'évènement
+        # Combien de fois cette règle peut se déclencher dans un même tour.
+        # `None` veut dire « autant que l'évènement arrive » — c'est le cas de
+        # toutes les règles d'XP, et c'est pourquoi l'ajout de ce champ ne
+        # change rien au jeu. Le plafond attend les règles qui **agiront** :
+        # un pouvoir qui soigne à chaque coup encaissé doit pouvoir dire
+        # « trois fois par tour, pas davantage », en données.
+        self.max_par_tour = max_par_tour
 
     def resoudre(self, event):
         """Clé de compétence à créditer pour cet évènement, ou None."""
@@ -308,13 +318,31 @@ class Trainer:
     def __init__(self, regles=REGLES, catalogue=None):
         self.table = regles_par_evenement(regles)
         self.catalogue = catalogue if catalogue is not None else CATALOGUE
+        self._tour = None       # le tour dont on compte les déclenchements
+        self._compte = {}       # règle -> fois déclenchée dans ce tour
+
+    def _sous_le_plafond(self, regle, game):
+        """Cette règle a-t-elle encore le droit de se déclencher ce tour-ci ?
+
+        Le compteur ne garde qu'un tour : il se vide au premier évènement du
+        suivant, donc rien ne s'accumule sur une partie de mille tours.
+        """
+        if regle.max_par_tour is None:
+            return True
+        if game.turn != self._tour:
+            self._tour, self._compte = game.turn, {}
+        fois = self._compte.get(id(regle), 0)
+        if fois >= regle.max_par_tour:
+            return False
+        self._compte[id(regle)] = fois + 1
+        return True
 
     def __call__(self, game, event):
         competences = game.player.skills
         multiplicateur = game.xp_multiplier()
         for regle in self.table.get(event.nom, ()):
             cle = regle.resoudre(event)
-            if cle is None:
+            if cle is None or not self._sous_le_plafond(regle, game):
                 continue
             for niveau in competences.gain(cle, regle.xp * multiplicateur):
                 nom = self.catalogue[cle].name
