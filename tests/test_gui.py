@@ -6,6 +6,8 @@ Ils sont ignorés automatiquement si tkinter ou un écran ne sont pas disponible
 
 import unittest
 
+from donjon import tree
+
 try:
     import tkinter
 except ImportError:                                  # pragma: no cover
@@ -167,13 +169,14 @@ class TestRefuge(unittest.TestCase):
         from donjon.gui import Fenetre
         fenetre = Fenetre(seed=7, sauvegarde=False)
         self.addCleanup(fenetre.root.destroy)
-        fenetre.session.meta.xp = 200
+        fenetre.session.meta.xp = 50
         fenetre.mode = "talents"
         fenetre.dessiner()
         zone = next(z for z in fenetre.zones if z[5] == "talent estomac")
         fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
         self.assertIn("estomac", fenetre.session.meta.noeuds)
-        self.assertAlmostEqual(fenetre.session.meta.xp, 50)
+        self.assertAlmostEqual(fenetre.session.meta.xp,
+                               50 - tree.ARBRE["estomac"].cost)
 
     def test_un_talent_trop_cher_ne_s_achete_pas(self):
         from donjon.gui import Fenetre

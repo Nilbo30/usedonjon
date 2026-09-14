@@ -8,7 +8,7 @@ permanente — le méta ne lira jamais un `Game`.
 
 class RunSummary:
     def __init__(self, state, depth, deepest, turns, skills, cause="", seed=None,
-                 xp_investie=0.0):
+                 xp_investie=0.0, effort=0.0):
         self.state = state          # "mort" ou "victoire"
         self.depth = depth          # étage où la partie s'est arrêtée
         self.deepest = deepest      # étage le plus profond atteint du run
@@ -16,10 +16,13 @@ class RunSummary:
         self.skills = dict(skills)  # clé -> niveau
         self.cause = cause
         self.seed = seed
-        # La monnaie du méta : toute l'XP versée aux compétences pendant la
-        # vie, et non la somme des niveaux. Les niveaux restent ici pour la
-        # fiche de fin et les records — ils se lisent, ils ne s'achètent plus.
+        # Deux chiffres, et un seul s'échange. `xp_investie` est l'XP brute
+        # versée aux compétences — ce qui s'est passé dans la partie.
+        # `effort` la ramène en « premiers crans équivalents » (voir
+        # `SkillSet.effort`) : c'est **lui** la monnaie du méta. Les niveaux,
+        # eux, ne restent que pour la fiche de fin et les records.
         self.xp_investie = xp_investie
+        self.effort = effort
         self.absorbed = False   # marqué par la session, pour n'encaisser qu'une fois
 
     @property
@@ -34,7 +37,7 @@ class RunSummary:
         lignes = [f"Étage le plus profond : {self.deepest}",
                   f"Tours survécus : {self.turns}",
                   f"Niveaux de compétences : {self.total_levels}",
-                  f"XP de compétences gagnée : {self.xp_investie:.0f}"]
+                  f"Effort : {self.effort:.0f} XP"]
         if self.cause:
             lignes.append(self.cause)
         acquises = sorted(((niveau, catalogue[cle].name)
@@ -48,7 +51,8 @@ class RunSummary:
     def to_dict(self):
         return {"state": self.state, "depth": self.depth, "deepest": self.deepest,
                 "turns": self.turns, "skills": self.skills, "cause": self.cause,
-                "seed": self.seed, "xp_investie": self.xp_investie}
+                "seed": self.seed, "xp_investie": self.xp_investie,
+                "effort": self.effort}
 
     def __repr__(self):
         return f"<RunSummary {self.state} étage {self.deepest} T{self.turns}>"

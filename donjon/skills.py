@@ -244,7 +244,7 @@ class SkillSet:
         self.catalogue = catalogue if catalogue is not None else CATALOGUE
         self.levels = {}         # clé -> niveau atteint
         self.xp = {}             # clé -> XP accumulée dans le niveau courant
-        self.investie = 0.0      # tout ce qui a été versé, niveaux franchis ou non
+        self.investie = {}       # clé -> XP versée, niveaux franchis ou non
 
     # --- consultation ---------------------------------------------------
     def level(self, key):
@@ -261,19 +261,41 @@ class SkillSet:
         return sum(self.levels.values())
 
     def total_xp(self):
-        """Toute l'XP versée aux compétences depuis le début de la vie.
-
-        C'est la monnaie du méta (voir `meta.valeur_du_run`), et non plus la
-        somme des niveaux. La différence est une pondération, et elle est
-        gratuite : les courbes étant géométriques, le premier cran d'épée coûte
-        5 XP et le sixième 38. Compter l'XP versée, c'est payer chaque cran ce
-        qu'il a réellement coûté — la difficulté est déjà écrite dans les
-        courbes, il n'y a aucune table de conversion à régler à la main.
+        """Toute l'XP versée aux compétences depuis le début de la vie, brute.
 
         Vaut, par construction, la somme des coûts des niveaux franchis plus ce
-        qui dort dans les niveaux en cours (un test le vérifie).
+        qui dort dans les niveaux en cours (un test le vérifie). Ce n'est **pas**
+        la monnaie du méta — voir `effort()` — mais c'est elle qui dit ce qui
+        s'est réellement passé dans la partie, d'où sa présence dans les
+        empreintes.
         """
-        return self.investie
+        return round(sum(self.investie.values()), 3)
+
+    def effort(self):
+        """La monnaie du méta : l'effort, en « premiers crans équivalents ».
+
+        L'XP versée brute comptait des **actions**, et rien d'autre : les
+        courbes s'y annulaient, si bien qu'un run se résumait à son nombre de
+        pas. La marche ramassait 60 % de la monnaie parce qu'on fait six cents
+        pas pour trente coups.
+
+        Diviser par `base` rétablit ce que les courbes disaient depuis
+        l'étape 2 : `marche` coûte 25 XP son premier cran contre 5 pour `epee`
+        précisément parce que marcher monte cinq fois plus vite. Une unité
+        d'effort, c'est donc « un premier cran de cette compétence-là », quelle
+        qu'elle soit.
+
+        Ce que ça garde intact : le gain reste linéaire en actions (fin du
+        plateau), le papillonnage reste neutre, et un cran arraché vaut
+        toujours plus qu'un cran offert — `base` est un diviseur constant par
+        compétence, il ne touche pas à la géométrie des courbes.
+        """
+        total = 0.0
+        for cle, versee in self.investie.items():
+            competence = self.catalogue.get(cle)
+            if competence is not None:
+                total += versee / competence.base
+        return round(total, 3)
 
     def known(self):
         """Compétences déjà pratiquées, les plus hautes d'abord."""
@@ -292,7 +314,7 @@ class SkillSet:
         competence = self.catalogue.get(key)
         if competence is None or amount <= 0:
             return []
-        self.investie = round(self.investie + amount, 3)
+        self.investie[key] = round(self.investie.get(key, 0) + amount, 3)
         niveau = self.levels.get(key, 0)
         acquis = self.xp.get(key, 0) + amount
         franchis = []

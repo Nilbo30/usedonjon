@@ -1522,3 +1522,93 @@ Le chemin reste exercé neuf fois, le plancher le garde à huit, et la raison es
 écrite à côté du chiffre.
 
 422 tests.
+
+### Étape 18 — l'effort, et la marche qui redescend de 60 % à 26 %
+
+L'étape 16 avait remplacé la somme des niveaux par l'XP de compétences versée,
+et la mesure avait immédiatement montré le défaut de la nouvelle monnaie :
+
+```
+base=25 growth=1,55  ->  niveau  6   XP versée 600
+base= 5 growth=1,50  ->  niveau 10   XP versée 600
+```
+
+**Les courbes s'y annulaient.** L'XP versée comptait des *actions*, rien
+d'autre — un run se résumait à son nombre de pas. La marche ramassait 60 % de
+la monnaie parce qu'on fait six cents pas pour trente coups, là où l'ancienne
+monnaie normalisait cette fréquence par les courbes elles-mêmes.
+
+#### La correction tenait bien en une ligne
+
+`SkillSet.effort()` : l'XP versée à chaque compétence, **divisée par le coût de
+son premier cran**. Une unité d'effort, c'est « un premier cran de cette
+compétence-là », quelle qu'elle soit. Vingt-cinq pas valent une unité, comme
+cinq coups d'épée ou deux butins trouvés.
+
+Aucune table nouvelle : `base` existe depuis l'étape 2, et c'est précisément là
+que le raisonnement avait été fait — « avec une XP fixe par action, marcher
+monte neuf fois plus vite qu'épée. C'est ce qui a dicté les courbes. »
+
+| compétence | niveaux (avant 16) | XP versée (16) | effort (18) |
+|---|---|---|---|
+| **Marche** | 17,5 % | **60,0 %** | **25,7 %** |
+| Récupération | 12,8 % | 13,7 % | 14,9 % |
+| Combat | 13,7 % | 10,0 % | 12,5 % |
+| Bouclier | 10,3 % | 5,6 % | 11,2 % |
+| Esquive | 10,8 % | 3,7 % | 10,5 % |
+| Épée | 7,3 % | 2,6 % | 4,2 % |
+
+La prédiction chiffrée de l'étape 16 disait 25,7 %. Mesuré : 25,7 %.
+
+#### Ce que ça ne défait pas
+
+`base` est un **diviseur constant par compétence** : il ne touche pas à la
+géométrie des courbes. Le sixième cran d'épée coûte toujours sept fois le
+premier, en effort comme en XP brute. Donc tout ce que l'étape 16 avait gagné
+tient : le plateau reste tombé, le gain reste linéaire en actions, et un cran
+arraché vaut toujours plus qu'un cran offert. Trois tests le disent.
+
+#### Deux chiffres, et un seul s'échange
+
+`total_xp()` reste l'XP brute — ce qui s'est passé dans la partie, et c'est
+elle qui figure dans les empreintes. `effort()` est la monnaie. L'interface
+montre la monnaie, parce qu'afficher un nombre qui n'est pas celui qu'on
+dépense n'aide personne.
+
+**Les seize empreintes n'ont pas bougé d'un caractère.** C'est la preuve la
+plus nette qu'on pouvait donner : cette étape ne touche qu'à la **conversion**,
+et le donjon lui-même est exactement le même.
+
+#### L'échelle, recalée pour la seconde fois — et en sens inverse
+
+L'étape 16 avait dû **aplatir** l'échelle. L'étape 18 la **redresse**, plus
+raide que jamais, et pour une raison mesurée : le revenu d'une vie grandit
+maintenant **×27** entre le couloir vide et l'arbre complet, là où il
+grandissait ×8,7.
+
+| | avant 16 | 16 | 18 |
+|---|---|---|---|
+| échelle | 3 · 12 · 35 · 90 · 220 | 150 · 350 · 800 · 1600 · 3200 | **6 · 30 · 100 · 280 · 700** |
+| rapports | 1:4:12:30:73 | 1:2,3:5,3:11:21 | **1:5:17:47:117** |
+| XP/vie, donjon vide | 4,3 | 221,5 | 8,8 |
+| XP/vie, arbre complet | 54,5 | 1 937 | 240 |
+
+Rythme mesuré sur douze parties de quinze vies : premier talent vie **1,0**,
+« Nourriture » vie **2,8**, « L'épée » vie 5,7, et **20,9 talents en quinze
+vies** — exactement la valeur d'avant l'étape 16 (20,8).
+
+#### Le critère du plan, revérifié de bout en bout
+
+Vingt et un achats, 40 vies chacun. Aucun recul ne franchit la barre des deux
+sigma ; le plus fort est à 1,0 σ. De 8,8 à 140 XP par vie.
+
+#### Ce que la mesure signale, et que je ne corrige pas
+
+Avec l'échelle redressée, la branche magique sort de l'horizon du bot :
+« Grimoires » à la vie 14 pour trois parties sur douze, et **« Les bâtons »
+jamais pris en quinze vies**. C'est la conséquence assumée d'une échelle plus
+raide — et le bot meurt vers l'étage 10, là où la nouvelle monnaie récompense
+surtout ceux qui descendent plus bas. Un humain qui joue mieux y arrivera plus
+tôt. À confirmer en jouant, pas au bot.
+
+425 tests, dont trois neufs sur l'effort.

@@ -19,8 +19,10 @@ from .config import RunConfig
 #: Emplacement de la sauvegarde. Modifiable pour les tests.
 CHEMIN_DEFAUT = os.path.join(os.path.expanduser("~"), ".usedonjon", "meta.json")
 
-#: XP méta = XP de compétences versée pendant la vie
+#: XP méta = effort fourni pendant la vie
 #:           × (1 + FACTEUR_PROFONDEUR × (étage − 1)).
+#: L'effort est l'XP de compétences versée, ramenée en « premiers crans
+#: équivalents » — voir `SkillSet.effort`.
 #: L'étage retenu est le plus profond du passage en cours : l'orbe le remet à
 #: zéro, ce qui fait de son usage un pari et non un gain gratuit.
 #:
@@ -32,6 +34,12 @@ CHEMIN_DEFAUT = os.path.join(os.path.expanduser("~"), ".usedonjon", "meta.json")
 #: deux fois dans le plan. Compter l'XP versée rend le gain linéaire en
 #: pratique, rend le papillonnage neutre (1 XP vaut 1 XP où qu'elle aille) et
 #: pondère chaque cran par son coût réel, sans aucune table à régler.
+#:
+#: **Correction de l'étape 18.** Compter l'XP brute revenait à compter des
+#: **actions** : les courbes s'y annulaient, et la marche ramassait 60 % de la
+#: monnaie parce qu'on fait six cents pas pour trente coups. La division par
+#: `base` rétablit ce que les courbes disaient depuis l'étape 2, sans rien
+#: coûter de plus — `base` existe déjà.
 FACTEUR_PROFONDEUR = 0.1
 
 #: Places dans le coffre avant tout agrandissement.
@@ -41,7 +49,7 @@ CAPACITE_ENTREPOT_BASE = 4
 def valeur_du_run(summary):
     """XP méta rapportée par un bilan de run."""
     facteur = 1 + FACTEUR_PROFONDEUR * (max(1, summary.deepest) - 1)
-    return summary.xp_investie * facteur
+    return summary.effort * facteur
 
 
 class Meta:

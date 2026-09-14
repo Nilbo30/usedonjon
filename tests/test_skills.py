@@ -262,6 +262,49 @@ class TestXpInvestie(unittest.TestCase):
         self.assertGreater(etale.total_levels(), concentre.total_levels())
         self.assertAlmostEqual(etale.total_xp(), concentre.total_xp(), delta=0.05)
 
+    def test_l_effort_ramene_chaque_cran_au_meme_poids(self):
+        """Un premier cran de marche vaut un premier cran d'épée. C'est l'étape 18.
+
+        L'XP brute comptait des **actions** : les courbes s'y annulaient, et la
+        marche ramassait 60 % de la monnaie parce qu'on fait six cents pas pour
+        trente coups. Diviser par `base` rétablit ce que les courbes disaient
+        depuis l'étape 2.
+        """
+        marche, epee = SkillSet(), SkillSet()
+        marche.gain("marche", skills.CATALOGUE["marche"].cost(0))
+        epee.gain("epee", skills.CATALOGUE["epee"].cost(0))
+        self.assertEqual(marche.total_xp() / epee.total_xp(), 5)
+        self.assertEqual(marche.effort(), epee.effort())
+        self.assertEqual(marche.effort(), 1)
+
+    def test_l_effort_garde_le_poids_des_crans_profonds(self):
+        """`base` est un diviseur constant : il ne touche pas à la géométrie.
+
+        Le sixième cran d'épée coûte toujours sept fois le premier, en effort
+        comme en XP brute. C'est ce qui fait que l'étape 18 ne défait rien de
+        l'étape 16.
+        """
+        epee = skills.CATALOGUE["epee"]
+        premier, sixieme = SkillSet(), SkillSet()
+        premier.gain("epee", epee.cost(0))
+        sixieme.gain("epee", epee.cost(5))
+        self.assertAlmostEqual(sixieme.effort() / premier.effort(),
+                               epee.cost(5) / epee.cost(0), places=6)
+
+    def test_l_effort_paye_ce_qui_monte_lentement(self):
+        """Une action de la compétence la plus chère vaut peu, et c'est voulu.
+
+        Marcher est douze fois plus fréquent que ramasser du butin ; un pas
+        vaut donc douze fois moins qu'un butin. Le joueur ne choisit pas
+        librement — chaque action nourrit sa compétence — mais ce qu'il choisit
+        de **faire** décide enfin de ce qu'il gagne.
+        """
+        pas, butin = SkillSet(), SkillSet()
+        pas.gain("marche", 1)
+        butin.gain("chance", 1)
+        self.assertEqual(pas.total_xp(), butin.total_xp())
+        self.assertAlmostEqual(butin.effort() / pas.effort(), 25 / 2)
+
     def test_un_cran_pese_ce_qu_il_a_coute(self):
         """Un cran de marche vaut cinq crans d'épée — parce qu'il coûte cinq fois plus.
 
@@ -384,6 +427,7 @@ class TestRefugeSansEntrainement(unittest.TestCase):
                 self.game.cmd_move(direction)
                 self.game.cmd_wait()
         self.assertEqual(self.game.player.skills.total_xp(), 0)
+        self.assertEqual(self.game.player.skills.effort(), 0)
 
     def test_mais_le_donjon_entraine_bien(self):
         from donjon.geom import DIRECTIONS

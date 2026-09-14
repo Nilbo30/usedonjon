@@ -20,13 +20,14 @@ from donjon.session import Session
 
 
 def bilan(deepest=1, xp=10, levels=10, state="mort"):
-    """Un bilan de run. `xp` est la monnaie : l'XP versée aux compétences.
+    """Un bilan de run. `xp` est la monnaie : l'effort fourni.
 
     `levels` ne sert plus qu'aux records affichés — depuis l'étape 16, la somme
-    des niveaux ne s'achète plus.
+    des niveaux ne s'achète plus. Et depuis l'étape 18, ce n'est plus l'XP
+    brute qui s'échange mais l'effort, l'XP ramenée en premiers crans.
     """
     return RunSummary(state, deepest, deepest, 100,
-                      {"marche": levels}, "Test.", xp_investie=xp)
+                      {"marche": levels}, "Test.", xp_investie=xp, effort=xp)
 
 
 class TestConversion(unittest.TestCase):

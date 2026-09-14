@@ -283,15 +283,25 @@ Deux boucles s'y imbriquent :
 
 Le jeu **se déverrouille**. La première vie se joue dans un couloir vide où
 l'on meurt de faim : pas d'arme, pas de monstre, rien au sol. Mourir rapporte
-de l'XP permanente — **toute l'XP de compétences gagnée pendant la vie**,
-multipliée par la profondeur atteinte — et cette XP s'échange contre des
-talents, à la stèle du refuge.
+de l'XP permanente — **l'effort fourni pendant la vie**, multiplié par la
+profondeur atteinte — et cette XP s'échange contre des talents, à la stèle du
+refuge.
 
-Ce que ça change : un cran arraché ne vaut pas un cran offert. Les courbes
-étant géométriques, monter « épée » du niveau 5 au niveau 6 demande 38 XP là où
-le premier cran en demandait 5 ; la récompense suit, sans qu'aucune table de
-conversion n'existe. Compter les niveaux, comme avant, revenait à payer les
-deux le même prix — et le gain d'une vie plafonnait quoi qu'on fasse.
+L'effort, c'est l'XP de compétences gagnée, comptée en « premiers crans » :
+vingt-cinq pas valent une unité, comme cinq coups d'épée ou deux butins
+trouvés. Deux propriétés en découlent, et elles ont coûté deux étapes chacune.
+
+**Un cran arraché ne vaut pas un cran offert.** Les courbes étant géométriques,
+monter « épée » du niveau 5 au niveau 6 demande 38 XP là où le premier cran en
+demandait 5 ; la récompense suit. Compter les niveaux, comme au début du
+projet, revenait à payer les deux le même prix — et le gain d'une vie
+plafonnait quoi qu'on fasse.
+
+**Et un pas ne vaut pas un coup.** Compter l'XP brute revenait à compter des
+actions : un run se résumait à son nombre de pas, et la marche ramassait 60 %
+de la monnaie. La division par le coût du premier cran rétablit ce que les
+courbes disaient déjà — marcher monte cinq fois plus vite que frapper, donc un
+pas vaut cinq fois moins.
 
 L'équipement, les créatures, les objets, les herbes, les parchemins, le coffre,
 l'orbe, les étages eux-mêmes : chacun est un nœud à acheter, avec ses

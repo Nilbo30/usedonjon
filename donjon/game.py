@@ -693,7 +693,8 @@ class Game:
             state=state, depth=self.depth, deepest=self.deepest,
             turns=self.turn, skills=dict(self.player.skills.levels),
             cause=message, seed=self.seed,
-            xp_investie=self.player.skills.total_xp())
+            xp_investie=self.player.skills.total_xp(),
+            effort=self.player.skills.effort())
         return self.summary
 
     def is_visible(self, pos):

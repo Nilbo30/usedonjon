@@ -97,6 +97,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 15 | [Le lot interface : fiches justes, bulle, action unique, stèle, piles](journal.md#étape-15--le-lot-interface) | ✅ fait |
 | 16 | [La monnaie du méta devient l'XP investie, et non la somme des niveaux](journal.md#étape-16--la-monnaie-du-méta-devient-lxp-investie) | ✅ fait |
 | 17 | [Le bus de déclencheurs : tout contenu devient de la donnée](journal.md#étape-170--un-filet-quil-a-fallu-mesurer-avant-dy-croire) | ✅ fait |
+| 18 | [La monnaie devient l'effort : un pas ne vaut plus un coup](journal.md#étape-18--leffort-et-la-marche-qui-redescend-de-60--à-26-) | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 

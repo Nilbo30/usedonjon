@@ -1000,7 +1000,7 @@ class Fenetre:
         # Le chiffre qui compte : l'XP versée aux compétences, c'est elle qui
         # s'échange contre des talents. Le décompte des crans est dans le
         # panneau des compétences, où il y a la place de l'expliquer.
-        self._texte(10, 26, f"{joueur.skills.total_xp():.0f} XP", pale=True)
+        self._texte(10, 26, f"{joueur.skills.effort():.0f} XP", pale=True)
 
         self._barre(95, 10, 110, joueur.hp, joueur.max_hp,
                     BARRE_PV if joueur.hp > joueur.max_hp * 0.3 else BARRE_PV_BAS,
@@ -1273,7 +1273,7 @@ class Fenetre:
         self._texte(gauche + 16, haut + 14, "Compétences de ce run", gras=True)
         self._texte(gauche + 250, haut + 14,
                     f"{competences.total_levels()} niveaux  ·  "
-                    f"{competences.total_xp():.0f} XP gagnée", pale=True)
+                    f"{competences.effort():.0f} XP gagnée", pale=True)
         self._texte(gauche + largeur - 16, haut + 14,
                     "au niveau suivant", ancre="ne", pale=True)
         for index, (nom, niveau, acquis, requis, prochain) in enumerate(lignes):
