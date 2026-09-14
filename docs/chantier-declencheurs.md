@@ -74,14 +74,15 @@ source de `game.py`). Ici : `\.heal(` et `\.take_damage(` interdits hors de
 
 **Pas ce que je croyais.** Je pensais trouver un `check_death` appelé de façon
 incohérente selon les sites. Vérification faite, les six sites de dégâts
-appellent tous `check_death` juste après. Le repliement dans `game.blesser()`
-est donc une simplification, pas un changement d'ordre.
+appellent tous `check_death` juste après.
 
-Le seul écart réel : `notify` tombe **avant** `check_death` sur deux sites (le
-coup au contact, le tir) et il n'y a pas de `notify` du tout sur les quatre
-autres. Une fois replié, la règle devient uniforme — le fait d'effet précède
-toujours la mort qu'il cause. C'est un choix, il est bon, et il ne se voit pas
-aujourd'hui puisque personne n'écoute.
+~~Le repliement dans `game.blesser()` est donc une simplification, pas un
+changement d'ordre.~~ **Faux, et corrigé à l'étape 17.2.** Deux des six sites —
+le coup au contact et le tir ennemi — glissent un `say` et un `notify` entre le
+dégât et la mort. Replier `check_death` dans `blesser` avancerait donc la mort
+du monstre **avant** l'évènement du coup qui l'a tué, ce qui déplace
+`monstre_vaincu` dans le flux. Ce n'est pas « à comportement identique », et
+`blesser` ne replie donc rien : elle retire des PV, un point.
 
 `Trainer` filtre par nom : des noms neufs sont inertes. « Aucun changement de
 comportement tant qu'aucune règle n'écoute » est donc tenable — à condition

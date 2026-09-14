@@ -215,6 +215,56 @@ class Game:
             listener(self, event)
         return event
 
+    # ------------------------------------------------------------------ #
+    # Les mutations d'état : le moteur est le seul à toucher aux jauges
+    # ------------------------------------------------------------------ #
+    # `Actor` ne connaît pas le jeu — ses `heal`, `take_damage` et
+    # `add_status` ne peuvent donc rien annoncer. Faire converger ici les
+    # dix-huit endroits qui les appelaient est ce qui permettra à l'étape 17.3
+    # de publier un fait d'effet **au seul endroit possible** : au point
+    # d'appel, un oubli serait silencieux — l'effet marcherait, mais rien ne
+    # l'écouterait.
+    #
+    # Un test de source interdit désormais ces méthodes hors d'ici.
+
+    def soigner(self, cible, points, source=None):
+        """Rend des PV. Renvoie ce qui a réellement été rendu."""
+        return cible.heal(points)
+
+    def blesser(self, cible, degats, source=None):
+        """Retire des PV. **N'appelle pas `check_death`** — et c'est mesuré.
+
+        L'audit annonçait le contraire : les six sites de dégâts appelant tous
+        `check_death` juste après, le repliement passait pour une
+        simplification. Vérification faite, deux d'entre eux glissent un `say`
+        et un `notify` entre les deux — le coup au contact et le tir ennemi.
+        Replier avancerait donc la mort du monstre **avant** l'évènement du
+        coup qui l'a tué, ce qui déplace `monstre_vaincu` dans le flux. Ce
+        n'est pas « à comportement identique ».
+        """
+        return cible.take_damage(degats)
+
+    def nourrir(self, cible, points):
+        """Remplit ou creuse le ventre, bornes comprises. Renvoie l'écart réel."""
+        avant = cible.fullness
+        cible.fullness = max(0, min(cible.max_fullness, avant + points))
+        return cible.fullness - avant
+
+    def poser_statut(self, cible, nom, tours, source=None):
+        """Pose un statut (confus, endormi...). Le plus long des deux l'emporte."""
+        cible.add_status(nom, tours)
+
+    def gagner_pv_max(self, cible, points, source=None):
+        """Augmente le maximum de PV — l'herbe de vie, et rien d'autre pour l'instant.
+
+        Cinquième porte, trouvée en écrivant le test de source : l'audit
+        parlait de « PV, ventre, statuts », et `base_max_hp` n'est aucun des
+        trois tout en étant bien un changement de PV. Sans elle, l'étape 17.3
+        n'aurait rien eu à publier pour l'herbe de vie.
+        """
+        cible.base_max_hp += points
+        return points
+
     def monsters(self):
         return [a for a in self.actors if a is not self.player and a.alive]
 
@@ -281,7 +331,7 @@ class Game:
                 etage=self.depth)
             while self._hunger_acc >= 1.0 and player.fullness > 0:
                 self._hunger_acc -= 1.0
-                player.fullness -= 1
+                self.nourrir(player, -1)
             if player.fullness == 20:
                 self.say("Ton ventre gargouille. Tu as faim.")
             self._repas_automatique()
@@ -293,13 +343,13 @@ class Game:
             self._regen_acc += 1.0 / self.regen_interval()
             while self._regen_acc >= 1.0:
                 self._regen_acc -= 1.0
-                soigne = player.heal(1)
+                soigne = self.soigner(player, 1)
                 # Seul le repos entraîne « Récupération » : marcher soigne
                 # aussi, mais ce n'est pas là qu'on apprend à se remettre.
                 if soigne and self._repos_ce_tour:
                     self.notify(events.REPOS, pv=soigne)
         else:
-            player.take_damage(1)
+            self.blesser(player, 1)
             self.check_death(player)
 
     def xp_multiplier(self):
@@ -525,7 +575,7 @@ class Game:
             return
         raw = max(1.0, attacker.attack - defender.defense * 0.7)
         dmg = max(1, int(round(self.rng.variance(raw))))
-        defender.take_damage(dmg)
+        self.blesser(defender, dmg, source=attacker)
         if attacker.is_player:
             self.say(f"Tu frappes {defender.name} ({dmg} dégâts).")
             self.notify(events.COUP, arme=arme, cible=defender,
@@ -859,7 +909,7 @@ class Game:
             return False
         brut = max(1.0, tireur.attack * DEGATS_A_DISTANCE - cible.defense * 0.7)
         degats = max(1, int(round(self.rng.variance(brut))))
-        cible.take_damage(degats)
+        self.blesser(cible, degats, source=tireur)
         self.say(f"{tireur.name} te touche à distance ({degats} dégâts)."
                  if cible.is_player
                  else f"{tireur.name} touche {cible.name} ({degats} dégâts).")
@@ -882,7 +932,7 @@ class Game:
                     questions.DEGATS_JET, max(1, item.power or 2),
                     porteur=self.player, objet=item, cible=target)
                 dmg = max(1, int(self.rng.variance(puissance)))
-                target.take_damage(dmg)
+                self.blesser(target, dmg, source=self.player)
                 self.say(f"{item.name} inflige {dmg} dégâts.")
                 self.check_death(target, killer=self.player)
             self._recuperer_projectile(item, target.pos)

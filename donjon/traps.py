@@ -24,7 +24,7 @@ class Trap:
 
 @trap("sommeil")
 def _piege_sommeil(game, actor):
-    actor.add_status("endormi", 6)
+    game.poser_statut(actor, "endormi", 6)
     game.say(game.act(actor, "respires", "respire")
              + " un gaz soporifique et " + ("t'endors !" if actor.is_player else "s'endort !"))
 
@@ -38,7 +38,7 @@ def _piege_teleport(game, actor):
 @trap("explosion")
 def _piege_explosion(game, actor):
     dmg = max(1, actor.max_hp // 5)
-    actor.take_damage(dmg)
+    game.blesser(actor, dmg)
     game.say("BOUM ! " + game.act(actor, "subis", "subit") + f" {dmg} dégâts.")
     game.check_death(actor)
 

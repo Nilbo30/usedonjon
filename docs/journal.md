@@ -1087,3 +1087,57 @@ formes, et il est payé.
 brief, l'ordre des passes, le bornage, et le test qui compte : une interception
 déclarée en données change bien `joueur.attack`, sans qu'une ligne de moteur
 ait bougé.
+
+### Étape 17.2 — cinq portes, et le moteur seul à les franchir
+
+Dix-huit endroits changeaient un PV, un ventre ou un statut. Ils convergent
+maintenant vers cinq méthodes de `Game` :
+
+```python
+game.soigner(cible, points, source=…)
+game.blesser(cible, degats, source=…)
+game.nourrir(cible, points)          # les deux sens, bornes comprises
+game.poser_statut(cible, nom, tours, source=…)
+game.gagner_pv_max(cible, points, source=…)
+```
+
+C'est une étape qui ne se voit pas du tout en jouant, et c'est exactement le
+but : `Actor` ne connaît pas le jeu, donc `heal` et `take_damage` ne peuvent
+rien annoncer. Sans cette convergence, l'étape 17.3 devrait publier aux
+dix-huit points d'appel — et **un oubli y serait silencieux** : l'effet
+marcherait, mais rien ne l'écouterait.
+
+Un **test de source** l'interdit désormais : hors de `entities.py` (qui les
+définit) et de `game.py` (seul autorisé à les appeler), aucun module ne peut
+toucher `.heal(`, `.take_damage(`, `.add_status(`, `.fullness` ou
+`.base_max_hp`. Le garde a été vérifié en réintroduisant volontairement un
+appel direct dans `traps.py` : il tombe.
+
+#### La correction que l'audit méritait
+
+L'audit disait, après vérification, que replier `check_death` dans `blesser`
+était « une simplification, pas un changement d'ordre ». **C'était faux.** Les
+six sites de dégâts appellent bien `check_death` juste après, mais deux d'entre
+eux — le coup au contact et le tir ennemi — glissent un `say` et un `notify`
+entre les deux. Replier avancerait la mort du monstre **avant** l'évènement du
+coup qui l'a tué, déplaçant `monstre_vaincu` dans le flux.
+
+`blesser` ne replie donc rien : elle retire des PV, un point. La simplification
+était tentante et elle aurait cassé la promesse de l'étape. C'est le deuxième
+chiffre de l'audit que le code contredit, après les « trois bornes » qui
+étaient quatre.
+
+#### Une cinquième porte, trouvée en écrivant le test
+
+L'audit parlait de « PV, ventre, statuts ». `base_max_hp` n'est aucun des trois
+— et c'est pourtant bien un changement de PV, celui de l'herbe de vie. Sans
+`gagner_pv_max`, l'étape 17.3 n'aurait rien eu à publier pour elle. C'est le
+test de source qui l'a fait apparaître, en cherchant ce qu'il devait interdire.
+
+#### Ce que ça coûte
+
+Rien de mesurable : 0,709 ms par tour contre 0,718 après l'étape 17.1, sur la
+même campagne de 25 vies. Et **14 629 tours des deux côtés**, pour la troisième
+fois — une preuve d'identité de plus, gratuite.
+
+377 tests. Les seize empreintes n'ont pas bougé d'un caractère.

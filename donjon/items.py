@@ -215,8 +215,8 @@ class Item:
 
 @effect("soigner")
 def _soigner(game, user, item):
-    healed = user.heal(questions.demander(questions.SOIN, item.power,
-                                          porteur=user, objet=item))
+    healed = game.soigner(user, questions.demander(
+        questions.SOIN, item.power, porteur=user, objet=item), source=item)
     if healed:
         game.say(game.act(user, "récupères", "récupère") + f" {healed} PV.")
     else:
@@ -226,8 +226,8 @@ def _soigner(game, user, item):
 
 @effect("herbe_de_vie")
 def _herbe_de_vie(game, user, item):
-    user.base_max_hp += item.power
-    user.heal(item.power)
+    game.gagner_pv_max(user, item.power, source=item)
+    game.soigner(user, item.power, source=item)
     game.say(game.act(user, "gagnes", "gagne") + f" {item.power} PV max !")
     return True
 
@@ -239,21 +239,21 @@ def _manger(game, user, item):
     before = user.fullness
     gagne = questions.demander(questions.SATIETE, item.power,
                                porteur=user, objet=item)
-    user.fullness = min(user.max_fullness, user.fullness + gagne)
+    game.nourrir(user, gagne)
     game.say(f"Tu manges {item.name}. Ventre : {before} -> {user.fullness}.")
     return True
 
 
 @effect("confusion_soi")
 def _confusion_soi(game, user, item):
-    user.add_status("confus", 12)
+    game.poser_statut(user, "confus", 12, source=item)
     game.say(game.act(user, "titubes", "titube") + ", la tête qui tourne.")
     return True
 
 
 @effect("sommeil_soi")
 def _sommeil_soi(game, user, item):
-    user.add_status("endormi", 8)
+    game.poser_statut(user, "endormi", 8, source=item)
     game.say(game.act(user, "t'endors", "s'endort") + " d'un coup.")
     return True
 
@@ -273,7 +273,7 @@ def _lire_panique(game, user, item):
     touched = 0
     for monster in game.monsters():
         if room and room.contains(monster.pos):
-            monster.add_status("confus", duree)
+            game.poser_statut(monster, "confus", duree, source=item)
             touched += 1
     game.say(f"Un cri strident ! {touched} monstre(s) paniquent." if touched
              else "Un cri strident... personne alentour.")
@@ -309,7 +309,7 @@ def _jet_degats(game, thrower, target, item):
     puissance = questions.demander(questions.DEGATS_JET, item.power,
                                    porteur=thrower, objet=item, cible=target)
     dmg = max(1, int(game.rng.variance(puissance)))
-    target.take_damage(dmg)
+    game.blesser(target, dmg, source=thrower)
     game.say(f"{item.name} touche {target.name} ({dmg} dégâts).")
     game.check_death(target, killer=thrower)
     return True
@@ -317,21 +317,21 @@ def _jet_degats(game, thrower, target, item):
 
 @effect("jet_sommeil")
 def _jet_sommeil(game, thrower, target, item):
-    target.add_status("endormi", 10)
+    game.poser_statut(target, "endormi", 10, source=thrower)
     game.say(f"{target.name} s'endort profondément.")
     return True
 
 
 @effect("jet_confusion")
 def _jet_confusion(game, thrower, target, item):
-    target.add_status("confus", 12)
+    game.poser_statut(target, "confus", 12, source=thrower)
     game.say(f"{target.name} est complètement désorienté.")
     return True
 
 
 @effect("jet_soin")
 def _jet_soin(game, thrower, target, item):
-    target.heal(item.power)
+    game.soigner(target, item.power, source=thrower)
     game.say(f"{target.name} récupère de la vitalité.")
     return True
 
