@@ -696,7 +696,17 @@ class Fenetre:
         self.mode = "jeu"
 
     def lancer(self, direction):
-        self.game.cmd_throw(self.slot, direction)
+        """Viser : lancer l'objet, ou s'en servir vers là si c'est un bâton.
+
+        Le seul point d'interface qu'a coûté l'étape 17.6 : le mode de visée
+        existait déjà pour le jet, il lui manquait de savoir vers quoi
+        l'envoyer.
+        """
+        objet = self._objet_decrit()
+        if objet is not None and objet.type.vise:
+            self.game.cmd_use(self.slot, direction)
+        else:
+            self.game.cmd_throw(self.slot, direction)
         self.mode = "jeu"
 
     def _lancer_vers(self, case):

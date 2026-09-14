@@ -829,7 +829,12 @@ class Game:
         self.say("Aucun objet à cet emplacement.")
         return None
 
-    def cmd_use(self, slot):
+    def cmd_use(self, slot, direction=None):
+        """S'en servir — sur soi, ou vers une direction pour un objet qui vise.
+
+        `direction` a été ajoutée à l'étape 17.6 : un bâton doit savoir où
+        brûler, et ni `cmd_use` ni `Item.use` ne le disaient.
+        """
         item = self._item_at_slot(slot)
         if not item:
             return False
@@ -838,14 +843,30 @@ class Game:
         if not item.type.usable:
             self.say(f"{item.name} ne s'utilise pas comme ça (essaie de le lancer).")
             return False
+        if item.type.vise and direction is None:
+            self.say(f"{item.name} demande une direction.")
+            return False
         mystere = not item.identifie
-        item.use(self, self.player)
+        if item.type.vise:
+            item.aim(self, self.player, direction)
+        else:
+            item.use(self, self.player)
         if mystere and self.identification.identifier(item.type.key):
             self.say(f"Identifié : {item.type.name}.")
-        self.player.consommer(item)
+        self._epuiser(item)
         self.pass_turn(self.player)
         self.notify(events.USAGE_OBJET, objet=item, categorie=item.category)
         return self._finish(True)
+
+    def _epuiser(self, item):
+        """Un objet à charges perd une charge ; les autres se consomment."""
+        if not item.type.charges:
+            self.player.consommer(item)
+            return
+        item.charges -= 1
+        if item.charges <= 0:
+            self.say(f"{item.name} n'a plus rien à donner.")
+            self.player.consommer(item)
 
     def cmd_equip(self, slot):
         item = self._item_at_slot(slot)
@@ -932,6 +953,34 @@ class Game:
             return
         self.level.items[pos] = objet
         self.say(f"{objet.name} retombe au sol.")
+
+    def acteurs_dans_la_zone(self, depuis, direction, portee, largeur=0):
+        """Tous les acteurs d'un souffle, et non le premier rencontré.
+
+        `ligne_de_tir` s'arrête au premier acteur : c'est ce qu'il faut pour
+        une flèche, jamais pour une flamme. C'est la primitive que le bus ne
+        pouvait pas fabriquer — elle est géométrique, pas évènementielle, et
+        c'était la prédiction de l'audit.
+
+        `largeur` à zéro donne un rayon qui traverse ; au-delà, un cône qui
+        s'ouvre d'une case par case parcourue, jusqu'à cette largeur.
+        """
+        perpendiculaire = (-direction[1], direction[0])
+        touches, pos = [], depuis
+        for distance in range(1, portee + 1):
+            pos = add(pos, direction)
+            if not self.level.walkable(pos):
+                break
+            etalement = min(largeur, distance - 1)
+            for ecart in range(-etalement, etalement + 1):
+                case = (pos[0] + perpendiculaire[0] * ecart,
+                        pos[1] + perpendiculaire[1] * ecart)
+                if not self.level.walkable(case):
+                    continue
+                acteur = self.actor_at(case)
+                if acteur is not None and acteur not in touches:
+                    touches.append(acteur)
+        return touches
 
     def ligne_de_tir(self, depuis, direction, portee):
         """Où s'arrête un projectile : (dernière case, premier acteur touché).

@@ -17,6 +17,7 @@ HERB = "herbe"
 SCROLL = "parchemin"
 FOOD = "nourriture"
 AMMO = "projectile"
+WAND = "bâton"
 
 #: Apparences des objets non identifiés, par catégorie. Ajouter une catégorie
 #: ici suffit à la rendre mystérieuse — les potions, le jour venu.
@@ -76,6 +77,7 @@ SKILL_PAR_CATEGORIE = {
     SCROLL: "parchemins",
     FOOD: "nourriture",
     AMMO: "jet",
+    WAND: "pyromancie",
 }
 
 EFFECTS = {}
@@ -91,7 +93,8 @@ def effect(name):
 class ItemType:
     def __init__(self, key, name, glyph, category, power=0, weight=10,
                  on_use=None, on_hit=None, note="", skill=None, depth_min=1,
-                 unlock=None, bonus=None, regles=()):
+                 unlock=None, bonus=None, regles=(), on_aim=None,
+                 portee=0, largeur=0, charges=0):
         self.key = key
         self.name = name
         self.glyph = glyph
@@ -102,6 +105,13 @@ class ItemType:
         self.regles = tuple(regles)  # règles portées (voir regles.py)
         self.on_use = on_use        # effet quand on consomme/lit l'objet
         self.on_hit = on_hit        # effet quand l'objet est lancé sur une cible
+        # Troisième registre, ajouté à l'étape 17.6 : un objet qu'on **vise**.
+        # `on_use` ne prend pas de direction et `on_hit` est déclenché par un
+        # jet ; il manquait la forme « je m'en sers, vers là-bas ».
+        self.on_aim = on_aim        # effet quand on s'en sert dans une direction
+        self.portee = portee        # jusqu'où, en cases (0 = sans portée)
+        self.largeur = largeur      # 0 = un rayon, plus = un cône qui s'ouvre
+        self.charges = charges      # usages avant épuisement (0 = consommable)
         self.note = note
         self.depth_min = depth_min  # étage à partir duquel l'objet apparaît
         self.unlock = unlock        # talent requis pour qu'il apparaisse
@@ -120,7 +130,12 @@ class ItemType:
 
     @property
     def usable(self):
-        return self.on_use is not None
+        return self.on_use is not None or self.on_aim is not None
+
+    @property
+    def vise(self):
+        """S'utilise-t-il vers une direction plutôt que sur soi ?"""
+        return self.on_aim is not None
 
 
 class Item:
@@ -136,6 +151,10 @@ class Item:
         self.plus = plus
         self.registre = registre
         self.quantite = quantite
+        # Les charges appartiennent à l'exemplaire, la réserve au type : un
+        # bâton à moitié vidé n'est pas un demi-bâton, et `quantite` compte
+        # des exemplaires, pas des usages.
+        self.charges = item_type.charges
 
     @property
     def identifie(self):
@@ -214,6 +233,12 @@ class Item:
     def use(self, game, user):
         fn = EFFECTS.get(self.type.on_use)
         return fn(game, user, self) if fn else False
+
+    def aim(self, game, user, direction):
+        """S'en servir vers une direction — la troisième forme, à côté de
+        `use` et `hit`."""
+        fn = EFFECTS.get(self.type.on_aim)
+        return fn(game, user, self, direction) if fn else False
 
     def hit(self, game, thrower, target):
         fn = EFFECTS.get(self.type.on_hit)
@@ -340,6 +365,34 @@ def _jet_confusion(game, thrower, target, item):
     return True
 
 
+@effect("pyromancie")
+def _pyromancie(game, user, item, direction):
+    """Un souffle de flammes : tout ce qui est sur son passage brûle.
+
+    Écrit **entièrement dans le registre**, comme les treize effets qui le
+    précèdent : la portée, la largeur et les charges viennent du type, les
+    cibles de `acteurs_dans_la_zone`, et les dégâts d'une question — donc une
+    interception pourra un jour dire « le feu mord la chair ».
+    """
+    from . import questions
+
+    cibles = [acteur for acteur
+              in game.acteurs_dans_la_zone(user.pos, direction,
+                                           item.type.portee, item.type.largeur)
+              if acteur is not user]
+    if not cibles:
+        game.say("Les flammes se perdent dans le vide.")
+        return True
+    for cible in cibles:
+        puissance = questions.demander(questions.DEGATS_SORT, item.power,
+                                       porteur=user, objet=item, cible=cible)
+        degats = max(1, int(game.rng.variance(puissance)))
+        game.blesser(cible, degats, source=user)
+        game.say(f"Les flammes lèchent {cible.name} ({degats} dégâts).")
+        game.check_death(cible, killer=user)
+    return True
+
+
 @effect("jet_soin")
 def _jet_soin(game, thrower, target, item):
     game.soigner(target, item.power, source=thrower)
@@ -390,6 +443,15 @@ _register(
              on_use="orbe_retour", skill="parchemins",
              note="Te ramène au refuge avec tes objets et tes compétences. "
                   "En échange, la profondeur atteinte est remise à zéro.", unlock="orbe"),
+    # Le bâton de flammes, posé à l'étape 17.6 comme test du bus de
+    # déclencheurs. Il est **verrouillé** : aucun nœud de l'arbre n'ouvre
+    # « batons », donc il n'apparaît nulle part. C'était un test de mécanisme,
+    # pas une livraison de contenu — l'équilibrage est un autre chantier.
+    ItemType("baton_flammes", "bâton de flammes", "/", WAND, power=7, weight=4,
+             on_aim="pyromancie", portee=5, largeur=1, charges=5, depth_min=3,
+             unlock="batons",
+             note="Un souffle de flammes sur {n} cases. Cinq charges."),
+
     # La pierre est le projectile de la main nue ; la flèche, taillée pour un
     # arc, ne se ramasse que sur un archer — d'où son poids nul, qui l'exclut
     # du tirage au sol sans l'exclure du butin.

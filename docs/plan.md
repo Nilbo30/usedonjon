@@ -96,7 +96,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 14 | [Retours de partie : sept bugs, pierres, nœuds répétables, exploration](journal.md#étape-14--ce-quune-vraie-partie-a-révélé) | ✅ fait |
 | 15 | [Le lot interface : fiches justes, bulle, action unique, stèle, piles](journal.md#étape-15--le-lot-interface) | ✅ fait |
 | 16 | [La monnaie du méta devient l'XP investie, et non la somme des niveaux](journal.md#étape-16--la-monnaie-du-méta-devient-lxp-investie) | ✅ fait |
-| 17 | Le bus de déclencheurs : tout contenu devient de la donnée | 🔨 en cours |
+| 17 | [Le bus de déclencheurs : tout contenu devient de la donnée](journal.md#étape-170--un-filet-quil-a-fallu-mesurer-avant-dy-croire) | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -115,7 +115,7 @@ comparées avant de choisir sont dans
 | 17.3 | [Ces méthodes publient](journal.md#étape-173--les-cinq-portes-publient) | ✅ fait |
 | 17.4 | [Les garde-fous](journal.md#étape-174--deux-garde-fous-qui-nont-encore-rien-à-garder) | ✅ fait |
 | 17.5 | [Le porteur générique](journal.md#étape-175--le-porteur-générique) | ✅ fait |
-| 17.6 | Le bâton de pyromancie, en données | à faire |
+| 17.6 | [Le bâton de pyromancie : cinq points de moteur, et pourquoi](journal.md#étape-176--le-bâton-de-flammes-et-le-compte-exact) | ✅ fait |
 
 ## Les deux boucles
 

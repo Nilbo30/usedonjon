@@ -141,11 +141,24 @@ class TestRangs(unittest.TestCase):
 
 class TestVerrouillageDuContenu(unittest.TestCase):
     def test_chaque_verrou_d_objet_est_donne_par_un_noeud(self):
+        """Sinon c'est du contenu que personne ne verra jamais.
+
+        `VERROUS_EN_ATTENTE` est la seule échappatoire, et elle est nominative :
+        un verrou y figure avec la raison pour laquelle son nœud n'existe pas
+        encore. C'est une dette visible, pas un trou.
+        """
         donnes = {drapeau for noeud in tree.ARBRE.values()
                   for drapeau in noeud.unlocks}
+        donnes |= set(tree.VERROUS_EN_ATTENTE)
         for type_objet in items.ITEM_TYPES.values():
             if type_objet.unlock:
                 self.assertIn(type_objet.unlock, donnes, type_objet.key)
+
+    def test_aucun_verrou_en_attente_n_est_deja_donne(self):
+        """Le jour où le nœud arrive, la dette doit disparaître de la liste."""
+        donnes = {drapeau for noeud in tree.ARBRE.values()
+                  for drapeau in noeud.unlocks}
+        self.assertEqual(donnes & set(tree.VERROUS_EN_ATTENTE), set())
 
     def test_une_config_nue_a_tous_les_verrous(self):
         """Le moteur, le bot et les tests jouent au jeu complet."""

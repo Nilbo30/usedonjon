@@ -48,6 +48,7 @@ SOIN = "soin"                    # PV rendus par une herbe
 SATIETE = "satiete"              # ventre rendu par un repas
 DUREE_EFFET = "duree_effet"      # tours que dure un parchemin
 DEGATS_JET = "degats_jet"        # puissance d'un objet lancé
+DEGATS_SORT = "degats_sort"      # puissance d'un sort lancé depuis un bâton
 
 #: Chaque question, et ce qu'elle veut dire. Une interception qui vise un nom
 #: absent d'ici est refusée : c'est ce qui empêche une faute de frappe de
@@ -64,6 +65,7 @@ QUESTIONS = {
     SATIETE: "ventre rendu par un repas",
     DUREE_EFFET: "tours que dure l'effet d'un parchemin",
     DEGATS_JET: "puissance d'un objet lancé",
+    DEGATS_SORT: "puissance d'un sort",
 }
 
 AJOUTER, RETIRER = "ajouter", "retirer"
@@ -86,6 +88,7 @@ CONTRIBUTIONS = {
     SATIETE: ("satiete", AJOUTER),
     DUREE_EFFET: ("duree_effet", AJOUTER),
     DEGATS_JET: ("degats_jet", AJOUTER),
+    DEGATS_SORT: ("degats_sort", AJOUTER),
 }
 
 

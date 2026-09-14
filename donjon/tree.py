@@ -235,6 +235,17 @@ _enregistrer(
 #: Effets qui ne concernent pas la partie mais la progression elle-même.
 EFFETS_META = {"coffre_places"}
 
+#: Du contenu qui existe mais qu'aucun nœud n'ouvre encore, et pourquoi.
+#: Sans cette liste, le test qui vérifie que tout verrou d'objet est donné par
+#: un talent tomberait — et l'affaiblir aurait laissé passer du contenu
+#: réellement injoignable. Une entrée ici est une dette : elle se solde en
+#: ajoutant le nœud, pas en allongeant la liste.
+VERROUS_EN_ATTENTE = {
+    "batons": "Le bâton de flammes a servi de test au bus de déclencheurs "
+              "(étape 17.6). Le mécanisme est prouvé ; l'accrocher à l'arbre "
+              "est une décision de contenu, avec son équilibrage à mesurer.",
+}
+
 #: L'échelle des prix : cinq marches, et rien entre elles. Un nœud coûte l'une
 #: de ces cinq valeurs (un test le vérifie), ce qui rend le rythme d'ouverture
 #: réglable d'un seul geste — on bouge l'échelle entière, jamais un nœud isolé.

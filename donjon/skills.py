@@ -40,6 +40,7 @@ EFFETS = {
     "regeneration": "tours en moins entre deux points de vie regagnés",
     "esquive": "chance d'éviter un coup entièrement (0.03 = 3 %)",
     "chance": "chance qu'une créature vaincue laisse quelque chose",
+    "degats_sort": "dégâts en plus des sorts lancés depuis un bâton",
 }
 
 
@@ -56,6 +57,7 @@ LIBELLES = {
     "regeneration": "tour de repos en moins",
     "esquive": "d'esquive",
     "chance": "de butin",
+    "degats_sort": "dégâts de sort",
 }
 
 
@@ -152,6 +154,12 @@ _enregistrer(
     Skill("parchemins", "Parchemins", base=2, growth=1.6,
           effects={"duree_effet": 1},
           note="Les incantations durent plus longtemps."),
+    # Ajoutée à l'étape 17.6 avec le bâton de flammes : une entrée ici, et le
+    # champ `skill` de l'objet. La règle `@objet` sur l'usage fait le reste —
+    # aucune règle nouvelle, aucune ligne de moteur.
+    Skill("pyromancie", "Pyromancie", base=4,
+          effects={"degats_sort": 1},
+          note="Les flammes obéissent mieux."),
 )
 
 

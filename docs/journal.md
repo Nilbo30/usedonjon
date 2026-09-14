@@ -1381,3 +1381,71 @@ versions en blocs, c'est mesurer trois moments de la machine.
 406 tests, dont treize sur les règles portées. Les seize empreintes sont
 intactes pour la sixième étape d'affilée — et cette fois c'est le mécanisme
 le plus invasif du chantier qui ne les a pas touchées.
+
+### Étape 17.6 — le bâton de flammes, et le compte exact
+
+Le test de validation du chantier : écrire le premier bâton de pyromancie
+**uniquement en données**, et signaler ce que ça demande au moteur. C'est
+l'information qui était cherchée, pas le bâton.
+
+#### La tentative en données seules, et ce qu'elle a heurté
+
+Écrite avant de toucher à quoi que ce soit, elle donne quatre points, et pas
+un de moins :
+
+| ce qui manquait | pourquoi |
+|---|---|
+| **une direction à l'usage** | ni `cmd_use(slot)` ni `Item.use(game, user)` n'en prennent — l'effet ne sait pas où viser |
+| **une portée par objet** | `PORTEE_TIR` est une constante de module, aucun champ par objet |
+| **des charges** | `quantite` compte des exemplaires et `plus` est un bonus : un bâton à cinq charges n'est pas cinq bâtons |
+| **une question pour les dégâts d'un sort** | sinon l'affinité du feu n'a nulle part où se poser |
+
+Et un cinquième en écrivant le cône :
+
+| **une primitive de visée en zone** | `ligne_de_tir` s'arrête au premier acteur : c'est ce qu'il faut pour une flèche, jamais pour une flamme |
+
+Plus un sixième, dans l'interface et non le moteur : le mode de visée existait
+pour le jet, il lui manquait de savoir vers quoi l'envoyer. **Une ligne.**
+
+#### Ce que ça dit, et ce que ça ne dit pas
+
+**La généralisation n'a pas raté**, et le critère « si ça demande de toucher au
+moteur » aurait donné un faux négatif — c'était la mise en garde du départ.
+Regardons ce que chaque point a coûté :
+
+- trois des cinq sont des **champs de données** (`portee`, `largeur`,
+  `charges`) : une ligne de déclaration chacun, zéro logique ;
+- un est un **troisième registre** (`on_aim`), à côté des deux qui existaient
+  déjà (`on_use`, `on_hit`). Le moteur a gagné une forme d'objet, pas un cas
+  particulier : le prochain bâton, la prochaine baguette, le prochain cor de
+  chasse n'en coûteront aucune ;
+- un est une **question de plus**, exactement la frontière annoncée à l'étape
+  17.1 — « une question par endroit où un nombre se calcule », et il y en a
+  maintenant douze ;
+- un est de la **géométrie**. Aucun bus d'évènements ne fabrique « tous les
+  acteurs dans ce cône » ; c'était la prédiction de l'audit, et c'est le seul
+  point que les données ne pouvaient pas couvrir. Acheté une fois, il servira
+  à tout ce qui frappe en zone.
+
+Ce qui a tenu en données, en revanche, est ce qui compte : **l'effet entier est
+dans le registre `@effect`**, comme les treize qui le précèdent. Et la
+compétence « Pyromancie » n'a demandé qu'une entrée au catalogue plus le champ
+`skill` de l'objet — la règle `@objet` sur l'usage fait le reste, sans une
+règle nouvelle ni une ligne de moteur. C'est la promesse du projet depuis
+l'étape 2, et elle tient encore.
+
+#### Prouvé, pas livré
+
+Le bâton est **verrouillé** : aucun nœud n'ouvre « batons », donc il
+n'apparaît nulle part. C'était un test de mécanisme, pas une livraison de
+contenu — l'accrocher à l'arbre est une décision avec son équilibrage à
+mesurer.
+
+Le test qui vérifie que tout verrou d'objet est donné par un talent l'a
+immédiatement attrapé. Plutôt que de l'affaiblir — ce qui aurait laissé passer
+du contenu réellement injoignable — `tree.VERROUS_EN_ATTENTE` nomme la dette et
+sa raison, et un second test exige qu'elle disparaisse de la liste le jour où
+le nœud arrive.
+
+420 tests, dont treize sur le bâton. Les seize empreintes sont intactes pour la
+septième étape d'affilée : du contenu verrouillé ne change rien à une partie.
