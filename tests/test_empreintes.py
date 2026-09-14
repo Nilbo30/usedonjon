@@ -1,0 +1,346 @@
+"""Le filet du chantier des déclencheurs : quinze parties, quinze empreintes.
+
+Chaque refonte du moteur qui se dit « à comportement identique » doit laisser
+ces quinze empreintes intactes. C'est la seule façon de le prouver ; sans elles,
+« identique » reste une intention.
+
+L'empreinte porte sur l'**état** à chaque commande — position, jauges, stats
+dérivées, sac, statuts, monstres, objets au sol, niveaux, XP versée — et jamais
+sur les messages : reformuler une phrase du journal ne doit pas casser le
+filet, changer un dégât doit le casser.
+
+**Un filet se mesure avant de s'y fier.** La première version ne comptait que
+huit vies de bot : porter `ESQUIVE_MAX` de 0,55 à 0,90 ne cassait *aucune*
+empreinte, et l'inventaire des évènements a dit pourquoi — sur ces huit vies,
+`pose` n'arrivait jamais et `jet` une seule fois. Le bot ne lance presque
+jamais, ne pose rien et ne déséquipe pas. D'où les quatre **scènes
+contrôlées** : ce que le bot ne fait pas, il faut le faire exprès.
+`test_le_filet_couvre_tout_ce_que_le_moteur_sait_faire` garde cette propriété.
+
+**Si une empreinte casse alors que le changement était voulu**, il faut
+regénérer la table à la main et dire pourquoi dans le journal :
+
+    python3 -m tests.test_empreintes
+
+Regénérer sans expliquer, c'est retirer le filet.
+"""
+
+import unittest
+
+from donjon import events, tree
+from tests.helpers import (donner, place_monster, poser_au_sol, poser_piege,
+                           sandbox, trace_de_partie, trace_de_partition)
+
+TOUT = tuple(tree.ARBRE)
+
+
+# --------------------------------------------------------------------------
+# Les scènes contrôlées : ce que le bot ne fait pas de lui-même
+# --------------------------------------------------------------------------
+def _scene_nue(graine=1):
+    """Une salle vide, un héros sans rien : on pose nous-mêmes ce qu'on teste."""
+    jeu = sandbox(seed=graine)
+    jeu.player.inventory.clear()
+    jeu.player.weapon = jeu.player.shield = None
+    return jeu
+
+
+def scene_du_jet():
+    jeu = _scene_nue()
+    donner(jeu, "pierre", 6)
+    place_monster(jeu, (11, 4), key="mamel", hp=12)
+    return jeu
+
+
+def scene_de_l_equipement():
+    """Trois pièces au sol : de quoi ramasser, équiper, déséquiper et reposer.
+
+    On se déplace entre deux poses : `cmd_drop` refuse une case déjà occupée,
+    et sans ce détail la scène ne posait qu'un objet sur trois.
+    """
+    jeu = _scene_nue()
+    for pos, cle in (((6, 4), "epee_fer"), ((7, 4), "bouclier_fer"),
+                     ((8, 4), "epee_bois")):
+        poser_au_sol(jeu, pos, cle)
+    return jeu
+
+
+def scene_des_objets():
+    jeu = _scene_nue()
+    for cle in ("onigiri", "herbe_soin", "parchemin_lumiere",
+                "parchemin_panique"):
+        donner(jeu, cle, 1)
+    jeu.player.hp = 8
+    jeu.player.fullness = 30
+    return jeu
+
+
+def scene_des_pieges():
+    jeu = _scene_nue()
+    for pos, cle in (((7, 4), "explosion"), ((8, 4), "sommeil"),
+                     ((9, 4), "teleport")):
+        poser_piege(jeu, pos, cle)
+    return jeu
+
+
+def scene_de_l_esquive():
+    """Un héros très entraîné, sans bouclier, sous les coups de trois bêtes.
+
+    Sa vingtaine de points d'esquive brute (0,90) dépasse le plafond du moteur
+    (0,55) : c'est la seule façon d'exercer ce plafond, qu'aucune vie de bot
+    n'approche. Il fait partie des trois bornes que l'étape 1 va convertir en
+    interceptions — le corpus doit donc y mordre.
+    """
+    jeu = sandbox(seed=3, config=_reglage(start_hp=200))
+    jeu.player.skills.levels["esquive"] = 10
+    jeu.player.shield = None
+    for pos in ((7, 4), (6, 5), (7, 5)):
+        place_monster(jeu, pos, key="mamel", hp=200)
+    return jeu
+
+
+def scene_du_butin():
+    """Huit bêtes d'un coup, et assez de chance pour buter sur son plafond."""
+    from donjon.config import TOUT_DEBLOQUE
+
+    jeu = sandbox(seed=4, config=_reglage(start_attack=99,
+                                          unlocks=TOUT_DEBLOQUE))
+    jeu.player.skills.levels["chance"] = 20
+    for pos in ((7, 4), (7, 5), (6, 5), (5, 4), (5, 5), (5, 3), (6, 3), (7, 3)):
+        place_monster(jeu, pos, key="mamel", hp=1)
+    return jeu
+
+
+def scene_de_la_faim():
+    """Assez de marche pour que le plancher du creusement morde.
+
+    `max(0.25, creuse − endurance)` : à trente niveaux de marche le bonus vaut
+    0,90 et c'est le plancher qui décide, pas la soustraction.
+    """
+    jeu = sandbox(seed=5, config=_reglage(max_fullness=200))
+    jeu.player.skills.levels["marche"] = 30
+    return jeu
+
+
+def _reglage(**champs):
+    """Une `RunConfig` de scène : un étage nu, et ce qu'on veut par-dessus."""
+    from donjon.config import RunConfig
+
+    return RunConfig(max_depth=5, monsters_per_floor=(0, 0),
+                     items_per_floor=(0, 0), traps_per_floor=(0, 0), **champs)
+
+
+#: Les sept partitions, en notation `script.py`.
+PARTITIONS = (
+    ("le jet", scene_du_jet, "TalTalTalTakTal,",
+     "f07b58ae81159cfa8c0b5c0366885885",
+     {"tours": 5, "pv": 20, "xp": 8.0, "pas": 7}),
+    ("l'équipement", scene_de_l_equipement, ",Eal,Ebl,EaEbDalDalDa",
+     "9359dc53017634088bb166a54e595615",
+     {"tours": 14, "pv": 20, "xp": 4.0, "pas": 15}),
+    ("les objets", scene_des_objets, "UaUaUaUa",
+     "c0fce7c892ea7643c2605111eb70cf90",
+     {"tours": 4, "pv": 20, "xp": 4.0, "pas": 5}),
+    ("les pièges", scene_des_pieges, "llll....llll",
+     "f2ef0b750df617e1eb2b10b8489025b8",
+     {"tours": 17, "pv": 18, "xp": 9.0, "pas": 13}),
+    ("l'esquive", scene_de_l_esquive, "." * 150,
+     "be68736ef5117698e9e87d0f00aa4cf0",
+     {"tours": 84, "pv": 0, "xp": 124.0, "pas": 86}),
+    ("le butin", scene_du_butin, "lnbhyk" * 12,
+     "c45fbac6d053f6d960fdab782e55dcab",
+     {"tours": 51, "pv": 22, "xp": 106.0, "pas": 73}),
+    ("la faim", scene_de_la_faim, "lh" * 50,
+     "4a82eec08ef94cbabee4e9c8f25be474",
+     {"tours": 100, "pv": 20, "xp": 100.0, "pas": 101}),
+)
+
+#: Huit vies de bot, choisies pour couvrir le contenu : le couloir vide des
+#: premières vies, les vivres, l'équipement, les pièges, les parchemins (donc
+#: l'identification), le tir, et deux fois l'arbre entier — dont une qui
+#: descend au-delà du deuxième palier. La cinquième se termine par une
+#: **victoire**, le seul chemin de fin que la mort ne couvre pas.
+PARTIES = (
+    ("couloir vide", 1, (),
+     "86201ab829e4f4973823c510b7916c4f",
+     {"etage": 3, "tours": 119, "pv": 0, "xp": 138.95, "pas": 122}),
+    ("vivres", 2, ("nourriture",),
+     "5993e657845c2021073ece2ecf39f5b8",
+     {"etage": 5, "tours": 215, "pv": 0, "xp": 312.4, "pas": 148}),
+    ("armes", 3, ("nourriture", "epee", "bouclier", "affutage"),
+     "a9c79d3dc0d6a937371d75d2e1149ca4",
+     {"etage": 6, "tours": 206, "pv": 0, "xp": 305.8, "pas": 160}),
+    ("pieges", 16, ("nourriture", "epee", "pieges"),
+     "f03c3ab4212a8c3146caddee47b95b2d",
+     {"etage": 8, "tours": 470, "pv": 0, "xp": 629.45, "pas": 339}),
+    ("herbes et parchemins", 13,
+     ("nourriture", "herbes", "grimoires", "intuition"),
+     "693d960b2f666af94e45834891f2d9a0",
+     {"etage": 10, "tours": 445, "pv": 16, "xp": 754.8, "pas": 283}),
+    ("projectiles", 6,
+     ("nourriture", "projectiles", "rien_ne_se_perd", "butin"),
+     "ef4b91bf9082e62043a71f35abf83c45",
+     {"etage": 5, "tours": 150, "pv": 0, "xp": 217.75, "pas": 155}),
+    ("arbre complet", 39, TOUT,
+     "1ad2b5f57ad1294dbeec6c829f20c443",
+     {"etage": 14, "tours": 1106, "pv": 3, "xp": 2406.95, "pas": 700}),
+    ("arbre complet, profond", 36, TOUT,
+     "4ccbbe7e3e0210e501b3b9fde0480ee7",
+     {"etage": 18, "tours": 1010, "pv": 0, "xp": 2044.45, "pas": 690}),
+)
+
+
+class TestEmpreintes(unittest.TestCase):
+    """Quinze parties rejouées à l'identique, ou le moteur a changé."""
+
+    def _comparer(self, nom, obtenue, obtenus, empreinte, reperes):
+        # Les repères d'abord : ils nomment ce qui a bougé. Une empreinte
+        # seule ne dit que « quelque chose ».
+        ecarts = {cle: (reperes[cle], obtenus[cle])
+                  for cle in reperes if reperes[cle] != obtenus[cle]}
+        self.assertEqual(ecarts, {}, f"« {nom} » — attendu vs obtenu")
+        self.assertEqual(
+            obtenue, empreinte,
+            f"« {nom} » : les repères sont les mêmes mais la trace diffère — "
+            f"quelque chose a bougé en cours de route. Rejoue avec "
+            f"`python3 -m tests.test_empreintes`.")
+
+    def test_les_vies_de_bot_se_rejouent_a_l_identique(self):
+        for nom, graine, talents, empreinte, reperes in PARTIES:
+            with self.subTest(partie=nom):
+                obtenue, obtenus, _ = trace_de_partie(graine, talents)
+                self._comparer(f"{nom} (graine {graine})", obtenue, obtenus,
+                               empreinte, reperes)
+
+    def test_les_scenes_controlees_se_rejouent_a_l_identique(self):
+        for nom, construire, partition, empreinte, reperes in PARTITIONS:
+            with self.subTest(scene=nom):
+                obtenue, obtenus, _ = trace_de_partition(construire, partition)
+                self._comparer(nom, obtenue, obtenus, empreinte, reperes)
+
+    def test_le_filet_couvre_tout_ce_que_le_moteur_sait_faire(self):
+        """Chaque évènement du moteur doit arriver au moins une fois.
+
+        C'est ce test qui a condamné la première version du filet : `pose`
+        n'arrivait jamais et `jet` une seule fois sur huit vies. Un filet qui
+        ne couvre pas une commande laisse passer toute régression sur elle,
+        sans rien dire.
+        """
+        compte = self._compter_les_evenements()
+        manquants = [nom for nom in events.NOMS if not compte.get(nom)]
+        self.assertEqual(manquants, [], f"jamais émis par le corpus : {compte}")
+
+    def test_les_commandes_rares_sont_couvertes_plusieurs_fois(self):
+        """Une occurrence unique ne couvre qu'un chemin sur plusieurs.
+
+        Lancer sur une cible, lancer dans le vide, équiper, déséquiper, poser :
+        chacun a son propre code. Un seuil, sinon le corpus se dégrade sans
+        bruit à mesure que le bot change.
+        """
+        compte = self._compter_les_evenements()
+        for nom, minimum in ((events.JET, 8), (events.POSE, 3),
+                             (events.EQUIPEMENT, 12), (events.BUTIN, 10),
+                             (events.USAGE_OBJET, 40),
+                             (events.MONSTRE_VAINCU, 50)):
+            self.assertGreaterEqual(compte.get(nom, 0), minimum, nom)
+
+    def _compter_les_evenements(self):
+        from collections import Counter
+
+        from donjon.script import autoplay, run_script
+        from donjon.session import Session
+
+        compte = Counter()
+        for _nom, graine, talents, _e, _r in PARTIES:
+            session = Session(sauvegarde=False, seed=graine)
+            session.meta.xp = 10 ** 9
+            restant = list(talents)
+            while restant:
+                for cle in list(restant):
+                    if session.meta.acheter(cle):
+                        restant.remove(cle)
+            jeu = session.descendre()
+            recorder = events.Recorder()
+            jeu.listeners.append(recorder)
+            autoplay(jeu, 4000)
+            compte.update(recorder.noms())
+        for _nom, construire, partition, _e, _r in PARTITIONS:
+            jeu = construire()
+            recorder = events.Recorder()
+            jeu.listeners.append(recorder)
+            run_script(jeu, partition)
+            compte.update(recorder.noms())
+        return compte
+
+    def test_les_trois_bornes_du_moteur_sont_reellement_atteintes(self):
+        """Une borne que le corpus n'atteint jamais n'est pas protégée.
+
+        Les trois bornes du moteur — le plancher du creusement, le plafond
+        d'esquive, le plafond de butin — sont exactement celles que l'étape 1
+        va convertir en interceptions. Avant les scènes de l'esquive, du butin
+        et de la faim, on pouvait porter `ESQUIVE_MAX` de 0,55 à 0,90 sans
+        qu'une seule empreinte bouge.
+        """
+        from donjon.game import CHANCE_BUTIN, CHANCE_BUTIN_MAX, ESQUIVE_MAX
+        from donjon.script import run_script
+
+        jeu = scene_de_la_faim()
+        avant = jeu.player.fullness
+        run_script(jeu, "lh" * 50)
+        creuse = (avant - jeu.player.fullness) / jeu.turn
+        self.assertAlmostEqual(creuse, 0.25, delta=0.02,
+                               msg="c'est le plancher qui doit décider, pas "
+                                   "la soustraction")
+
+        jeu = scene_de_l_esquive()
+        self.assertGreater(jeu.player.bonus("esquive"), ESQUIVE_MAX)
+
+        jeu = scene_du_butin()
+        self.assertGreater(CHANCE_BUTIN + jeu.player.bonus("chance"),
+                           CHANCE_BUTIN_MAX)
+
+    def test_le_filet_attrape_bien_quelque_chose(self):
+        """Un filet qu'on ne teste pas peut être inerte sans qu'on le sache.
+
+        Deux vérifications : deux parties différentes ont des empreintes
+        différentes, et un héros qui frappe plus fort en a une autre. Sans ça,
+        une `instantane` cassée renverrait une constante et tous les tests
+        ci-dessus passeraient pour toujours.
+        """
+        une, _, _ = trace_de_partie(1, ())
+        autre, _, _ = trace_de_partie(2, ())
+        self.assertNotEqual(une, autre)
+
+        from donjon.config import RunConfig
+        from donjon.script import autoplay
+        from donjon.session import Session
+        from tests.helpers import instantane
+
+        def finale(attaque):
+            session = Session(sauvegarde=False, seed=1,
+                              config=RunConfig(start_attack=attaque))
+            jeu = session.descendre()
+            autoplay(jeu, 4000)
+            return instantane(jeu)
+
+        self.assertNotEqual(finale(6), finale(9))
+
+
+def _regenerer():                                    # pragma: no cover
+    """Réimprime les deux tables, à recopier après un changement voulu."""
+    print("PARTIES = (")
+    for nom, graine, talents, _e, _r in PARTIES:
+        empreinte, reperes, _ = trace_de_partie(graine, talents)
+        talents_txt = "TOUT" if talents == TOUT else repr(talents)
+        print(f'    ("{nom}", {graine}, {talents_txt},')
+        print(f'     "{empreinte}", {reperes}),')
+    print(")\n\nPARTITIONS = (")
+    for nom, construire, partition, _e, _r in PARTITIONS:
+        empreinte, reperes, _ = trace_de_partition(construire, partition)
+        print(f'    ("{nom}", {construire.__name__}, "{partition}",')
+        print(f'     "{empreinte}", {reperes}),')
+    print(")")
+
+
+if __name__ == "__main__":                           # pragma: no cover
+    _regenerer()

@@ -338,7 +338,7 @@ pratique, on perd tout à la mort, et ce qu'on y gagne rouvre le jeu un nœud à
 la fois. Le plan détaillé, la frontière entre état de run et état permanent, et
 **toutes les décisions avec leurs mesures** — y compris celles que les chiffres
 ont fait changer d'avis — sont dans
-[`docs/plan-incremental.md`](docs/plan-incremental.md).
+[`docs/plan.md`](docs/plan.md) et [`docs/journal.md`](docs/journal.md).
 
 ## Pistes pour la suite
 

@@ -312,10 +312,11 @@ coûte à peine plus et évite d'y revenir.
 
 ---
 
-# d. La scission du plan — proposition, non faite
+# d. La scission du plan — faite
 
-`docs/plan-incremental.md` fait **1 150 lignes**. Il sert deux usages qui se
-gênent : dire où on en est, et dire comment on y est arrivé.
+`docs/plan-incremental.md` faisait **1 150 lignes** et servait deux usages qui
+se gênaient : dire où on en est, et dire comment on y est arrivé. Il est
+désormais scindé en `plan.md` (236 lignes) et `journal.md` (1 005).
 
 Proposition :
 
@@ -336,4 +337,5 @@ dedans** — chaque ligne du tableau des étapes renvoie à son entrée. Sinon o
 garde l'état courant et on perd la raison de l'état courant, ce qui est le
 contraire du but.
 
-**Rien n'est scindé tant que tu n'as pas dit oui.**
+C'est ce qui a été fait : chaque ligne du tableau des étapes de `plan.md` est
+un lien vers l'entrée correspondante du journal.
