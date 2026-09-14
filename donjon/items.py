@@ -91,7 +91,7 @@ def effect(name):
 class ItemType:
     def __init__(self, key, name, glyph, category, power=0, weight=10,
                  on_use=None, on_hit=None, note="", skill=None, depth_min=1,
-                 unlock=None, bonus=None):
+                 unlock=None, bonus=None, regles=()):
         self.key = key
         self.name = name
         self.glyph = glyph
@@ -99,6 +99,7 @@ class ItemType:
         self.skill = skill or SKILL_PAR_CATEGORIE.get(category)
         self.power = power          # dégâts d'arme, défense, soin, etc.
         self.weight = weight        # poids de tirage à la génération
+        self.regles = tuple(regles)  # règles portées (voir regles.py)
         self.on_use = on_use        # effet quand on consomme/lit l'objet
         self.on_hit = on_hit        # effet quand l'objet est lancé sur une cible
         self.note = note
@@ -162,6 +163,16 @@ class Item:
     @property
     def power(self):
         return self.type.power + self.plus
+
+    @property
+    def regles(self):
+        """Les règles d'un objet vivent sur son **type**, jamais sur l'exemplaire.
+
+        C'est ce qui rend le coffre indolore : il n'y stocke qu'une clé et
+        reconstruit l'objet depuis le catalogue. Le jour où un enchantement
+        sera propre à un exemplaire, il faudra l'écrire dans l'entrepôt.
+        """
+        return self.type.regles
 
     @property
     def etiquette(self):

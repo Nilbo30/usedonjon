@@ -35,6 +35,7 @@ class Level:
         self.traps = {}      # pos -> Trap
         self.stairs = None
         self.explored = set()
+        self.regles = ()     # règles portées par l'étage (voir regles.py)
 
     # --- accès cases ---------------------------------------------------
     def in_bounds(self, pos):

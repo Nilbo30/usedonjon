@@ -61,6 +61,7 @@ class RunConfig:
         reanimations=0,
         endurance=0.0,
         profondeur_max_chaine=8,
+        regles=(),
     ):
         self.max_depth = max_depth
         self.spawn_interval = spawn_interval
@@ -107,6 +108,12 @@ class RunConfig:
         # chose, c'est ce nombre qui empêchera la boucle. Il est ici, et pas
         # en dur dans le moteur, pour qu'un talent puisse un jour l'ouvrir.
         self.profondeur_max_chaine = profondeur_max_chaine
+        # Les règles portées par le run (voir regles.py). C'est **le seul
+        # chemin** par lequel un talent peut poser une règle : `Game` lit
+        # `config.regles`, jamais `Meta`. La frontière tient telle quelle, et
+        # le test de source qui interdit `Meta` dans `game.py` la garantit
+        # toujours tout seul.
+        self.regles = tuple(regles)
         self.recuperation_projectile = recuperation_projectile
         # Combien de fois le coup fatal ne l'est pas, dans une descente.
         self.reanimations = reanimations

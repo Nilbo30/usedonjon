@@ -112,7 +112,7 @@ class Meta:
         objets de départ et les classes de créatures s'accumulent.
         """
         effets, reglages, unlocks = {}, {}, set()
-        objets, classes = [], set()
+        objets, classes, regles = [], set(), []
         for cle in self.noeuds:
             noeud = tree.ARBRE.get(cle)
             if noeud is None:
@@ -125,7 +125,8 @@ class Meta:
             unlocks.update(noeud.unlocks)
             objets += list(noeud.objets)
             classes.update(noeud.classes)
-        return effets, reglages, unlocks, objets, classes
+            regles += list(noeud.regles)
+        return effets, reglages, unlocks, objets, classes, regles
 
     def capacite_entrepot(self):
         effets, *_ = self._cumul()
@@ -139,10 +140,11 @@ class Meta:
         chemin-ci, et lui seul, qui verrouille ce qui n'a pas été gagné.
         """
         base = base or RunConfig()
-        effets, reglages, unlocks, objets, classes = self._cumul()
+        effets, reglages, unlocks, objets, classes, regles = self._cumul()
         valeurs = dict(tree.BASE_VERROUILLEE)
         valeurs.update(reglages)
         valeurs["starting_kit"] = tuple(objets)
+        valeurs["regles"] = tuple(regles)
         for champ, valeur in effets.items():
             if champ in tree.EFFETS_META:
                 continue

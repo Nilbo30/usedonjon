@@ -1296,3 +1296,88 @@ contre un coût que j'avais annoncé trois fois.
 
 393 tests, dont dix sur les garde-fous. Les seize empreintes sont intactes pour
 la cinquième étape d'affilée.
+
+### Étape 17.5 — le porteur générique
+
+Jusqu'ici un seul objet pouvait réagir à un évènement : le héros, par sa table
+de compétences, câblée en dur dans `skills.Trainer`. Une règle peut désormais
+être **portée** par n'importe quoi — une créature, une arme au poing, l'étage,
+le run entier — et le moteur va la chercher là où elle est.
+
+```python
+Regle(events.MONSTRE_VAINCU, lambda d: d.jeu.soigner(d.porteur, 2))
+```
+
+#### La spécification tient en une phrase
+
+**Les porteurs concernés sont ceux que l'évènement nomme, plus leur équipement,
+plus l'étage, plus le run.** Avec une addition au contrat : pour une **action**,
+le héros est toujours concerné, puisqu'une action est par définition la sienne
+— c'est ce qui permet à une paire de bottes de réagir à un simple pas.
+
+La ligne qui compte est celle qui manque : **un objet posé par terre ne porte
+rien tant qu'on ne le touche pas.** Sans elle, chaque pas balaierait
+l'inventaire de l'étage. Un test pose vingt cailloux au sol et vérifie qu'un
+pas ne concerne personne.
+
+#### Un porteur est tout ce qui a un champ `regles`
+
+Pas un seul `isinstance` dans `regles.py`, donc aucun import d'`entities` ni
+d'`items` — c'est ce qui garde le fichier hors du cycle d'imports, et ça rend
+le mécanisme ouvert : poser `regles` sur une nouvelle sorte d'objet suffit à la
+rendre porteuse. Cinq l'ont reçu : `Actor`, `ItemType`, `Level`, `RunConfig`,
+et `tree.Noeud`.
+
+Les règles d'un objet vivent sur son **type**, jamais sur l'exemplaire. C'est
+ce qui rend le coffre indolore : il n'y stocke qu'une clé et reconstruit
+l'objet depuis le catalogue. Le jour où un enchantement sera propre à un
+exemplaire, il faudra l'écrire dans l'entrepôt — noté, pas fait.
+
+#### La frontière tient sans rien changer
+
+Une règle de talent passe par `RunConfig.regles`, produit par `Meta._cumul()`.
+`Game` lit `config.regles` et jamais `Meta` : le test de source qui interdit
+`Meta` dans `game.py` continue de garantir la frontière tout seul, sans une
+ligne de plus.
+
+#### Ce que cette étape ne fait pas, et pourquoi
+
+Les **interceptions** gardent leur registre global : elles ne sont pas encore
+portées. La raison est structurelle, et c'est une conséquence directe de
+l'étape 17.1 — une question ne reçoit délibérément pas le `Game`, ce qui
+interdit toute cascade au milieu d'un calcul de dégâts. Or l'étage et le run ne
+se trouvent qu'à partir du `Game`.
+
+Ce n'est pas un manque pour le chantier 3 : les porteurs d'une question se
+limitent à ce qu'elle nomme déjà — le porteur, son arme, sa cible — et c'est
+exactement ce qu'il faut pour « l'argent mord la chair ».
+
+#### Le coût, mesuré autrement
+
+C'était l'inconnue de l'étape : `ventre_change` part environ une fois par tour,
+et chacun traverse maintenant une collecte de porteurs.
+
+Premier essai, cinq passes par version en blocs : 0,595 avant le chantier,
+0,639 après 17.4, **0,596 après 17.5**. Incohérent — 17.5 contient tout ce que
+17.4 contient, plus une collecte. Ce n'était pas une mesure, c'était la dérive
+de la machine entre trois blocs.
+
+Repris en **entrelaçant** les passes — A, B, C, A, B, C… — pour que la dérive
+frappe les trois versions également, sept fois chacune :
+
+| | min | médiane | max |
+|---|---|---|---|
+| avant le chantier | 0,518 | **0,578** | 0,601 |
+| après 17.4 | 0,533 | **0,572** | 0,614 |
+| après 17.5 | 0,540 | **0,573** | 0,621 |
+
+Les médianes sont indiscernables. Les minima — la mesure la moins polluée —
+laissent deviner quelques pour cent, pas davantage. **Le chantier entier, la
+collecte des porteurs comprise, ne coûte rien de mesurable.**
+
+L'entrelacement est la leçon de méthode de cette étape : mesurer trois
+versions en blocs, c'est mesurer trois moments de la machine.
+
+406 tests, dont treize sur les règles portées. Les seize empreintes sont
+intactes pour la sixième étape d'affilée — et cette fois c'est le mécanisme
+le plus invasif du chantier qui ne les a pas touchées.

@@ -114,7 +114,7 @@ comparées avant de choisir sont dans
 | 17.2 | [Toute mutation passe par le moteur](journal.md#étape-172--cinq-portes-et-le-moteur-seul-à-les-franchir) | ✅ fait |
 | 17.3 | [Ces méthodes publient](journal.md#étape-173--les-cinq-portes-publient) | ✅ fait |
 | 17.4 | [Les garde-fous](journal.md#étape-174--deux-garde-fous-qui-nont-encore-rien-à-garder) | ✅ fait |
-| 17.5 | Le porteur générique | à faire |
+| 17.5 | [Le porteur générique](journal.md#étape-175--le-porteur-générique) | ✅ fait |
 | 17.6 | Le bâton de pyromancie, en données | à faire |
 
 ## Les deux boucles

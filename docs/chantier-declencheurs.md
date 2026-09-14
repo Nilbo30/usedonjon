@@ -109,6 +109,10 @@ Ma proposition tient en une phrase : **les porteurs concernés sont ceux que
 l'évènement nomme — source et cible — plus leur équipement, plus l'étage, plus
 le run.**
 
+*(Livré à l'étape 17.5, avec une addition trouvée en écrivant : pour une
+**action**, le héros est toujours concerné, puisqu'une action est par contrat
+la sienne. Sans ça, une paire de bottes ne pourrait pas réagir à un pas.)*
+
 | porteur | concerné par |
 |---|---|
 | une créature | tout évènement qui la nomme comme source ou cible |

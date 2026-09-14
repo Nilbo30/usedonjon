@@ -13,6 +13,8 @@ contenu :
 * `unlocks` — des drapeaux que la génération consulte (« grimoires ») ;
 * `objets` — ce qui s'ajoute au sac de départ ;
 * `classes` — les classes de créatures que le nœud réveille (voir monsters.py) ;
+* `regles` — des règles portées par le run (voir regles.py) : « quand ceci
+  arrive, fais cela ». Elles passent par la `RunConfig`, jamais par le moteur ;
 * `repetitions` — combien de fois on peut le reprendre (1 par défaut). Les
   effets d'un nœud repris s'additionnent d'eux-mêmes : le cumul lit la liste
   des achats, pas un ensemble ;
@@ -46,7 +48,7 @@ BASE_VERROUILLEE = {
 class Noeud:
     def __init__(self, key, name, cost, description, branche="", parents=(),
                  effets=None, reglages=None, unlocks=(), objets=(), classes=(),
-                 repetitions=1, facteur_cout=1, ordre=0):
+                 repetitions=1, facteur_cout=1, ordre=0, regles=()):
         self.key = key
         self.name = name
         self.cost = cost
@@ -61,6 +63,7 @@ class Noeud:
         self.repetitions = repetitions         # combien de fois on peut le reprendre
         self.facteur_cout = facteur_cout       # de combien le prix grimpe à chaque reprise
         self.ordre = ordre                     # départage d'affichage, voir BRANCHES
+        self.regles = tuple(regles)            # règles portées par le run (regles.py)
 
     def accessible(self, acquis):
         return all(parent in acquis for parent in self.parents)

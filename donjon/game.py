@@ -12,7 +12,7 @@ Deux idées portent l'extensibilité :
 """
 
 from . import (ai, dungeon, events, hub, items, monsters, path, questions,
-               skills, tiles, traps)
+               regles as regles_mod, skills, tiles, traps)
 from .config import RunConfig
 from .entities import ACTION_COST, Monster, Player, equiper_kit
 from .events import Event
@@ -75,7 +75,7 @@ class Game:
         self.level = None
         # Auditeurs d'évènements. Le formateur de compétences en est un comme
         # un autre : le moteur ne sait pas ce qu'il fait de ce qu'on lui dit.
-        self.listeners = [skills.Trainer()]
+        self.listeners = [skills.Trainer(), regles_mod.Distributeur()]
         # Le garde-fou des chaînes : combien de maillons sont en cours, et ce
         # qui a été coupé. Voir `notify`.
         self.maillons = 0

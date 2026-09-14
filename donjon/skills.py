@@ -21,6 +21,7 @@ pas gratuite, et ils sont volontairement peu nombreux.
 """
 
 from . import events
+from .regles import PlafondParTour
 
 # --- portées ---------------------------------------------------------------
 TOUJOURS = "toujours"        # le bonus s'applique en permanence
@@ -318,31 +319,15 @@ class Trainer:
     def __init__(self, regles=REGLES, catalogue=None):
         self.table = regles_par_evenement(regles)
         self.catalogue = catalogue if catalogue is not None else CATALOGUE
-        self._tour = None       # le tour dont on compte les déclenchements
-        self._compte = {}       # règle -> fois déclenchée dans ce tour
-
-    def _sous_le_plafond(self, regle, game):
-        """Cette règle a-t-elle encore le droit de se déclencher ce tour-ci ?
-
-        Le compteur ne garde qu'un tour : il se vide au premier évènement du
-        suivant, donc rien ne s'accumule sur une partie de mille tours.
-        """
-        if regle.max_par_tour is None:
-            return True
-        if game.turn != self._tour:
-            self._tour, self._compte = game.turn, {}
-        fois = self._compte.get(id(regle), 0)
-        if fois >= regle.max_par_tour:
-            return False
-        self._compte[id(regle)] = fois + 1
-        return True
+        # Le même compteur que les règles portées : deux copies dériveraient.
+        self.plafond = PlafondParTour()
 
     def __call__(self, game, event):
         competences = game.player.skills
         multiplicateur = game.xp_multiplier()
         for regle in self.table.get(event.nom, ()):
             cle = regle.resoudre(event)
-            if cle is None or not self._sous_le_plafond(regle, game):
+            if cle is None or not self.plafond.autorise(regle, game.turn):
                 continue
             for niveau in competences.gain(cle, regle.xp * multiplicateur):
                 nom = self.catalogue[cle].name

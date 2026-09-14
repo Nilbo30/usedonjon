@@ -30,6 +30,7 @@ class Actor:
         self.alive = True
         self.statuses = {}       # nom -> tours restants
         self.is_player = False
+        self.regles = ()         # règles portées (voir regles.py)
 
     # --- statistiques (surchargées par le joueur : équipement + compétences)
     @property
@@ -97,6 +98,7 @@ class Monster(Actor):
         )
         self.species = species
         self.behaviour = species.get("behaviour", "chasseur")
+        self.regles = tuple(species.get("regles", ()))
         self.target_pos = None   # dernière position connue du héros
 
 
