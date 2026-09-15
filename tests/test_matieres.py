@@ -31,7 +31,7 @@ class TestLeVerrou(unittest.TestCase):
 
     #: Ce qu'une matière a le droit de porter. Pas d'`attaque`, jamais : le
     #: jour où ce champ apparaît, le verrou du chantier a sauté.
-    CHAMPS_DE_MATIERE = {"nom", "poids", "profondeur"}
+    CHAMPS_DE_MATIERE = {"nom", "poids", "profondeur", "unlock"}
 
     def test_la_forme_est_le_seul_endroit_ou_l_attaque_est_ecrite(self):
         """Un `attaque` dans `MATIERES` serait le verrou en train de sauter."""
@@ -61,6 +61,52 @@ class TestLesTables(unittest.TestCase):
         """Une matière sans faiblesse rendrait les quatre autres décoratives."""
         for matiere, ligne in affinites.AFFINITES.items():
             self.assertLessEqual(min(ligne.values()), 1.0, matiere)
+
+
+class TestLesVerrous(unittest.TestCase):
+    """Une matière est un pan de contenu : elle s'achète à la stèle."""
+
+    def _tirages(self, unlocks, profondeur=12, combien=400):
+        from donjon.rng import Rng
+
+        rng = Rng(7)
+        trouves = set()
+        for _ in range(combien):
+            objet = items.random_item(rng, depth=profondeur, unlocks=unlocks)
+            if objet is not None and objet.type.matiere:
+                trouves.add(objet.type.matiere)
+        return trouves
+
+    def test_sans_talent_on_ne_trouve_que_du_bois(self):
+        """Et le bois est justement la matière qui ne mord rien."""
+        self.assertEqual(self._tirages(("epees", "boucliers")), {"bois"})
+
+    def test_le_talent_pris_la_matiere_apparait(self):
+        trouves = self._tirages(("epees", "boucliers", "fer"))
+        self.assertIn("fer", trouves)
+        self.assertNotIn("argent", trouves)
+
+    def test_une_arme_reclame_sa_forme_et_sa_matiere(self):
+        """Les deux verrous, pas un seul : c'est le croisement, jusqu'au bout."""
+        self.assertEqual(set(items.ITEM_TYPES["epee_fer"].unlock),
+                         {"epees", "fer"})
+        self.assertEqual(set(items.ITEM_TYPES["epee_bois"].unlock), {"epees"})
+
+    def test_chaque_matiere_verrouillee_a_son_noeud(self):
+        from donjon import tree
+
+        donnes = {drapeau for noeud in tree.ARBRE.values()
+                  for drapeau in noeud.unlocks}
+        for matiere, donnees in items.MATIERES.items():
+            verrou = donnees["unlock"]
+            if verrou is not None:
+                self.assertIn(verrou, donnes, matiere)
+
+    def test_le_kit_de_depart_ne_depend_d_aucun_verrou_de_matiere(self):
+        """Sinon un héros neuf partirait les mains vides."""
+        for cle in ("epee_bois", "bouclier_bois"):
+            self.assertEqual(set(items.ITEM_TYPES[cle].unlock) & set(items.MATIERES),
+                             set(), cle)
 
 
 class TestLaMorsure(unittest.TestCase):

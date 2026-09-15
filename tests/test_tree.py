@@ -151,8 +151,8 @@ class TestVerrouillageDuContenu(unittest.TestCase):
                   for drapeau in noeud.unlocks}
         donnes |= set(tree.VERROUS_EN_ATTENTE)
         for type_objet in items.ITEM_TYPES.values():
-            if type_objet.unlock:
-                self.assertIn(type_objet.unlock, donnes, type_objet.key)
+            for verrou in type_objet.unlock:
+                self.assertIn(verrou, donnes, type_objet.key)
 
     def test_aucun_verrou_en_attente_n_est_deja_donne(self):
         """Le jour où le nœud arrive, la dette doit disparaître de la liste."""

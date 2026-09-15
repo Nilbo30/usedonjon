@@ -80,18 +80,20 @@ SURVOL = "#f0e9a8"
 #: plus rien à personne.
 #:
 #: Le facteur est un compromis, mesuré et non deviné — plus l'éventail est
-#: grand, plus il accepte de nœuds et moins on en voit d'un coup :
+#: grand, plus il accepte de nœuds et moins on en voit d'un coup. Mesuré sur
+#: l'arbre tel qu'il est (31 nœuds) :
 #:
 #:     facteur   écart minimal   nœuds de marge   visibles d'un coup
-#:       1,0          40 px            0               27 / 27
-#:       1,5          59 px            8               13 / 27
-#:       1,75         69 px           12                9 / 27
-#:       2,0          79 px           16                6 / 27
+#:       1,5           49 px            4              19 / 31
+#:       1,75          58 px            8              14 / 31
+#:       2,0           66 px           11               9 / 31
+#:       2,25          74 px           14               7 / 31
 #:
-#: 1,5 garde la moitié de l'arbre lisible sans bouger la souris. Le jour où
-#: huit nœuds ne suffiront plus, c'est ce nombre qu'il faudra monter, et cette
-#: table qui dira ce qu'il en coûte.
-TALENT_RAYON_PREMIER, TALENT_RAYON_DERNIER = 218, 488
+#: 1,75 garde près de la moitié de l'arbre lisible sans bouger la souris, et
+#: huit nœuds d'avance. Le jour où ils ne suffiront plus, c'est ce nombre
+#: qu'il faudra monter, et cette table qui dira ce qu'il en coûte — un test
+#: le réclamera avant que ça déborde.
+TALENT_RAYON_PREMIER, TALENT_RAYON_DERNIER = 254, 569
 #: La fenêtre est large et basse : on étire l'éventail en ellipse.
 TALENT_ETIREMENT = 1.75
 #: Ouverture de l'éventail, en degrés, de la droite vers la gauche.

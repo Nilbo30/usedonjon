@@ -2254,3 +2254,90 @@ refaite caches vidés. **Un banc de mesure qui ne varie pas quand on change le
 réglage ne confirme rien : il est cassé.**
 
 494 tests, dont sept neufs sur la stèle.
+
+## Étape 22 — les matières s'achètent, et ce que ça coûte au pivot
+
+L'étape 20 avait écrit les quatre nœuds de matière et dû les reprendre :
+l'éventail ne tenait pas un nœud de plus. L'étape 21 lui a rendu de la place.
+Ils reviennent, avec **l'échelle basse**, et la mesure qui va avec.
+
+### Un objet peut réclamer deux talents
+
+C'est le seul point de moteur, et il tenait dans le croisement : une arme est
+une **forme** et une **matière**, donc deux verrous, pas un. `ItemType.unlock`
+devient un n-uplet — une chaîne seule reste acceptée, c'est le cas de tout le
+reste du contenu — et les deux filtres (butin au sol, butin des créatures)
+deviennent une inclusion d'ensembles.
+
+    epee_bois   →  ('epees',)
+    epee_fer    →  ('epees', 'fer')
+
+Le kit de départ est intact : le bois n'a pas de verrou. C'est aussi la matière
+qui ne mord rien de particulier et qui glisse sur le fabriqué — ce qu'on trouve
+quand on n'a rien appris.
+
+### L'échelle basse, et pourquoi elle n'est pas un cadeau
+
+| | bronze | fer | argent | obsidienne |
+|---|---|---|---|---|
+| échelle haute (essayée) | 30 | 100 | 280 | 700 |
+| **échelle basse (retenue)** | **6** | **30** | **100** | **280** |
+
+À l'échelle haute, le fer ne se prenait presque jamais dans l'horizon d'un
+joueur et l'argent jamais : le changement d'arme tombait de 0,117 à 0,062 par
+vie. **Verrouiller une matière la rend déjà plus rare ; il ne faut donc pas,
+en plus, la rendre chère.** C'est une décision de jeu prise sur trois mesures,
+pas un réglage au jugé.
+
+### Ce que le verrou coûte quand même
+
+Soixante campagnes de quinze vies, appariées, contre l'étape 21.
+
+| | avant | après | |
+|---|---|---|---|
+| effort/vie | 43,70 | 42,83 | 1,6 σ |
+| étage atteint | 7,17 | 7,10 | 1,6 σ |
+| **pivots/vie** | **0,108** | **0,087** | **2,2 σ** |
+
+Matières portées en fin de vie :
+
+| | bois | bronze | fer | argent | obsidienne |
+|---|---|---|---|---|---|
+| avant | 482 | 210 | 55 | 42 | 8 |
+| après | 494 | 211 | 57 | **12** | **0** |
+
+Le fer et le bronze survivent au verrou ; **l'argent perd les trois quarts et
+l'obsidienne disparaît**. Le changement d'arme perd un cinquième, au-dessus de
+la barre des deux sigma — c'est la seule des trois mesures qui bouge vraiment,
+et c'est exactement celle qu'on savait menacée.
+
+Ce n'est pas une régression : c'est le prix annoncé, payé, et mesuré. Un joueur
+qui va plus loin que les quinze vies du bot finira par prendre l'obsidienne —
+c'est la même situation que « Les bâtons », jamais pris dans cet horizon et
+pourtant bien vivant pour qui joue mieux. **Mais il faut le savoir, et ne pas
+se raconter que verrouiller du contenu le met en valeur : ça le raréfie.**
+
+### L'éventail a rendu ses huit nœuds, et on les a repris
+
+Quatre de plus, et le test de marge de l'étape 21 a fait exactement son
+travail : il a échoué **avant** que deux ronds se touchent, en disant quoi
+faire. Le facteur passe de 1,5 à **1,75**, et la table du commentaire est
+refaite sur l'arbre tel qu'il est (31 nœuds) :
+
+| facteur | écart minimal | nœuds de marge | visibles d'un coup |
+|---|---|---|---|
+| 1,5 | 49 px | 4 | 19 / 31 |
+| **1,75** | **58 px** | **8** | **14 / 31** |
+| 2,0 | 66 px | 11 | 9 / 31 |
+
+On revient au même profil qu'hier : huit nœuds d'avance, près de la moitié de
+l'arbre lisible sans bouger la souris. Le garde-fou a coûté une ligne et a
+évité une séance entière de tâtonnement — c'est ce que valait le test.
+
+### Les empreintes
+
+**Deux sur seize.** Celles qui achètent l'épée, donc le bronze, donc un donjon
+qui ne sert plus le même équipement. Les six autres vies et les huit partitions
+n'ont pas frémi : le bois n'a jamais eu de verrou.
+
+494 tests, dont cinq neufs sur les verrous de matière.

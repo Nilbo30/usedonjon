@@ -141,6 +141,35 @@ _enregistrer(
           branche="Équipement", parents=("bouclier",), repetitions=3,
           facteur_cout=3, effets={"start_defense": 1}),
 
+    # --- Les matières : quatre crans, et le seul vrai long terme du jeu ---
+    # Sans eux on ne trouve que du bois, qui ne mord rien de particulier et
+    # glisse sur le fabriqué. Chaque cran ouvre une matière **pour les cinq
+    # formes à la fois** — dague, épée, lance, hache et bouclier — et une
+    # compétence qui s'apprend en s'en servant (voir `affinites.py` pour ce que
+    # chacune mord).
+    #
+    # L'échelle est **basse** à dessein, et c'est une décision mesurée : à
+    # 30/100/280/700, le fer ne se prenait presque jamais dans l'horizon d'un
+    # joueur et l'argent jamais, ce qui faisait tomber le changement d'arme de
+    # 0,117 à 0,062 par vie. Verrouiller une matière la rend plus rare ; il ne
+    # faut donc pas, en plus, la rendre chère. Voir le journal de l'étape 22.
+    Noeud("bronze", "Le bronze", 6,
+          "Le premier métal du donjon : il mord un peu mieux la bête, et un "
+          "peu mieux ce qui est fabriqué. Armes et boucliers, les deux.",
+          branche="Équipement", parents=("epee",), unlocks=("bronze",)),
+    Noeud("fer", "Le fer", 30,
+          "Il mord ce qui est assemblé — et le fond du donjon en est plein. "
+          "Contre la chair, il ne vaut pas mieux que le bois.",
+          branche="Équipement", parents=("bronze",), unlocks=("fer",)),
+    Noeud("argent", "L'argent", 100,
+          "Il mord tout ce qui vit, et glisse sur le fabriqué : l'exact "
+          "contraire du fer. Les deux ensemble font le haut et le bas.",
+          branche="Équipement", parents=("fer",), unlocks=("argent",)),
+    Noeud("obsidienne", "L'obsidienne", 280,
+          "Tranchante sur tout ce qui respire, sans rien pouvoir contre "
+          "l'assemblé. Rare, et jamais avant le septième étage.",
+          branche="Équipement", parents=("argent",), unlocks=("obsidienne",)),
+
     # --- Monde vivant : d'abord le danger, l'équipement viendra après -----
     Noeud("pieges", "Pièges", 30,
           "Le sol devient traître. Les créatures marchent dessus aussi : "

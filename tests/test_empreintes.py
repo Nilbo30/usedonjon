@@ -192,6 +192,11 @@ PARTITIONS = (
 #: changé passé l'étage 7 — moins de golems, plus d'espèces — et le lancer
 #: s'achète désormais. Deux des quatre descendent **plus bas** qu'avant, ce
 #: qui est l'effet recherché.
+#:
+#: Le jour où les matières sont passées derrière des talents (étape 22),
+#: **deux** ont bougé : celles qui achètent l'épée, donc le bronze, donc un
+#: donjon qui ne sert plus le même équipement. Les six autres n'ont pas frémi,
+#: le bois n'ayant jamais eu de verrou.
 #: Huit vies de bot, choisies pour couvrir le contenu : le couloir vide des
 #: premières vies, les vivres, l'équipement, les pièges, les parchemins (donc
 #: l'identification), le tir, et deux fois l'arbre entier — dont une qui
@@ -205,11 +210,11 @@ PARTIES = (
      "5993e657845c2021073ece2ecf39f5b8",
      {"etage": 5, "tours": 215, "pv": 0, "xp": 312.4, "pas": 148}),
     ("armes", 3, ("nourriture", "epee", "bouclier", "affutage"),
-     "55eb9782612964151e90e5ec2f5565a3",
-     {"etage": 5, "tours": 188, "pv": 0, "xp": 255.35, "pas": 116}),
+     "0ddbcf779f8038a938af55dd3cd91675",
+     {"etage": 9, "tours": 253, "pv": 0, "xp": 434.7, "pas": 190}),
     ("pieges", 16, ("nourriture", "epee", "pieges"),
-     "f3338ff3e8172e8518c215b9f3d0b4d2",
-     {"etage": 10, "tours": 483, "pv": 0, "xp": 750.4, "pas": 365}),
+     "7b0b7a1b6ce7a9bfa368431f978bdb06",
+     {"etage": 9, "tours": 500, "pv": 0, "xp": 727.7, "pas": 357}),
     ("herbes et parchemins", 13,
      ("nourriture", "herbes", "grimoires", "intuition"),
      "c398f98253e335bd9a606d737ad54cb1",

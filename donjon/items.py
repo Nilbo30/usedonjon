@@ -69,12 +69,19 @@ FORMES = {
 #: Les matières, et ce qu'elles mordent : voir `affinites.py` pour la table.
 #: `profondeur` décide où elles commencent à apparaître, `poids` leur rareté —
 #: l'argent est léger au tirage parce qu'il est rare, pas parce qu'il est bon.
+#: `unlock` : le talent qui met cette matière dans le donjon. Le bois n'en a
+#: pas — c'est ce qu'on trouve quand on n'a rien appris, et c'est aussi la
+#: matière qui ne mord rien. Les quatre autres s'achètent à la stèle : une
+#: matière est un pan de contenu, pas un objet de plus.
 MATIERES = {
-    "bois": {"nom": "en bois", "poids": 10, "profondeur": 1},
-    "bronze": {"nom": "en bronze", "poids": 7, "profondeur": 2},
-    "fer": {"nom": "en fer", "poids": 5, "profondeur": 4},
-    "argent": {"nom": "en argent", "poids": 3, "profondeur": 5},
-    "obsidienne": {"nom": "en obsidienne", "poids": 2, "profondeur": 7},
+    "bois": {"nom": "en bois", "poids": 10, "profondeur": 1, "unlock": None},
+    "bronze": {"nom": "en bronze", "poids": 7, "profondeur": 2,
+               "unlock": "bronze"},
+    "fer": {"nom": "en fer", "poids": 5, "profondeur": 4, "unlock": "fer"},
+    "argent": {"nom": "en argent", "poids": 3, "profondeur": 5,
+               "unlock": "argent"},
+    "obsidienne": {"nom": "en obsidienne", "poids": 2, "profondeur": 7,
+                   "unlock": "obsidienne"},
 }
 
 
@@ -92,7 +99,9 @@ def _equipements():
                 forme["glyphe"], forme["categorie"],
                 power=forme["attaque"],
                 weight=matiere["poids"] * forme["poids"],
-                depth_min=matiere["profondeur"], unlock=forme["unlock"],
+                depth_min=matiere["profondeur"],
+                unlock=tuple(cle for cle in (forme["unlock"], matiere["unlock"])
+                             if cle),
                 skill=cle_forme, matiere=cle_matiere,
                 cadence=forme.get("cadence", 0), portee=forme.get("portee", 0))
 
@@ -196,7 +205,15 @@ class ItemType:
         self.cadence = cadence
         self.note = note
         self.depth_min = depth_min  # étage à partir duquel l'objet apparaît
-        self.unlock = unlock        # talent requis pour qu'il apparaisse
+        # Les talents requis pour qu'il apparaisse — **tous**, et pas un seul.
+        # Une arme en croise deux : sa forme et sa matière. Une clé seule reste
+        # acceptée, c'est le cas de tout le reste du contenu.
+        if unlock is None:
+            self.unlock = ()
+        elif isinstance(unlock, str):
+            self.unlock = (unlock,)
+        else:
+            self.unlock = tuple(unlock)
         # Effet de compétence qui grossit sa puissance : la fiche doit annoncer
         # ce que l'objet fera vraiment dans *ces* mains, pas dans le vide.
         self.bonus = bonus
@@ -600,7 +617,7 @@ def random_item(rng, depth=1, registre=None, unlocks=None):
     """Tire un objet au hasard; les objets s'améliorent avec la profondeur."""
     candidats = [(t, t.weight) for t in ITEM_TYPES.values()
                  if depth >= t.depth_min
-                 and (t.unlock is None or unlocks is None or t.unlock in unlocks)]
+                 and (unlocks is None or set(t.unlock) <= set(unlocks))]
     if not candidats:
         return None
     candidats = _part_reservee(candidats)

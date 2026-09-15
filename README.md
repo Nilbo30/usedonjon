@@ -121,8 +121,10 @@ s'écrivent pas un par un : ils se croisent. La **forme** — dague, épée, lan
 hache, bouclier — dit comment on frappe et porte les chiffres : les dégâts, le
 coût du coup en énergie, et pour la lance le fait de traverser jusqu'à la case
 suivante. La **matière** — du bois à l'obsidienne — dit sur quoi ça mord et ne
-porte **aucun** chiffre d'attaque. Cinq formes × cinq matières font
-vingt-cinq équipements pour douze lignes de données. Les munitions s'empilent, les
+porte **aucun** chiffre d'attaque, et chacune sauf le bois s'achète à la
+stèle. Cinq formes × cinq matières font vingt-cinq équipements pour douze
+lignes de données ; une arme réclame donc **deux** talents, sa forme et sa
+matière. Les munitions s'empilent, les
 consommables se ramassent en marchant dessus, et les fiches au survol
 annoncent ce que l'objet fera *dans ces mains-là*, compétences comprises.
 
@@ -135,7 +137,7 @@ l'interdise. Elles sont perdues à la mort.
 **Le méta** — un refuge où l'on marche, son coffre, sa stèle des talents —
 un éventail plus grand que la fenêtre, qu'on **promène à la souris**, et où un
 talent reste caché tant que son prérequis n'est pas pris ;
-24 nœuds (32 achats avec les reprises) répartis en 6 branches, dont une
+31 nœuds (45 achats avec les reprises) répartis en 6 branches, dont une
 réanimation et deux automatisations (explorer un étage, manger sans y penser).
 
 **Les interfaces** — fenêtre tkinter entièrement jouable à la souris, terminal
@@ -366,10 +368,6 @@ ont fait changer d'avis — sont dans
 
 ## Pistes pour la suite
 
-- **Les matières derrière des talents** : écrit et mesuré, en attente d'un
-  arbitrage — un verrou rend une matière plus rare, donc le changement d'arme
-  plus rare encore (0,117 pivot par vie sans verrou, 0,087 avec l'échelle
-  basse, 0,062 avec la haute)
 - **L'horizon du pivot** : la bascule des familles commence à l'étage 8, le bot
   meurt en moyenne au 7 — le changement de matière est juste mais n'a presque
   jamais lieu. Faire remonter les homoncules, ouvrir « Les profondeurs » plus

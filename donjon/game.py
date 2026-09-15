@@ -729,7 +729,8 @@ class Game:
         if "butin" not in self.config.unlocks:
             return
         possibles = [cle for cle in monsters.butin_possible(monstre.species)
-                     if items.ITEM_TYPES[cle].unlock in (None, *self.config.unlocks)]
+                     if set(items.ITEM_TYPES[cle].unlock)
+                     <= set(self.config.unlocks)]
         if not possibles or monstre.pos in self.level.items:
             return
         chance = questions.demander(questions.BUTIN, CHANCE_BUTIN,

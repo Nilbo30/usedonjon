@@ -101,6 +101,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 19 | [L'arme devient forme × matière](journal.md#étape-191--la-matière-et-ce-quelle-ne-donne-jamais) | ✅ fait |
 | 20 | [Dix retours de partie, et l'éventail qui ne peut plus grandir](journal.md#étape-20--dix-retours-de-partie-dont-un-qui-bloque-tout-le-reste) | ✅ fait |
 | 21 | [La stèle se promène, et l'arbre se découvre](journal.md#étape-21--la-stèle-se-promène-et-larbre-se-découvre) | ✅ fait |
+| 22 | [Les matières s'achètent, et ce que ça coûte au pivot](journal.md#étape-22--les-matières-sachètent-et-ce-que-ça-coûte-au-pivot) | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -245,10 +246,13 @@ vingt-huitième le faisait déborder. L'étape 21 l'a rouvert par un **zoom pur*
 un seul angle) et un **déplacement à la souris**, l'éventail étant désormais
 plus grand que la fenêtre.
 
-Il reste **huit nœuds de marge**, et un test les surveille — il échoue avant le
-débordement, pas après. Quand ils ne suffiront plus, c'est le facteur de
-`TALENT_RAYON_DERNIER` qu'il faudra monter : son commentaire porte la table de
-ce que chaque cran coûte en lisibilité.
+Les quatre nœuds de matière ont repris ces huit nœuds dès l'étape 22, et le
+test de marge a fait son travail : il a échoué **avant** que deux ronds se
+touchent, en disant quoi faire. Facteur monté à 1,75, huit nœuds de marge à
+nouveau. C'est la boucle telle qu'elle doit tourner — quand ils ne suffiront
+plus, c'est ce facteur qu'il faudra monter, et le commentaire de
+`TALENT_RAYON_DERNIER` porte la table de ce que chaque cran coûte en
+lisibilité.
 
 ## Question encore ouverte
 
