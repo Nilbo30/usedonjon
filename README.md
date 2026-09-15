@@ -132,7 +132,9 @@ bouclier — ou l'esquive si le bras est nu. Deux courbes par emplacement : c'es
 ce qui fait le prix d'un changement de matière, sans qu'aucune règle ne
 l'interdise. Elles sont perdues à la mort.
 
-**Le méta** — un refuge où l'on marche, son coffre, sa stèle des talents ;
+**Le méta** — un refuge où l'on marche, son coffre, sa stèle des talents —
+un éventail plus grand que la fenêtre, qu'on **promène à la souris**, et où un
+talent reste caché tant que son prérequis n'est pas pris ;
 24 nœuds (32 achats avec les reprises) répartis en 6 branches, dont une
 réanimation et deux automatisations (explorer un étage, manger sans y penser).
 
@@ -364,12 +366,10 @@ ont fait changer d'avis — sont dans
 
 ## Pistes pour la suite
 
-- **Refaire la mise en page de la stèle** : l'éventail tient 27 talents avec
-  1,6 pixel de marge, et un vingt-huitième le fait déborder quel qu'il soit.
-  C'est devenu le préalable à tout contenu qui passe par un talent
-- **Les matières derrière des talents** : prêt et mesuré, en attente de la
-  place dans l'éventail — et à savoir qu'un verrou rend une matière plus rare,
-  donc le changement d'arme plus rare encore
+- **Les matières derrière des talents** : écrit et mesuré, en attente d'un
+  arbitrage — un verrou rend une matière plus rare, donc le changement d'arme
+  plus rare encore (0,117 pivot par vie sans verrou, 0,087 avec l'échelle
+  basse, 0,062 avec la haute)
 - **L'horizon du pivot** : la bascule des familles commence à l'étage 8, le bot
   meurt en moyenne au 7 — le changement de matière est juste mais n'a presque
   jamais lieu. Faire remonter les homoncules, ouvrir « Les profondeurs » plus

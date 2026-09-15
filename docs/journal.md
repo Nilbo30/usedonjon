@@ -2133,3 +2133,124 @@ Quatre empreintes sur seize ont bougé, dont deux qui descendent **plus bas**
 qu'avant. C'est l'effet recherché.
 
 487 tests, dont dix-huit neufs.
+
+### Annotation à l'étape 20, écrite après coup
+
+La mesure de l'étape 20 disait « rien ne franchit la barre » sur 900 vies.
+Relancée sur **1800**, l'effort par vie passe à **+0,96 (2,4 σ)** : elle
+franchit la barre. C'est la première fois qu'un écart **grandit** avec
+l'échantillon au lieu de se dégonfler — quatre fois de suite, c'était
+l'inverse. L'entrée d'origine n'est pas corrigée, elle est annotée : elle
+disait vrai de ce qu'elle avait mesuré.
+
+Le sens reste celui qu'on attendait et la taille est petite : moins de golems,
+c'est +2 % d'effort par vie. Rien à recaler ; simplement, c'est un effet réel
+et non du bruit.
+
+## Étape 21 — la stèle se promène, et l'arbre se découvre
+
+L'étape 20 s'était arrêtée sur un mur : l'éventail des talents tenait 27 nœuds
+avec 1,6 pixel de marge, et un vingt-huitième le faisait déborder quel qu'il
+soit. Deux changements le lèvent, et ils ne se ressemblent pas : l'un rend la
+place, l'autre décide de ce qu'on montre.
+
+### Le zoom pur, la seule piste qui marchait
+
+Quatre leviers avaient été essayés à l'étape 20 — ouverture, étirement, rayon
+des ronds, branche dédiée — et chacun desserrait les paires radiales en
+resserrant les angulaires, ou l'inverse. Le cinquième marche, et pour une
+raison qu'on peut écrire :
+
+La part d'ouverture que réclame une branche vaut `TALENT_ESPACEMENT / rayon`,
+puis tout est normalisé sur les 160° de l'éventail. **Multiplier les deux
+rayons par le même facteur divise donc tous les besoins par ce facteur, et la
+normalisation les rattrape** : les angles ne bougent pas d'un degré, seules les
+distances grandissent. C'est un zoom, au sens strict — la seule transformation
+qui aère sans redessiner.
+
+Reste que l'éventail dépasse alors de la fenêtre. D'où la seconde moitié : **on
+le promène à la souris**.
+
+Le facteur est un compromis, mesuré :
+
+| facteur | écart minimal | nœuds de marge | visibles d'un coup |
+|---|---|---|---|
+| 1,0 | 40 px | **0** | 27 / 27 |
+| **1,5** | **59 px** | **8** | **13 / 27** |
+| 1,75 | 69 px | 12 | 9 / 27 |
+| 2,0 | 79 px | 16 | 6 / 27 |
+
+1,5 garde la moitié de l'arbre lisible sans bouger la souris. Le jour où huit
+nœuds ne suffiront plus, c'est ce nombre qu'il faudra monter — et la table dit
+ce qu'il en coûtera.
+
+### Un clic qui attend le relâchement
+
+Glisser part d'un appui, et un appui sur un rond achetait le talent. On aurait
+voulu déplacer l'arbre, on aurait acheté « Les abysses », et **les choix sont
+définitifs**. Un talent s'achète donc maintenant au **relâchement**, et
+seulement si la souris n'a pas voyagé de plus de cinq pixels entre les deux.
+Deux tests le tiennent : glisser depuis un rond ne doit rien acheter, et un
+frisson de souris de deux pixels doit rester un clic.
+
+C'est aussi ce qui a fait bouger tous les tests d'achat de talent : ils
+cliquaient d'un appui. Ils passent par un `cliquer()` qui appuie **puis**
+relâche — ce qu'un vrai clic a toujours été.
+
+### Découper à la main, faute de mieux
+
+Le canevas de tkinter ne découpe rien : un rond tiré trop haut allait se
+dessiner par-dessus la barre de vie, et un trait de talent traversait le
+bandeau. La première version avait exactement ce défaut, et elle se voyait au
+premier coup d'œil sur une capture.
+
+Trois réponses, dans cet ordre : un rond hors cadre ne se dessine pas ; un
+trait est **découpé au rectangle** (Liang-Barsky, quatre bornes le long du
+segment) ; le cœur de l'éventail s'efface quand il n'a plus la place. Le cadre
+commence sous la légende des branches et s'arrête au-dessus de la ligne de
+lecture, avec la marge qu'il faut au **nom** posé au-dessus du rond.
+
+### Les nœuds cachés
+
+Un talent ne se montre plus tant que son prérequis n'est pas pris. On voit donc
+toujours exactement ce qu'on peut viser, et le reste se découvre en montant.
+Au premier lancement, ce sont les **quatre racines** — Estomac solide,
+Constitution, Nourriture, Sens de l'orientation — et rien d'autre.
+
+Une exception, qui n'en est pas une : un nœud **acquis** reste visible même
+quand il n'a plus rien à donner. Un arbre qui efface ce qu'on a payé serait
+cruel.
+
+Ouvrir la stèle la **recadre** sur ce qui est visible. Sans ça, une première
+partie ouvrirait l'arbre sur du vide : les racines sont en bas de l'éventail,
+et tout le reste est caché.
+
+### Ce que les tests gardent, maintenant
+
+Le test « tous les nœuds tiennent dans le cadre » n'avait plus de sens : le
+cadre est plus petit que l'arbre, exprès. Il est remplacé par deux autres, qui
+disent ce qui compte vraiment depuis qu'on déplace la vue :
+
+* **chaque talent peut être amené sous les yeux** — aucun n'est hors
+  d'atteinte, quel que soit le déplacement permis ;
+* **l'éventail ne peut pas être emporté hors de l'écran** — on en garde un bon
+  tiers sur chaque axe, et pas le strict minimum : l'éventail est un arc, les
+  coins de sa boîte sont vides, et n'en garder qu'un pixel revenait à pouvoir
+  tirer l'arbre jusqu'à ne plus montrer qu'un coin sans un seul rond dedans.
+
+Et surtout un test neuf, celui qui manquait le jour du mur : **l'éventail garde
+de la place pour grandir**. Il ajoute six nœuds fictifs et vérifie que ça tient
+encore. « Deux ronds se touchent » arrive trop tard — il dit qu'on a débordé,
+pas qu'on allait déborder. Celui-ci échoue avant, et son message dit quoi
+faire.
+
+### Un piège d'outillage, noté parce qu'il m'a eu
+
+Pendant la recherche du bon facteur, trois mesures d'affilée ont donné le même
+chiffre pour trois réglages différents. Ce n'était pas le code : Python
+relisait un `__pycache__` périmé, les réécritures du fichier tombant dans la
+même seconde que la précédente. La comparaison des facteurs ci-dessus a été
+refaite caches vidés. **Un banc de mesure qui ne varie pas quand on change le
+réglage ne confirme rien : il est cassé.**
+
+494 tests, dont sept neufs sur la stèle.

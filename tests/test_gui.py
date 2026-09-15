@@ -41,6 +41,30 @@ class Clic:
         self.y = y
 
 
+def cliquer(fenetre, x, y):
+    """Un clic entier : appuyer **puis relâcher**.
+
+    Depuis que l'éventail se déplace à la souris, un talent ne s'achète qu'au
+    relâchement — sinon un glissement parti d'un rond achèterait le talent, et
+    les achats sont définitifs.
+    """
+    fenetre.on_click(Clic(x, y))
+    fenetre.on_relache(Clic(x, y))
+
+
+def cliquer_zone(fenetre, etiquette):
+    zone = next(z for z in fenetre.zones if z[5] == etiquette)
+    cliquer(fenetre, (zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2)
+    return zone
+
+
+def glisser(fenetre, depuis, vers):
+    """Appuyer, promener la souris, relâcher."""
+    fenetre.on_click(Clic(*depuis))
+    fenetre.on_glisse(Clic(*vers))
+    fenetre.on_relache(Clic(*vers))
+
+
 TALENTS_DE_TEST = ("estomac", "epee", "nourriture", "herbes",
                    "grimoires", "coffre")
 
@@ -243,8 +267,7 @@ class TestRefuge(unittest.TestCase):
         fenetre.session.meta.xp = 50
         fenetre.mode = "talents"
         fenetre.dessiner()
-        zone = next(z for z in fenetre.zones if z[5] == "talent estomac")
-        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
+        cliquer_zone(fenetre, "talent estomac")
         self.assertIn("estomac", fenetre.session.meta.noeuds)
         self.assertAlmostEqual(fenetre.session.meta.xp,
                                50 - tree.ARBRE["estomac"].cost)
@@ -256,22 +279,46 @@ class TestRefuge(unittest.TestCase):
         fenetre.session.meta.xp = 0
         fenetre.mode = "talents"
         fenetre.dessiner()
-        zone = next(z for z in fenetre.zones if z[5] == "talent estomac")
-        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
+        cliquer_zone(fenetre, "talent estomac")
         self.assertEqual(fenetre.session.meta.noeuds, [])
 
-    def test_un_talent_verrouille_se_lit_mais_ne_s_achete_pas(self):
-        """On peut regarder ce qui attend derrière un rond éteint, pas le prendre."""
+    def test_un_talent_dont_le_lien_n_est_pas_achete_ne_se_montre_pas(self):
+        """L'arbre ne se donne pas d'un coup : il se découvre en montant."""
         from donjon.gui import Fenetre
         fenetre = Fenetre(seed=7, sauvegarde=False)
         self.addCleanup(fenetre.root.destroy)
         fenetre.session.meta.xp = 10 ** 6
         fenetre.mode = "talents"
         fenetre.dessiner()
-        zone = next(z for z in fenetre.zones if z[5] == "talent second_souffle")
-        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
-        self.assertNotIn("second_souffle", fenetre.session.meta.noeuds)
-        self.assertEqual(fenetre.session.meta.xp, 10 ** 6)
+        etiquettes = [z[5] for z in fenetre.zones]
+        self.assertIn("talent constitution", etiquettes, "une racine se voit")
+        self.assertNotIn("talent second_souffle", etiquettes)
+
+    def test_acheter_le_lien_montre_ce_qu_il_y_a_derriere(self):
+        from donjon.gui import Fenetre
+        fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(fenetre.root.destroy)
+        fenetre.session.meta.xp = 10 ** 6
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        self.assertNotIn("talent second_souffle",
+                         [z[5] for z in fenetre.zones])
+
+        fenetre.session.meta.acheter("constitution")
+        fenetre.dessiner()
+
+        self.assertIn("talent second_souffle", [z[5] for z in fenetre.zones])
+
+    def test_un_talent_acquis_reste_visible_meme_une_fois_fini(self):
+        """Un arbre qui efface ce qu'on a payé serait cruel."""
+        from donjon.gui import Fenetre
+        fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(fenetre.root.destroy)
+        fenetre.session.meta.xp = 10 ** 6
+        fenetre.session.meta.acheter("estomac")
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        self.assertIn("talent estomac", [z[5] for z in fenetre.zones])
 
     def test_un_talent_repetable_reste_cliquable_entre_deux_reprises(self):
         """Sinon il aurait l'air fini dès le premier achat."""
@@ -293,27 +340,125 @@ class TestRefuge(unittest.TestCase):
         self.assertIsNone(fenetre.session.acheter("rien_ne_se_perd"))
 
     def _cliquer_zone_de(self, cle, fenetre):
-        zone = next(z for z in fenetre.zones if z[5] == f"talent {cle}")
-        fenetre.on_click(Clic((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2))
+        cliquer_zone(fenetre, f"talent {cle}")
 
-    def test_l_eventail_place_tous_les_noeuds_dans_le_cadre(self):
-        """Un nœud d'une branche oubliée dans `BRANCHES` disparaîtrait sans bruit.
-
-        La marge laisse la place au nom, posé à côté du rond : c'est elle qui a
-        manqué le jour où l'arbre a gagné un rang de profondeur.
-        """
+    def test_l_eventail_place_tous_les_noeuds(self):
+        """Un nœud d'une branche oubliée dans `BRANCHES` disparaîtrait sans bruit."""
         from donjon import tree
-        from donjon.gui import HUD_HEIGHT
 
         fenetre = self.fenetre
         fenetre.mode = "talents"
         fenetre.dessiner()
-        places = fenetre._disposition_talents()
-        self.assertEqual(len(places), len(tree.ARBRE))
-        bas = HUD_HEIGHT + fenetre.hauteur_carte
-        for cle, (x, y, _angle, _place) in places.items():
-            self.assertTrue(40 <= x <= fenetre.largeur - 40, f"{cle} en x={x}")
-            self.assertTrue(HUD_HEIGHT + 60 <= y <= bas - 40, f"{cle} en y={y}")
+        self.assertEqual(len(fenetre._disposition_talents()), len(tree.ARBRE))
+
+    def test_chaque_talent_peut_etre_amene_sous_les_yeux(self):
+        """L'éventail déborde de la fenêtre : encore faut-il pouvoir tout voir.
+
+        C'est ce qui remplace « tout tient dans le cadre » : depuis que l'arbre
+        se déplace à la souris, ce qui compte n'est plus qu'il tienne mais
+        qu'aucun nœud ne soit hors d'atteinte.
+        """
+        from donjon import tree
+
+        fenetre = self.fenetre
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        gx0, gy0, gx1, gy1 = fenetre._cadre_des_talents()
+        for cle in tree.ARBRE:
+            x0, y0, x1, y1 = fenetre._etendue_des_talents({cle})
+            fenetre.decalage_talents = fenetre._decalage_borne(
+                (gx0 + gx1) / 2 - x0, (gy0 + gy1) / 2 - y0)
+            x, y, *_ = fenetre._disposition_talents()[cle]
+            self.assertTrue(gx0 <= x <= gx1, f"{cle} en x={x:.0f}")
+            self.assertTrue(gy0 <= y <= gy1, f"{cle} en y={y:.0f}")
+
+    def test_l_eventail_ne_peut_pas_etre_emporte_hors_de_l_ecran(self):
+        """On doit pouvoir promener l'arbre sans jamais le perdre."""
+        fenetre = self.fenetre
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        gx0, gy0, gx1, gy1 = fenetre._cadre_des_talents()
+        for loin in ((-9000, -9000), (9000, 9000), (-9000, 9000), (9000, -9000)):
+            fenetre.decalage_talents = fenetre._decalage_borne(*loin)
+            places = fenetre._disposition_talents().values()
+            self.assertTrue(
+                any(gx0 <= x <= gx1 and gy0 <= y <= gy1 for x, y, *_ in places),
+                f"tout l'éventail est sorti en {loin}")
+
+    def test_glisser_promene_l_eventail_sans_rien_acheter(self):
+        """Le piège que le relâchement évite : glisser depuis un rond."""
+        from donjon.gui import Fenetre
+
+        fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(fenetre.root.destroy)
+        fenetre.session.meta.xp = 10 ** 6
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        avant = fenetre.decalage_talents
+        zone = next(z for z in fenetre.zones if z[5] == "talent estomac")
+        depuis = ((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2)
+
+        glisser(fenetre, depuis, (depuis[0] + 90, depuis[1] + 30))
+
+        self.assertEqual(fenetre.session.meta.noeuds, [],
+                         "glisser depuis un rond ne doit rien acheter")
+        self.assertNotEqual(fenetre.decalage_talents, avant,
+                            "et doit bien avoir déplacé l'éventail")
+
+    def test_un_frisson_de_souris_reste_un_clic(self):
+        """Sous le seuil, on n'a pas glissé : on a cliqué, la main tremble."""
+        from donjon.gui import Fenetre
+
+        fenetre = Fenetre(seed=7, sauvegarde=False)
+        self.addCleanup(fenetre.root.destroy)
+        fenetre.session.meta.xp = 50
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        zone = next(z for z in fenetre.zones if z[5] == "talent estomac")
+        depuis = ((zone[0] + zone[2]) / 2, (zone[1] + zone[3]) / 2)
+
+        glisser(fenetre, depuis, (depuis[0] + 2, depuis[1] + 1))
+
+        self.assertIn("estomac", fenetre.session.meta.noeuds)
+
+    def test_l_eventail_garde_de_la_place_pour_grandir(self):
+        """Le test qui manquait le jour où l'arbre a cessé de pouvoir grandir.
+
+        « Deux ronds se touchent » arrive trop tard : il dit qu'on a débordé,
+        pas qu'on allait déborder. Celui-ci échoue **avant**, et son message
+        dit quoi faire — monter le facteur de `TALENT_RAYON_DERNIER`, dont le
+        commentaire donne le prix en lisibilité.
+        """
+        import itertools
+        import math
+
+        from donjon import tree
+        from donjon.gui import RAYON_TALENT
+
+        marge = 6
+        fenetre = self.fenetre
+        fenetre.mode = "talents"
+        fenetre.dessiner()
+        ajoutes = []
+        try:
+            for numero in range(marge):
+                cle = f"__marge{numero}"
+                tree.ARBRE[cle] = tree.Noeud(cle, cle, 30, "",
+                                             branche="Équipement",
+                                             parents=("epee",))
+                ajoutes.append(cle)
+            places = fenetre._disposition_talents()
+            plus_proche = min(
+                (math.dist(un[:2], autre[:2]), a, b)
+                for (a, un), (b, autre) in itertools.combinations(places.items(), 2))
+        finally:
+            for cle in ajoutes:
+                del tree.ARBRE[cle]
+        distance, a, b = plus_proche
+        self.assertGreater(
+            distance, 2 * RAYON_TALENT + 6,
+            f"l'arbre ne supporte plus {marge} nœuds de plus ({a} / {b} à "
+            f"{distance:.0f} px) : monte le facteur de TALENT_RAYON_DERNIER")
 
     def test_chaque_prix_tient_dans_son_rond(self):
         """Un prix qui déborde vient heurter le nom du voisin.

@@ -100,6 +100,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 18 | [La monnaie devient l'effort : un pas ne vaut plus un coup](journal.md#étape-18--leffort-et-la-marche-qui-redescend-de-60--à-26-) | ✅ fait |
 | 19 | [L'arme devient forme × matière](journal.md#étape-191--la-matière-et-ce-quelle-ne-donne-jamais) | ✅ fait |
 | 20 | [Dix retours de partie, et l'éventail qui ne peut plus grandir](journal.md#étape-20--dix-retours-de-partie-dont-un-qui-bloque-tout-le-reste) | ✅ fait |
+| 21 | [La stèle se promène, et l'arbre se découvre](journal.md#étape-21--la-stèle-se-promène-et-larbre-se-découvre) | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -236,18 +237,18 @@ le contact en passant un coin) que le bot n'exploite pas.
   Pyromancie et cryomancie viendront avec le contenu correspondant, chacune
   en une entrée de table.
 
-## Le prochain obstacle : l'éventail est plein
+## L'éventail, et la place qu'il lui reste
 
-L'arbre tient **27 nœuds avec 1,6 pixel de marge** ; un vingt-huitième, quel
-qu'il soit et où qu'on le mette, fait tomber le test des ronds. Élargir les
-anneaux desserre les paires radiales et resserre les angulaires, et
-inversement : aucun réglage ne repasse au-dessus du seuil (mesuré sur quatre
-leviers, voir le journal de l'étape 20).
+Il a été bloqué net à l'étape 20 : 27 nœuds, 1,6 pixel de marge, et un
+vingt-huitième le faisait déborder. L'étape 21 l'a rouvert par un **zoom pur**
+(les deux rayons multipliés par 1,5, seule transformation qui aère sans changer
+un seul angle) et un **déplacement à la souris**, l'éventail étant désormais
+plus grand que la fenêtre.
 
-Refaire la mise en page de la stèle est donc le préalable à **tout** contenu
-qui passe par un talent — les matières, le mage, les baguettes, l'arc. Pistes
-non tranchées : un éventail qui défile, deux couronnes concentriques, un plan
-zoomable, ou des ronds plus petits avec le prix hors du rond.
+Il reste **huit nœuds de marge**, et un test les surveille — il échoue avant le
+débordement, pas après. Quand ils ne suffiront plus, c'est le facteur de
+`TALENT_RAYON_DERNIER` qu'il faudra monter : son commentaire porte la table de
+ce que chaque cran coûte en lisibilité.
 
 ## Question encore ouverte
 

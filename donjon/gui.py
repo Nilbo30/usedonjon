@@ -63,7 +63,35 @@ SURVOL = "#f0e9a8"
 #: Le premier et le dernier anneau ; les rangs intermédiaires se répartissent
 #: entre les deux. Un rang de plus resserre l'éventail au lieu de le faire
 #: déborder — c'est arrivé, le jour où « Cuirasse » est passée au rang 3.
-TALENT_RAYON_PREMIER, TALENT_RAYON_DERNIER = 145, 325
+#:
+#: Ces deux rayons ont été **multipliés par 1,5** le jour où l'éventail a cessé
+#: de tenir dans la fenêtre. Multiplier les deux par le même facteur est un
+#: zoom pur : la part d'ouverture que réclame une branche est proportionnelle à
+#: `TALENT_ESPACEMENT / rayon`, donc tous les besoins sont divisés par le même
+#: nombre et la normalisation les rattrape — les angles ne bougent pas d'un
+#: degré, seules les distances grandissent. C'est la seule façon d'aérer
+#: l'éventail sans en redessiner la forme ; toutes les autres (ouverture,
+#: étirement, rayon des ronds) desserrent les paires radiales en resserrant les
+#: angulaires, ou l'inverse. Mesuré : sur quatre leviers, aucun ne repassait
+#: au-dessus du seuil.
+#:
+#: L'éventail est donc plus large que la fenêtre, et **on le déplace à la
+#: souris**. C'est ce qui rend l'arbre extensible : un nœud de plus ne coûte
+#: plus rien à personne.
+#:
+#: Le facteur est un compromis, mesuré et non deviné — plus l'éventail est
+#: grand, plus il accepte de nœuds et moins on en voit d'un coup :
+#:
+#:     facteur   écart minimal   nœuds de marge   visibles d'un coup
+#:       1,0          40 px            0               27 / 27
+#:       1,5          59 px            8               13 / 27
+#:       1,75         69 px           12                9 / 27
+#:       2,0          79 px           16                6 / 27
+#:
+#: 1,5 garde la moitié de l'arbre lisible sans bouger la souris. Le jour où
+#: huit nœuds ne suffiront plus, c'est ce nombre qu'il faudra monter, et cette
+#: table qui dira ce qu'il en coûte.
+TALENT_RAYON_PREMIER, TALENT_RAYON_DERNIER = 218, 488
 #: La fenêtre est large et basse : on étire l'éventail en ellipse.
 TALENT_ETIREMENT = 1.75
 #: Ouverture de l'éventail, en degrés, de la droite vers la gauche.
@@ -134,7 +162,8 @@ AIDE = [
     "  « , » ramasser    « > » descendre    « . » attendre    « i » sac",
     "  « s » se reposer jusqu'à guérison (interrompu si un monstre paraît)",
     "  « e » explorer l'étage tout seul (talent « Sens de l'orientation »)",
-    "  « t » l'arbre des talents (au refuge)",
+    "  « t » l'arbre des talents (au refuge) — glisse pour le promener ;",
+    "      un talent reste caché tant que son prérequis n'est pas pris.",
     "  « c » compétences    « ? » cette aide    « q » quitter",
     "  Bouton « Options » : repartir de zéro (efface toute la progression)",
     "  « R » rejouer après la partie",
@@ -155,6 +184,36 @@ def melange(couleur, vers, facteur):
 def sombre(couleur, facteur=0.62):
     """Version « déjà visitée mais hors de vue » d'une couleur."""
     return melange(couleur, FOND, facteur)
+
+
+def segment_dans_le_cadre(depart, arrivee, cadre):
+    """Le morceau de ce segment qui tient dans ce rectangle, ou None.
+
+    Le canevas de tkinter ne découpe rien : un trait de talent tiré hors du
+    panneau irait se dessiner par-dessus le bandeau de vie. On découpe donc
+    nous-mêmes, par l'algorithme de Liang-Barsky — quatre bornes, un paramètre
+    le long du segment.
+    """
+    x0, y0 = depart
+    x1, y1 = arrivee
+    dx, dy = x1 - x0, y1 - y0
+    gx0, gy0, gx1, gy1 = cadre
+    debut, fin = 0.0, 1.0
+    for pente, distance in ((-dx, x0 - gx0), (dx, gx1 - x0),
+                            (-dy, y0 - gy0), (dy, gy1 - y0)):
+        if pente == 0:
+            if distance < 0:
+                return None              # parallèle et déjà dehors
+            continue
+        part = distance / pente
+        if pente < 0:
+            debut = max(debut, part)
+        else:
+            fin = min(fin, part)
+        if debut > fin:
+            return None
+    return ((x0 + debut * dx, y0 + debut * dy),
+            (x0 + fin * dx, y0 + fin * dy))
 
 
 def rayon_de_rang(rang, dernier_rang):
@@ -249,6 +308,13 @@ class Fenetre:
         self._trajet_prevu = None
         self.exploration = False   # exploration automatique en cours
         self._panneau_ouvert_a = None   # case dont le panneau s'est déjà ouvert
+        # Déplacement de l'éventail des talents. `None` veut dire « pas encore
+        # cadré » : le prochain dessin le centrera sur ce qui est visible.
+        self.decalage_talents = None
+        self._presse_a = None           # où le bouton gauche s'est enfoncé
+        self._talent_presse = None      # le rond sur lequel, s'il y en a un
+        self._glisse = False            # a-t-on bougé assez pour que ce soit
+        self._mode_dessine = None       # un glissement et non un clic ?
         # Les armes déjà montrées : elles n'arrêteront plus l'exploration.
         # Remises à zéro à chaque étage — une arme d'en bas est une nouvelle,
         # et deux étages différents partagent des coordonnées.
@@ -271,6 +337,8 @@ class Fenetre:
         self.canvas.bind("<Button-1>", self.on_click)
         self.canvas.bind("<Double-Button-1>", self.on_double_clic)
         self.canvas.bind("<Button-3>", self.on_click_droit)
+        self.canvas.bind("<B1-Motion>", self.on_glisse)
+        self.canvas.bind("<ButtonRelease-1>", self.on_relache)
         self.canvas.bind("<Motion>", self.on_motion)
         self.canvas.bind("<Leave>", self.on_leave)
         self.root.resizable(False, False)
@@ -446,8 +514,18 @@ class Fenetre:
     # ------------------------------------------------------------------ #
     def on_click(self, event):
         """Un clic gauche : d'abord les boutons et panneaux, puis la carte."""
-        for x1, y1, x2, y2, action, _ in reversed(self.zones):
+        self._presse_a = (event.x, event.y)
+        self._glisse = False
+        self._talent_presse = None
+        for x1, y1, x2, y2, action, etiquette in reversed(self.zones):
             if x1 <= event.x <= x2 and y1 <= event.y <= y2:
+                # Un talent s'achète au **relâchement**. Agir dès l'appui
+                # rendait tout glissement parti d'un rond mortel : on voulait
+                # déplacer l'éventail, on achetait un talent, et les achats
+                # sont définitifs.
+                if self.mode == "talents" and etiquette.startswith("talent "):
+                    self._talent_presse = (etiquette, action)
+                    return
                 self.arreter_trajet()
                 action()
                 self._verifier_fin()
@@ -481,6 +559,42 @@ class Fenetre:
         if not 0 <= self.slot < len(inventaire):
             return
         _texte, action = self.action_principale(inventaire[self.slot])
+        action()
+        self._verifier_fin()
+        if not self.ferme:
+            self.dessiner()
+
+    def on_glisse(self, event):
+        """Bouton gauche enfoncé et souris qui bouge : on promène l'éventail.
+
+        L'arbre est plus large que la fenêtre depuis qu'il a de la place pour
+        grandir ; c'est ici qu'on va voir ailleurs.
+        """
+        if self.mode != "talents" or self._presse_a is None:
+            return
+        depart = self._presse_a
+        if not self._glisse:
+            if math.dist(depart, (event.x, event.y)) < self.SEUIL_DE_GLISSEMENT:
+                return
+            self._glisse = True
+        dx, dy = self.decalage_talents or (0.0, 0.0)
+        self.decalage_talents = self._decalage_borne(
+            dx + event.x - depart[0], dy + event.y - depart[1])
+        self._presse_a = (event.x, event.y)
+        self.dessiner()
+
+    def on_relache(self, event):
+        """Le clic n'a lieu que si la souris n'a pas voyagé entre-temps."""
+        presse, self._talent_presse = self._talent_presse, None
+        glisse, self._glisse = self._glisse, False
+        self._presse_a = None
+        if presse is None or glisse:
+            return
+        etiquette, action = presse
+        zone = next((z for z in self.zones if z[5] == etiquette), None)
+        if zone is None or not (zone[0] <= event.x <= zone[2]
+                                and zone[1] <= event.y <= zone[3]):
+            return                       # relâché ailleurs : rien n'a été fait
         action()
         self._verifier_fin()
         if not self.ferme:
@@ -761,6 +875,12 @@ class Fenetre:
     # Dessin
     # ------------------------------------------------------------------ #
     def dessiner(self):
+        if self.mode != self._mode_dessine:
+            self._mode_dessine = self.mode
+            if self.mode == "talents":
+                # Rouvrir la stèle la recadre : on ne retrouve jamais l'arbre
+                # là où on l'avait laissé glisser trois vies plus tôt.
+                self.decalage_talents = None
         self.canvas.delete("all")
         self.zones = []
         self._recadrer()
@@ -1402,11 +1522,17 @@ class Fenetre:
                                      fill=PANNEAU, outline=BORDURE, width=2)
         self._texte(16, haut + 12, "Talents", gras=True)
         self._legende_des_branches(96, haut + 15)
+        if self.decalage_talents is None:
+            self._recadrer_les_talents()
         places = self._disposition_talents()
-        self._liens_de_talents(places)
+        visibles = self._talents_visibles()
+        self._liens_de_talents(places, visibles)
         self._coeur_de_l_eventail(meta)
         for cle, place in places.items():
-            self._noeud_de_talent(tree_mod.ARBRE[cle], place)
+            # Hors du cadre, on ne dessine pas : le canevas ne découpe rien et
+            # un rond tiré trop haut irait se poser sur la barre de vie.
+            if cle in visibles and self._dans_le_cadre_des_talents(place):
+                self._noeud_de_talent(tree_mod.ARBRE[cle], place)
         survole = self._talent_survole()
         if survole:
             reprises = ""
@@ -1420,12 +1546,106 @@ class Fenetre:
         else:
             self._texte(16, bas - 26,
                         "Survole un talent pour le lire, clique pour l'acheter."
+                        "   Glisse pour promener l'arbre."
                         "   Les choix sont définitifs.", pale=True)
         self._bouton(self.largeur - 96, haut + 8, 80, 26, "Fermer",
                      lambda: setattr(self, "mode", "jeu"))
 
+    #: Au-delà de cette distance, l'appui devient un glissement et non un clic.
+    SEUIL_DE_GLISSEMENT = 5
+
     def _centre_de_l_eventail(self):
-        return self.largeur / 2, HUD_HEIGHT + self.hauteur_carte - 42
+        dx, dy = self.decalage_talents or (0.0, 0.0)
+        return (self.largeur / 2 + dx,
+                HUD_HEIGHT + self.hauteur_carte - 42 + dy)
+
+    def _talents_visibles(self):
+        """Les nœuds qu'on a le droit de voir : ceux dont le lien est acheté.
+
+        Un talent reste caché tant que son prérequis n'est pas pris. On voit
+        donc toujours exactement ce qu'on peut viser, et le reste de l'arbre se
+        découvre en montant — ce que le joueur a payé, il le voit ; ce qui vient
+        après, il l'apprend en y arrivant.
+
+        Les nœuds **acquis** restent visibles même quand ils ne sont plus
+        achetables : un arbre qui efface ce qu'on a payé serait cruel.
+        """
+        acquis = self.session.meta.noeuds
+        return {cle for cle, noeud in tree_mod.ARBRE.items()
+                if noeud.accessible(acquis) or cle in acquis}
+
+    def _etendue_des_talents(self, cles=None):
+        """La boîte qu'occuperaient ces nœuds si l'éventail n'était pas déplacé."""
+        garde, self.decalage_talents = self.decalage_talents, (0.0, 0.0)
+        places = self._disposition_talents()
+        self.decalage_talents = garde
+        retenues = [p for cle, p in places.items()
+                    if cles is None or cle in cles]
+        if not retenues:
+            return (self.largeur / 2,) * 2 + (self.largeur / 2,) * 2
+        xs = [p[0] for p in retenues]
+        ys = [p[1] for p in retenues]
+        return min(xs), min(ys), max(xs), max(ys)
+
+    def _dans_le_cadre_des_talents(self, place):
+        gx0, gy0, gx1, gy1 = self._cadre_des_talents()
+        x, y = place[0], place[1]
+        return gx0 <= x <= gx1 and gy0 <= y <= gy1
+
+    def _cadre_des_talents(self):
+        """Le rectangle de la fenêtre où l'éventail a le droit de se montrer.
+
+        Il commence sous la légende des branches et s'arrête au-dessus de la
+        ligne de lecture : un rond posé pile dessus recouvrirait ce qui sert à
+        le comprendre. La marge du haut laisse en plus la place au **nom**, qui
+        se pose au-dessus du rond dans le haut de l'éventail.
+        """
+        return (0, HUD_HEIGHT + 66,
+                self.largeur, HUD_HEIGHT + self.hauteur_carte - 44)
+
+    @staticmethod
+    def _borner(valeur, bas, haut):
+        """Ramène `valeur` entre deux bornes — au milieu si elles se croisent.
+
+        Elles se croisent quand l'éventail est plus petit que la fenêtre : il
+        n'y a alors rien à déplacer, et le centrer est la seule réponse juste.
+        """
+        if bas > haut:
+            return (bas + haut) / 2
+        return min(max(valeur, bas), haut)
+
+    def _decalage_borne(self, dx, dy):
+        """Empêche d'emporter l'éventail hors de l'écran et de le perdre.
+
+        On exige qu'il **en reste un bon tiers** à l'écran sur chaque axe, et
+        non le strict minimum : l'éventail est un arc, et les coins de la boîte
+        qui l'entoure sont vides. Ne garder qu'un pixel de cette boîte, c'était
+        pouvoir tirer l'arbre jusqu'à ne plus montrer qu'un coin sans un seul
+        rond dedans.
+        """
+        x0, y0, x1, y1 = self._etendue_des_talents()
+        gx0, gy0, gx1, gy1 = self._cadre_des_talents()
+        garde_x = min(x1 - x0, gx1 - gx0) / 3
+        garde_y = min(y1 - y0, gy1 - gy0) / 3
+        return (self._borner(dx, gx0 + garde_x - x1, gx1 - garde_x - x0),
+                self._borner(dy, gy0 + garde_y - y1, gy1 - garde_y - y0))
+
+    def _recadrer_les_talents(self):
+        """Centre la vue sur ce qui est visible — à l'ouverture de la stèle.
+
+        Sans ça, ouvrir l'arbre au début d'une partie montrerait le vide : les
+        quatre racines sont en bas de l'éventail, et tout le reste est caché.
+
+        Sur les nœuds seulement, sans le cœur : une fois l'arbre bien entamé,
+        l'ensemble est plus haut que le panneau, et faire tenir le cœur revient
+        à sacrifier une rangée de talents pour un chiffre que le bandeau du
+        haut affiche déjà. Le cœur se retrouve d'un glissement vers le bas.
+        """
+        x0, y0, x1, y1 = self._etendue_des_talents(self._talents_visibles())
+        gx0, gy0, gx1, gy1 = self._cadre_des_talents()
+        self.decalage_talents = self._decalage_borne(
+            (gx0 + gx1) / 2 - (x0 + x1) / 2,
+            (gy0 + gy1) / 2 - (y0 + y1) / 2)
 
     def _disposition_talents(self):
         """Place chaque nœud : (x, y, angle, largeur disponible pour le nom).
@@ -1500,17 +1720,26 @@ class Fenetre:
             traits += [(depart, (x, y), cle) for depart in departs]
         return traits
 
-    def _liens_de_talents(self, places):
+    def _liens_de_talents(self, places, visibles=None):
+        cadre = self._cadre_des_talents()
         for depart, arrivee, cle in self.traits_de_talents(places):
+            if visibles is not None and cle not in visibles:
+                continue
+            morceau = segment_dans_le_cadre(depart, arrivee, cadre)
+            if morceau is None:
+                continue
             acquis = self.session.meta.acquis(cle)
             teinte = COULEUR_BRANCHE.get(tree_mod.ARBRE[cle].branche, BORDURE)
             # Le trait porte seul le prérequis : il doit se lire.
             self.canvas.create_line(
-                *depart, *arrivee, width=2 if acquis else 1,
+                *morceau[0], *morceau[1], width=2 if acquis else 1,
                 fill=melange(teinte, FOND, 0.5) if acquis else LIEN)
 
     def _coeur_de_l_eventail(self, meta):
         cx, cy = self._centre_de_l_eventail()
+        gx0, gy0, gx1, gy1 = self._cadre_des_talents()
+        if not (gx0 + 36 <= cx <= gx1 - 36 and gy0 + 36 <= cy <= gy1 - 36):
+            return
         self.canvas.create_oval(cx - 36, cy - 36, cx + 36, cy + 36,
                                 fill=BOUTON, outline=BORDURE, width=2)
         self.canvas.create_text(cx, cy - 7, text=f"{meta.xp:.0f}", fill=TEXTE,
