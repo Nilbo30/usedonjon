@@ -2,6 +2,7 @@ import unittest
 
 from donjon import dungeon, path, tiles
 from donjon.rng import Rng
+from tests.helpers import sandbox
 
 
 class TestGeneration(unittest.TestCase):
@@ -115,3 +116,53 @@ class TestCouloirsPropres(unittest.TestCase):
         for graine in range(40):
             self.assertTrue(dungeon._connexe(dungeon.generate(Rng(graine))),
                             f"graine {graine}")
+
+
+class TestExplorationAutomatique(unittest.TestCase):
+    """Ce que l'exploration va chercher — et ce qu'elle laisse par terre."""
+
+    def _jeu(self):
+        from donjon.config import RunConfig, TOUT_DEBLOQUE
+
+        jeu = sandbox(seed=1, config=RunConfig(max_depth=5,
+                                               monsters_per_floor=(0, 0),
+                                               items_per_floor=(0, 0),
+                                               traps_per_floor=(0, 0),
+                                               unlocks=TOUT_DEBLOQUE))
+        jeu.level.explored |= set(jeu.level.walkable_cells())
+        return jeu
+
+    def _cases_libres(self, jeu, combien):
+        return [pos for pos in sorted(jeu.level.walkable_cells())
+                if pos != jeu.player.pos][:combien]
+
+    def test_elle_va_chercher_ce_qui_se_consomme(self):
+        from tests.helpers import poser_au_sol
+
+        jeu = self._jeu()
+        case = self._cases_libres(jeu, 1)[0]
+        poser_au_sol(jeu, case, "onigiri")
+        self.assertEqual(jeu.prochaine_exploration(), case)
+
+    def test_elle_ne_va_jamais_chercher_une_arme(self):
+        """Marcher sur une arme ne la ramasse pas : aller la chercher non plus.
+
+        Le moteur a déjà tranché ailleurs (`_gerer_objet_au_sol`) qu'emporter
+        une arme est une décision. L'exploration automatique contredisait cette
+        règle, et le sac finissait plein d'épées qu'on n'avait pas choisies.
+        """
+        from tests.helpers import poser_au_sol
+
+        jeu = self._jeu()
+        case = self._cases_libres(jeu, 1)[0]
+        poser_au_sol(jeu, case, "epee_fer")
+        self.assertNotEqual(jeu.prochaine_exploration(), case)
+
+    def test_une_arme_ne_masque_pas_un_vivre(self):
+        from tests.helpers import poser_au_sol
+
+        jeu = self._jeu()
+        arme, vivre = self._cases_libres(jeu, 2)
+        poser_au_sol(jeu, arme, "epee_fer")
+        poser_au_sol(jeu, vivre, "onigiri")
+        self.assertEqual(jeu.prochaine_exploration(), vivre)

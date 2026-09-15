@@ -984,9 +984,16 @@ class Game:
         # précédente n'offre rien d'atteignable. Les objets ne comptent que
         # s'ils ont été vus : viser ce qu'on ignore encore, c'est viser à
         # travers les murs.
+        #
+        # L'**équipement** ne compte pas du tout. Le moteur a déjà tranché
+        # ailleurs (`_gerer_objet_au_sol`) que marcher sur une arme ne la
+        # ramasse pas : emporter une arme est une décision. L'exploration
+        # automatique contredisait cette règle en allant les chercher une par
+        # une, et le sac finissait plein d'épées qu'on n'avait pas choisies.
         groupes = [
             [pos for pos in level.items
-             if pos != depuis and pos in level.explored],
+             if pos != depuis and pos in level.explored
+             and not level.items[pos].type.equippable],
             [pos for pos in level.explored
              if level.walkable(pos) and pos != depuis
              and any(voisin not in level.explored and level.in_bounds(voisin)
@@ -1082,6 +1089,17 @@ class Game:
         return True
 
     def cmd_throw(self, slot, delta, max_range=8):
+        """Lancer un objet — une capacité qui s'achète.
+
+        Le nœud « Projectiles » ne faisait que **poser des pierres au sol** :
+        le geste, lui, était offert dès la première vie. Un héros qui n'a
+        jamais appris à viser n'a pas à savoir lancer une herbe à la figure
+        d'un rat. Le talent ouvre maintenant les deux d'un coup — de quoi
+        lancer, et de quoi apprendre à le faire.
+        """
+        if "projectiles" not in self.config.unlocks:
+            self.say("Tu ne sais pas viser. (« Projectiles », à la stèle)")
+            return False
         item = self._item_at_slot(slot)
         if not item:
             return False

@@ -82,6 +82,77 @@ class TestFenetre(unittest.TestCase):
         self.fenetre.on_key(Evenement(keysym="Escape"))
         self.assertEqual(self.fenetre.mode, "jeu")
 
+    def test_un_bouton_deja_ouvert_se_referme(self):
+        """Le clavier basculait, les boutons non : cliquer deux fois ne faisait rien."""
+        for mode in ("sac", "competences", "aide"):
+            self.fenetre._basculer(mode)
+            self.assertEqual(self.fenetre.mode, mode)
+            self.fenetre._basculer(mode)
+            self.assertEqual(self.fenetre.mode, "jeu")
+
+    def test_un_bouton_passe_d_un_panneau_a_l_autre(self):
+        """Basculer ne veut pas dire « ne rien faire quand autre chose est ouvert »."""
+        self.fenetre._basculer("sac")
+        self.fenetre._basculer("competences")
+        self.assertEqual(self.fenetre.mode, "competences")
+
+    def test_l_xp_a_depenser_est_affichee_pendant_la_descente(self):
+        """Sans ça, savoir ce qu'on peut s'offrir demandait de remonter au refuge."""
+        self.fenetre.session.meta.xp = 1234
+        self.fenetre.dessiner()
+        textes = [self.fenetre.canvas.itemcget(item, "text")
+                  for item in self.fenetre.canvas.find_all()
+                  if self.fenetre.canvas.type(item) == "text"]
+        self.assertIn("1234 XP à dépenser", textes)
+
+    def test_une_arme_en_vue_arrete_l_exploration_une_seule_fois(self):
+        """Une arme au sol est une décision : on la montre, on ne la ramasse pas.
+
+        Le joueur qui repart sans s'en occuper ne doit plus être arrêté — c'est
+        ce qu'« ignorer » veut dire, et c'est la même mémoire que l'escalier.
+        """
+        from tests.helpers import poser_au_sol
+
+        _debloquer(self.fenetre, *TALENTS_DE_TEST, "exploration")
+        self.fenetre.game = self.fenetre.session.descendre()
+        jeu = self.fenetre.game
+        case = next(pos for pos in jeu.visible_cells()
+                    if jeu.level.walkable(pos) and pos != jeu.player.pos
+                    and pos not in jeu.level.items)
+        poser_au_sol(jeu, case, "epee_fer")
+
+        self.assertTrue(self.fenetre._signaler_un_equipement())
+        self.assertFalse(self.fenetre._signaler_un_equipement())
+
+    def test_une_arme_deja_en_vue_au_depart_n_arrete_pas_l_exploration(self):
+        """Sinon lancer l'exploration devant une arme ne ferait jamais un pas."""
+        from tests.helpers import poser_au_sol
+
+        _debloquer(self.fenetre, *TALENTS_DE_TEST, "exploration")
+        self.fenetre.game = self.fenetre.session.descendre()
+        jeu = self.fenetre.game
+        case = next(pos for pos in jeu.visible_cells()
+                    if jeu.level.walkable(pos) and pos != jeu.player.pos
+                    and pos not in jeu.level.items)
+        poser_au_sol(jeu, case, "epee_fer")
+
+        self.fenetre.explorer()
+        self.assertFalse(self.fenetre._signaler_un_equipement())
+
+    def test_l_exploration_ne_ramasse_pas_une_arme_qu_elle_piétine(self):
+        from tests.helpers import poser_au_sol
+
+        _debloquer(self.fenetre, *TALENTS_DE_TEST, "exploration")
+        self.fenetre.game = self.fenetre.session.descendre()
+        jeu = self.fenetre.game
+        poser_au_sol(jeu, jeu.player.pos, "epee_fer")
+        avant = len(jeu.player.inventory)
+
+        self.fenetre.pas_exploration()
+
+        self.assertEqual(len(jeu.player.inventory), avant)
+        self.assertIn(jeu.player.pos, jeu.level.items)
+
     def test_utiliser_un_objet_depuis_le_sac(self):
         joueur = self.fenetre.game.player
         joueur.fullness = 10

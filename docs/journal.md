@@ -2002,3 +2002,134 @@ mais c'est la première fois qu'on la voit pénaliser le fait de **bien jouer**.
 474 tests, dont douze neufs sur le pivot. Une seule empreinte a bougé :
 « pièges », la seule vie assez longue pour porter deux armes de matières
 différentes en même temps.
+
+## Étape 20 — dix retours de partie, dont un qui bloque tout le reste
+
+Dix remarques après une vraie partie. Sept sont traitées, une est déjà vraie,
+une est une décision à prendre, et la dernière s'est heurtée à un mur qu'il
+vaut mieux connaître : **l'éventail des talents est plein**.
+
+### Ce qui est corrigé
+
+**Un bouton qui rouvre ce qui est ouvert le referme.** Le clavier basculait
+déjà — « c » ouvre les compétences, « c » les referme — les boutons, eux, ne
+faisaient qu'ouvrir. Cliquer deux fois sur « Compétences » ne faisait rien, et
+il fallait deviner qu'on sortait par Échap ou par le clic droit.
+
+**L'XP à dépenser est affichée.** Il y a deux monnaies et on n'en voyait
+qu'une : à gauche l'effort de la descente en cours, et c'est tout. Le trésor de
+guerre ne se lisait qu'au centre de l'éventail — donc il fallait mourir,
+remonter au refuge et ouvrir la stèle pour savoir ce qu'on pouvait s'offrir.
+Il s'affiche maintenant en haut à droite, en permanence.
+
+**L'exploration ne ramasse plus les armes.** Elle allait les chercher une par
+une et le sac finissait plein d'épées qu'on n'avait pas choisies. Or le moteur
+avait déjà tranché ailleurs : `_gerer_objet_au_sol` ramasse les consommables au
+passage et **laisse l'équipement au sol**, parce qu'emporter une arme est une
+décision. L'exploration automatique contredisait sa propre règle.
+
+Elle fait maintenant ce que le retour demandait, mot pour mot : elle s'arrête
+la première fois qu'une arme entre dans le champ, la nomme, et rend la main. Si
+le joueur repart sans s'en occuper, elle ne l'arrêtera plus — c'est la même
+mémoire que celle de l'escalier, et c'est ce qu'« ignorer » veut dire.
+
+**Viser s'achète.** Le nœud « Projectiles » ne faisait que poser des pierres au
+sol ; le geste, lui, était offert dès la première vie. Un héros qui n'a jamais
+appris à viser n'a pas à savoir lancer une herbe à la figure d'un rat. Le
+talent ouvre maintenant les deux d'un coup — de quoi lancer, et de quoi
+apprendre à le faire.
+
+**Le donjon profond est moins monotone.** « Trop de golems de pierre à partir
+de l'étage 8 » : c'était vrai, et pire que ça.
+
+| | avant | après |
+|---|---|---|
+| espèces à l'étage 8 | 5 | **6** |
+| espèces à l'étage 11 | **4** | 7 |
+| espèces à l'étage 13 | 4 | 6 |
+| part du golem, étages 8-13 | 18 à 26 % | **10 à 16 %** |
+
+Passé l'étage 10 le bestiaire tombait à quatre espèces et n'en rebougeait plus
+jamais : gobelins et arbalétriers s'arrêtaient au dixième, et il ne restait que
+les trois homoncules et le sorcier. Quatre changements de données :
+
+* le golem pèse **6** au lieu de 10 — la créature la plus lente et la plus dure
+  du jeu ne doit pas être une rencontre sur cinq ;
+* le tas de chair arrive à l'étage **8** au lieu de 9, et pèse 10 : la famille
+  des homoncules se présente par sa face molle en même temps que par son mur ;
+* gobelin jusqu'au **11**, brute gobeline et arbalétrier jusqu'au **13** — le
+  moteur sait déjà les mettre à niveau (`_scale_to_depth`), il n'y avait aucune
+  raison de les retirer.
+
+Deux tests neufs gardent la propriété, et ils gardent une **forme** et non un
+chiffre : aucun étage du milieu ne tient sur moins de cinq espèces, aucune
+créature n'y dépasse 30 % des rencontres. Les étages 1-2 en sont exclus (deux
+bêtes, c'est une mise en bouche) et le fond du donjon aussi (il ne reste que
+les homoncules, et c'est tout l'intérêt).
+
+Un troisième test a dû être **réécrit plutôt que réparé** : il figeait « plus
+de 50 % d'homoncules à l'étage 11 », un réglage. Il mesure maintenant une
+pente — plus on descend, plus la chair cède au fabriqué — et la pente, elle, ne
+doit jamais s'inverser.
+
+### Le mur : l'éventail des talents est plein
+
+Le retour demandait que les matières se cachent derrière des talents. C'est
+écrit, mesuré, et **repris** : les quatre nœuds n'entrent pas dans l'éventail.
+
+La preuve est nette. L'éventail tient 27 nœuds avec **1,6 pixel** de marge :
+les deux plus proches, « Repas automatique » et « Herbes », sont à 39,6 px pour
+un minimum de 38. J'ai ajouté **un seul nœud vide** pour voir : 37,1 px. Le
+test des ronds tombe.
+
+Ce n'est pas un problème de réglage. J'ai cherché sur quatre leviers — rayon du
+dernier anneau (325 → 415), ouverture (160° → 172°), étirement de l'ellipse
+(1,3 à 2,0), rayon des ronds (16 → 15), et jusqu'à donner aux matières leur
+propre branche. Chaque combinaison déplace le problème sans le résoudre : élargir
+les anneaux desserre les paires radiales et resserre les paires angulaires, et
+inversement. Le minimum n'est jamais repassé au-dessus de 38.
+
+**L'arbre ne peut plus grandir avant que sa mise en page soit refaite.** C'est
+une étape à part entière, et c'est maintenant le premier obstacle sur la route
+de tout ce qui viendra — pas seulement des matières.
+
+Ce que la mesure a dit avant que je reprenne le travail, et qui servira le jour
+où l'éventail aura de la place :
+
+| | matières trouvées en fin de vie | pivots/vie |
+|---|---|---|
+| sans verrou (19.3) | bois 480 · bronze 220 · fer 52 · argent 39 · obsidienne 8 | 0,117 |
+| échelle 30/100/280/700 | bois 556 · bronze 194 · fer 13 · **rien d'autre** | 0,062 |
+| échelle 6/30/100/280 | bois 494 · bronze 211 · fer 57 · argent 12 | 0,087 |
+
+**Verrouiller les matières les rend plus rares, pas plus désirables** — et le
+pivot, déjà fragile, tombe de moitié à la première échelle. Si le verrou revient
+un jour, ce sera avec l'échelle basse, et en sachant ce qu'il coûte.
+
+### Un bonus : une liste recopiée à la main qui ne l'est plus
+
+`TOUT_DEBLOQUE` — ce que le bot et les tests ont d'ouvert — était une liste de
+quatorze chaînes recopiées à la main depuis l'arbre. Le jour des quatre nœuds,
+elle s'est désynchronisée immédiatement : le bot jouait à un donjon où les
+matières n'existaient pas. Un test l'a vu, mais **le voir après coup n'est pas
+la même chose que de ne pas pouvoir se tromper**. Elle se lit maintenant dans
+l'arbre.
+
+### Mesures
+
+Soixante campagnes de quinze vies, appariées, contre l'étape 19.3.
+
+| | avant | après | |
+|---|---|---|---|
+| effort/vie | 42,77 | 43,70 | +0,93 (1,8 σ) |
+| étage atteint | 7,13 | 7,17 | +0,04 (1,1 σ) |
+| pivots/vie | 0,117 | 0,108 | 1,3 σ |
+
+Rien ne franchit la barre. Le sens est celui qu'on attendait : moins de golems,
+c'est un peu plus de survie, donc un peu plus d'effort — et un peu, ici, veut
+dire pas assez pour être sûr.
+
+Quatre empreintes sur seize ont bougé, dont deux qui descendent **plus bas**
+qu'avant. C'est l'effet recherché.
+
+487 tests, dont dix-huit neufs.

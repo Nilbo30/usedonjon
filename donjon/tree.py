@@ -187,9 +187,9 @@ _enregistrer(
           classes=("embusque",), effets={"items_per_floor": (1, 1)},
           ordre=1),
     Noeud("projectiles", "Projectiles", 100,
-          "Des pierres à lancer traînent au sol : de quoi frapper sans "
-          "s'approcher. Le donjon apprend à viser aussi : on te tire dessus "
-          "de loin — et un archer abattu laisse ses flèches.",
+          "Tu apprends à viser, et des pierres à lancer traînent au sol : de "
+          "quoi frapper sans s'approcher. Le donjon apprend aussi : on te tire "
+          "dessus de loin — et un archer abattu laisse ses flèches.",
           branche="Trouvailles", parents=("nourriture",),
           unlocks=("projectiles",), classes=("archer",),
           effets={"items_per_floor": (1, 1)}),

@@ -99,6 +99,7 @@ alors une récompense assumée, à garder en tête en écrivant ces tables.
 | 17 | [Le bus de déclencheurs : tout contenu devient de la donnée](journal.md#étape-170--un-filet-quil-a-fallu-mesurer-avant-dy-croire) | ✅ fait |
 | 18 | [La monnaie devient l'effort : un pas ne vaut plus un coup](journal.md#étape-18--leffort-et-la-marche-qui-redescend-de-60--à-26-) | ✅ fait |
 | 19 | [L'arme devient forme × matière](journal.md#étape-191--la-matière-et-ce-quelle-ne-donne-jamais) | ✅ fait |
+| 20 | [Dix retours de partie, et l'éventail qui ne peut plus grandir](journal.md#étape-20--dix-retours-de-partie-dont-un-qui-bloque-tout-le-reste) | ✅ fait |
 
 Chaque étape laisse le jeu lançable et jouable.
 
@@ -234,6 +235,19 @@ le contact en passant un coin) que le bot n'exploite pas.
 - Aucune compétence de magie n'existe encore : le jeu n'a ni bâton ni sort.
   Pyromancie et cryomancie viendront avec le contenu correspondant, chacune
   en une entrée de table.
+
+## Le prochain obstacle : l'éventail est plein
+
+L'arbre tient **27 nœuds avec 1,6 pixel de marge** ; un vingt-huitième, quel
+qu'il soit et où qu'on le mette, fait tomber le test des ronds. Élargir les
+anneaux desserre les paires radiales et resserre les angulaires, et
+inversement : aucun réglage ne repasse au-dessus du seuil (mesuré sur quatre
+leviers, voir le journal de l'étape 20).
+
+Refaire la mise en page de la stèle est donc le préalable à **tout** contenu
+qui passe par un talent — les matières, le mage, les baguettes, l'arc. Pistes
+non tranchées : un éventail qui défile, deux couronnes concentriques, un plan
+zoomable, ou des ronds plus petits avec le prix hors du rond.
 
 ## Question encore ouverte
 

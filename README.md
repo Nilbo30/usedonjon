@@ -364,6 +364,12 @@ ont fait changer d'avis — sont dans
 
 ## Pistes pour la suite
 
+- **Refaire la mise en page de la stèle** : l'éventail tient 27 talents avec
+  1,6 pixel de marge, et un vingt-huitième le fait déborder quel qu'il soit.
+  C'est devenu le préalable à tout contenu qui passe par un talent
+- **Les matières derrière des talents** : prêt et mesuré, en attente de la
+  place dans l'éventail — et à savoir qu'un verrou rend une matière plus rare,
+  donc le changement d'arme plus rare encore
 - **L'horizon du pivot** : la bascule des familles commence à l'étage 8, le bot
   meurt en moyenne au 7 — le changement de matière est juste mais n'a presque
   jamais lieu. Faire remonter les homoncules, ouvrir « Les profondeurs » plus

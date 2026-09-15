@@ -111,25 +111,25 @@ BESTIAIRE = [
         "key": "gobelin", "name": "Gobelin", "glyph": "g",
         "famille": "humanoide", "classe": "rodeur",
         "hp": 16, "attack": 8, "defense": 3,
-        "depth": (3, 8), "weight": 16,
+        "depth": (3, 11), "weight": 16,
     },
     {
         "key": "brute_gobeline", "name": "Brute gobeline", "glyph": "B",
         "famille": "humanoide", "classe": "guerrier",
         "hp": 22, "attack": 11, "defense": 4,
-        "depth": (5, 10), "weight": 12, "color": "#3e8f6d",
+        "depth": (5, 13), "weight": 12, "color": "#3e8f6d",
     },
     {
         "key": "arbaletrier", "name": "Arbalétrier gobelin", "glyph": "a",
         "famille": "humanoide", "classe": "archer",
         "hp": 15, "attack": 9, "defense": 3,
-        "depth": (5, 10), "weight": 5, "color": "#6fae8f",
+        "depth": (5, 13), "weight": 5, "color": "#6fae8f",
     },
     {
         "key": "tas_de_chair", "name": "Tas de chair", "glyph": "c",
         "famille": "homoncule", "classe": "rodeur",
         "hp": 40, "attack": 9, "defense": 2, "speed": 80,
-        "depth": (9, 99), "weight": 8, "color": "#c07a86", "shape": "rond",
+        "depth": (8, 99), "weight": 10, "color": "#c07a86", "shape": "rond",
     },
     {
         "key": "automate", "name": "Automate de métal", "glyph": "A",
@@ -141,7 +141,7 @@ BESTIAIRE = [
         "key": "golem", "name": "Golem de pierre", "glyph": "G",
         "famille": "homoncule", "classe": "guerrier",
         "hp": 30, "attack": 12, "defense": 7, "speed": 60,
-        "depth": (8, 99), "weight": 10,
+        "depth": (8, 99), "weight": 6,
     },
     {
         "key": "sorcier", "name": "Sorcier bleu", "glyph": "s",

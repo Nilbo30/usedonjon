@@ -229,6 +229,34 @@ class TestObjets(unittest.TestCase):
         self.assertTrue(target.has_status("endormi"))
         self.assertEqual(game.player.inventory, [])
 
+    def test_viser_est_une_capacite_qui_s_achete(self):
+        """Le nœud « Projectiles » ne posait que des pierres : il ouvre le geste.
+
+        Un héros qui n'a jamais appris à viser n'a pas à savoir lancer une
+        herbe à la figure d'un rat — et le talent qui met les pierres au sol
+        est exactement celui qui devrait apprendre à s'en servir.
+        """
+        from donjon.config import RunConfig
+
+        game = sandbox(config=RunConfig(max_depth=5, unlocks=("vivres",)))
+        cible = place_monster(game, (game.player.pos[0] + 3, game.player.pos[1]))
+        game.player.inventory = [items.make("graine_sommeil")]
+
+        self.assertFalse(game.cmd_throw(0, (1, 0)))
+        self.assertEqual(len(game.player.inventory), 1, "l'objet reste au sac")
+        self.assertFalse(cible.has_status("endormi"))
+
+    def test_le_talent_pris_le_geste_revient(self):
+        from donjon.config import RunConfig
+
+        game = sandbox(config=RunConfig(max_depth=5,
+                                        unlocks=("vivres", "projectiles")))
+        cible = place_monster(game, (game.player.pos[0] + 3, game.player.pos[1]))
+        game.player.inventory = [items.make("graine_sommeil")]
+
+        self.assertTrue(game.cmd_throw(0, (1, 0)))
+        self.assertTrue(cible.has_status("endormi"))
+
     def test_objet_lance_dans_le_vide_tombe_au_sol(self):
         game = sandbox()
         game.player.inventory = [items.make("fleche")]

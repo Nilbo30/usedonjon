@@ -25,15 +25,50 @@ from tests.helpers import donner, sandbox
 
 class TestLaLectureDeLEtage(unittest.TestCase):
     def test_le_haut_du_donjon_est_peuple_d_animaux_et_le_bas_d_homoncules(self):
-        """Tout le pivot repose là-dessus : si c'est faux, le reste ne tient pas."""
+        """Tout le pivot repose là-dessus : si c'est faux, le reste ne tient pas.
+
+        On mesure une **pente**, pas un seuil : la part exacte d'homoncules à
+        tel étage est un réglage, et un test qui la fige empêche de l'ajuster.
+        Ce qui ne doit jamais bouger, c'est le sens — plus on descend, plus la
+        chair cède au fabriqué.
+        """
         jeu = sandbox(seed=1)
-        jeu.depth = 2
-        haut = script._familles_attendues(jeu)
-        jeu.depth = 11
-        bas = script._familles_attendues(jeu)
-        self.assertGreater(haut.get("animal", 0), 0.5)
-        self.assertEqual(bas.get("animal", 0), 0)
-        self.assertGreater(bas.get("homoncule", 0), 0.5)
+        parts = []
+        for profondeur in (2, 8, 11, 15):
+            jeu.depth = profondeur
+            parts.append(script._familles_attendues(jeu))
+        self.assertGreater(parts[0].get("animal", 0), 0.5, "le haut est vivant")
+        self.assertEqual(parts[0].get("homoncule", 0), 0, "et rien n'y est fabriqué")
+        self.assertEqual(parts[-1].get("animal", 0), 0, "le bas ne respire plus")
+        self.assertGreater(parts[-1].get("homoncule", 0), 0.5, "il est fabriqué")
+        homoncules = [part.get("homoncule", 0) for part in parts]
+        self.assertEqual(homoncules, sorted(homoncules), "la pente doit monter")
+
+    #: Les étages où le bestiaire doit être varié. Les deux premiers sont une
+    #: mise en bouche — deux bêtes, et c'est très bien ; le fond du donjon est
+    #: l'inverse, il ne reste que les homoncules et c'est tout l'intérêt.
+    ETAGES_VARIES = range(3, 14)
+
+    def test_aucun_etage_du_milieu_ne_tient_sur_moins_de_cinq_especes(self):
+        """Un étage à quatre espèces, c'est « encore un golem » à chaque salle."""
+        from donjon import monsters
+
+        for profondeur in self.ETAGES_VARIES:
+            table = monsters.table_for_depth(profondeur, None)
+            self.assertGreaterEqual(len(table), 5, f"étage {profondeur}")
+
+    def test_aucune_creature_n_occupe_le_donjon_a_elle_seule(self):
+        """Le golem pesait une rencontre sur cinq dès l'étage 8, et ça se voyait."""
+        from donjon import monsters
+
+        for profondeur in self.ETAGES_VARIES:
+            table = monsters.table_for_depth(profondeur, None)
+            total = sum(poids for _, poids in table)
+            pire, part = max(((espece["key"], poids / total)
+                              for espece, poids in table),
+                             key=lambda couple: couple[1])
+            self.assertLess(part, 0.30, f"étage {profondeur} : {pire} à "
+                                        f"{part * 100:.0f} %")
 
     def test_le_mordant_suit_la_population(self):
         jeu = sandbox(seed=1)

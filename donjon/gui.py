@@ -249,6 +249,11 @@ class Fenetre:
         self._trajet_prevu = None
         self.exploration = False   # exploration automatique en cours
         self._panneau_ouvert_a = None   # case dont le panneau s'est déjà ouvert
+        # Les armes déjà montrées : elles n'arrêteront plus l'exploration.
+        # Remises à zéro à chaque étage — une arme d'en bas est une nouvelle,
+        # et deux étages différents partagent des coordonnées.
+        self._equipements_signales = set()
+        self._etage_des_signalements = None
         self._escalier_vu = False       # l'exploration rend la main en le voyant
         self._reset_arme = False   # l'effacement attend une confirmation
         self.root = tk.Tk()
@@ -611,7 +616,34 @@ class Fenetre:
         # Voir l'escalier est une nouvelle : on rend la main pour que le joueur
         # décide s'il descend ou s'il finit l'étage.
         self._escalier_vu = self.game.level.stairs in self.game.visible_cells()
+        self._equipements_signales |= self._equipements_en_vue()
         self.pas_exploration()
+
+    def _equipements_en_vue(self):
+        """Les armes et boucliers visibles d'ici, par position."""
+        if self._etage_des_signalements != self.game.depth:
+            self._etage_des_signalements = self.game.depth
+            self._equipements_signales = set()
+        return {pos for pos in self.game.visible_cells()
+                if pos in self.game.level.items
+                and self.game.level.items[pos].type.equippable}
+
+    def _signaler_un_equipement(self):
+        """Rend la main la première fois qu'une arme entre dans le champ.
+
+        Une arme au sol est une décision, pas une ramasse : l'exploration
+        s'arrête pour la montrer, une fois. Si le joueur repart explorer sans
+        s'en occuper, elle ne l'arrêtera plus — c'est ce qu'« ignorer » veut
+        dire, et c'est la même mémoire que celle de l'escalier.
+        """
+        nouveaux = self._equipements_en_vue() - self._equipements_signales
+        if not nouveaux:
+            return False
+        self._equipements_signales |= nouveaux
+        noms = ", ".join(sorted(self.game.level.items[pos].name
+                                for pos in nouveaux))
+        self.game.say(f"Tu aperçois {noms}.")
+        return True
 
     def pas_exploration(self):
         self._trajet_prevu = None
@@ -625,7 +657,8 @@ class Fenetre:
             return
         joueur = self.game.player
         pv_avant = joueur.hp
-        if joueur.pos in self.game.level.items:
+        if (joueur.pos in self.game.level.items
+                and not self.game.level.items[joueur.pos].type.equippable):
             self.game.cmd_pickup()
         else:
             cible = self.game.prochaine_exploration()
@@ -639,7 +672,9 @@ class Fenetre:
                 self.dessiner()
                 return
         self._verifier_fin()
-        if (not self._escalier_vu and self.game.state == PLAYING
+        if self.game.state == PLAYING and self._signaler_un_equipement():
+            self.arreter_trajet()
+        elif (not self._escalier_vu and self.game.state == PLAYING
                 and self.game.level.stairs in self.game.visible_cells()):
             self._escalier_vu = True
             # Dans le journal et non en note passagère : c'est un fait de jeu,
@@ -1016,6 +1051,12 @@ class Fenetre:
         statuts = joueur.status_line()
         if statuts:
             self._texte(self.largeur - 10, 8, statuts, ancre="ne", couleur="#e0a54f")
+        # Deux monnaies, et on n'en voyait qu'une : à gauche l'effort de cette
+        # descente, ici le trésor de guerre. Sans ça, savoir ce qu'on peut
+        # s'offrir demandait d'ouvrir l'arbre — donc de remonter au refuge.
+        self._texte(self.largeur - 10, 26,
+                    f"{self.session.meta.xp:.0f} XP à dépenser",
+                    ancre="ne", pale=True)
 
     def _barre(self, x, y, largeur, valeur, maximum, couleur, legende):
         """Jauge + légende posée à droite (lisible quelle que soit la valeur)."""
@@ -1044,6 +1085,16 @@ class Fenetre:
         if self.game.state == PLAYING:
             self._barre_de_boutons(haut + LOG_HEIGHT - 32)
 
+    def _basculer(self, mode):
+        """Ouvre ce panneau, ou le referme s'il est déjà ouvert.
+
+        Le clavier basculait déjà — « c » ouvre les compétences, « c » les
+        referme. Les boutons, eux, ne faisaient qu'ouvrir : cliquer deux fois
+        sur « Compétences » ne se passait rien, et il fallait deviner qu'on
+        sortait par le clic droit ou par Échap.
+        """
+        self.mode = "jeu" if self.mode == mode else mode
+
     def _barre_de_boutons(self, y):
         """Tout ce qui se fait au clavier se fait aussi d'un clic."""
         joueur, level = self.game.player, self.game.level
@@ -1057,10 +1108,10 @@ class Fenetre:
             ("Se reposer", self.game.cmd_rest,
              joueur.hp < joueur.max_hp and not self.game.monsters_visible()
              and not au_refuge),
-            ("Talents", lambda: setattr(self, "mode", "talents"), au_refuge),
-            ("Sac", lambda: setattr(self, "mode", "sac"), True),
-            ("Compétences", lambda: setattr(self, "mode", "competences"), True),
-            ("Aide", lambda: setattr(self, "mode", "aide"), True),
+            ("Talents", lambda: self._basculer("talents"), au_refuge),
+            ("Sac", lambda: self._basculer("sac"), True),
+            ("Compétences", lambda: self._basculer("competences"), True),
+            ("Aide", lambda: self._basculer("aide"), True),
             ("Options", self.ouvrir_options, True),
         ]
         # Chaque bouton est dimensionné par son texte : ajouter une commande

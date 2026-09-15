@@ -29,12 +29,15 @@ class TestLeVerrou(unittest.TestCase):
             self.assertEqual(set(puissances.values()), {forme["attaque"]},
                              f"{cle_forme} : la matière a dérapé sur le chiffre")
 
+    #: Ce qu'une matière a le droit de porter. Pas d'`attaque`, jamais : le
+    #: jour où ce champ apparaît, le verrou du chantier a sauté.
+    CHAMPS_DE_MATIERE = {"nom", "poids", "profondeur"}
+
     def test_la_forme_est_le_seul_endroit_ou_l_attaque_est_ecrite(self):
         """Un `attaque` dans `MATIERES` serait le verrou en train de sauter."""
         for matiere, donnees in items.MATIERES.items():
             self.assertNotIn("attaque", donnees, matiere)
-            self.assertEqual(set(donnees), {"nom", "poids", "profondeur"},
-                             matiere)
+            self.assertEqual(set(donnees), self.CHAMPS_DE_MATIERE, matiere)
 
 
 class TestLesTables(unittest.TestCase):

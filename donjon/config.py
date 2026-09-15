@@ -12,13 +12,16 @@ modification du moteur.
 """
 
 
-from . import monsters
+from . import monsters, tree
 
 #: Une config construite à la main (tests, bot, CLI) a tout le contenu.
-TOUT_DEBLOQUE = frozenset({"butin", "vivres", "projectiles", "herbes",
-                           "exploration", "auto_repas", "auto_soin",
-                           "grimoires", "batons",
-                           "intuition", "epees", "boucliers", "coffre", "orbe"})
+#: Tous les verrous que l'arbre sait donner, **lus dans l'arbre**. Recopiés à
+#: la main, ils se désynchronisaient à chaque nœud neuf : quatre matières
+#: ajoutées un jour, et le bot jouait à un donjon où elles n'existaient pas.
+#: Un test le voyait, mais le voir après coup n'est pas la même chose que de
+#: ne pas pouvoir se tromper.
+TOUT_DEBLOQUE = frozenset(drapeau for noeud in tree.ARBRE.values()
+                          for drapeau in noeud.unlocks)
 
 #: De même pour le bestiaire : toutes les classes de créatures.
 TOUTES_CLASSES = frozenset(monsters.CLASSES)
